@@ -681,10 +681,19 @@ with this unless you know what you are doing.
 
 =item B<keygencommand>
 
-If this key is specified its value is a command string that will be executed
-in order to generate a private key. The command should write a single line of
+If this keyword is specified its value is a command string that will be
+executed in order to generate a private key (see
+B<L<privatekey|/item_privatekey>>. The command should write a single line of
 hexadecimal digits to F<stdout>. This line must be a string of at least 10
-hexadecimal digits.
+hexadecimal digits. A simple Tcl script (C<passphrase.tcl>) that prompts a
+user for a pass-phrase and then uses this to generate an appropriate key is
+included in the standard B<Zebedee> distribution. If might be used as follows
+(C<wish> is the Tcl script interpreter):
+
+ keygencommand "/usr/bin/wish -f passphrase.tcl"
+
+If a B<L<privatekey|/item_privatekey>> value is specified it takes precedence
+over any B<keygencommand>.
 
 =item B<keygenlevel>
 
@@ -767,11 +776,36 @@ checked against the SKIP standards document."
 
 =item B<privatekey>
 
-By default B<Zebedee> will generate a new private key each time one is
-required. If, however, you wish to use a fixed key then it can be specified
-as a string of hexadecimal digits. You will definitely need to do this if you
-wish to use the L<identity checking|Identity Checking> feature. Note that the
-key must be at least 10 digits long.
+By default B<Zebedee> will generate a new private key (the "exponent" value in
+the Diffie-Hellman key exchange calculation) each time one is required. If,
+however, you wish to use a fixed key then it can be specified as a string of
+hexadecimal digits.  You will definitely need to do this if you wish to use
+the L<identity checking|Identity Checking> feature. Note that the key must be
+at least 10 digits long.
+
+=item B<sharedkey>
+
+By default B<Zebedee> uses the Diffie-Hellman key exchange protocol to
+establish an anonymous, shared secret key between client an server. This means
+that neither party has to store any permanent secret key. However, under some
+circumstances you may wish to use a pre-established shared secret key,
+communicated by other means. The B<sharedkey> keyword allows you to do this.
+Its value is a string of hexadecimal digits. This value is the unencrypted
+shared key and it must contain at least as many bits (there are 4 bits per
+digit) as will be used to encrypt the traffic through the tunnel. Note that
+the shared key is not, however, used to encrypt the data directly. A unique
+session key is still established for each tunnel.
+
+All clients and servers that wish to communicate must use the same shared
+secret key value. Connections between clients and servers that do not share
+the same secret will be terminated before a tunnel is established. It is your
+responsibility to distribute and protect this secret from disclosure.
+
+=item B<sharedkeygencommand>
+
+This is the equivalent to the B<L<keygencommand|/item_keygencommand>> but in
+this case generates a B<L<sharedkey|/item_sharedkey>> value. Any
+B<L<sharedkey|/item_sharedkey>> value overrides this, if present.
 
 =back
 
@@ -2118,4 +2152,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.14 2002-04-30 11:42:41 ndwinton Exp $
+ $Id: zebedee.pod,v 1.15 2002-05-02 15:37:13 ndwinton Exp $

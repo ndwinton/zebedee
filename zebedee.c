@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.22 2002-04-30 11:42:41 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.23 2002-05-02 15:37:13 ndwinton Exp $";
 #define RELEASE_STR "2.4.0"
 
 #include <stdio.h>
@@ -453,6 +453,8 @@ char *ProxyHost = NULL;		/* HTTP proxy host, if used */
 unsigned short ProxyPort = 0;	/* HTTP proxy port, if used */
 int Transparent = 0;		/* Try to propagate the client IP address */
 char *FieldSeparator = NULL;	/* Input field separator character */
+char *SharedKey = NULL;		/* Static shared secret key */
+char *SharedKeyGenCmd = NULL;	/* Command to generate shared secret key */
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -526,7 +528,7 @@ unsigned long headerGetULong(unsigned char *hdrBuf, int offset);
 
 BFState_t *setupBlowfish(char *keyStr, unsigned short keyBits);
 char *generateKey(void);
-char *runKeyGenCommand(void);
+char *runKeyGenCommand(char *keyGenCmd);
 void generateNonce(unsigned char *);
 char *generateSessionKey(char *secretKey, unsigned char *cNonce, unsigned char *sNonce, unsigned short bits);
 unsigned short hexStrToBits(char *hexStr, unsigned short bits, unsigned char *bitVec);
@@ -2385,7 +2387,7 @@ generateKey(void)
     ** however, then we will fall back to the inline method.
     */
 
-    if ((result = runKeyGenCommand()) != NULL)
+    if (KeyGenCmd && (result = runKeyGenCommand(KeyGenCmd)) != NULL)
     {
 	return result;
     }
@@ -2642,7 +2644,7 @@ generateKey(void)
 /*
 ** runKeyGenCommand
 **
-** This runs the external key generation command, if any. It reads a single
+** This runs the specified key generation command, if any. It reads a single
 ** line from the command's standard output and extracts a hex string from
 ** it. The string must be at least MIN_KEY_BYTES * 2 bytes long.
 **
@@ -2651,22 +2653,22 @@ generateKey(void)
 */
 
 char *
-runKeyGenCommand(void)
+runKeyGenCommand(char *keyGenCmd)
 {
     FILE *fp;
     char buf[MAX_LINE_SIZE];
     char *result = NULL;
 
 
-    if (KeyGenCmd == NULL)
+    if (keyGenCmd == NULL)
     {
 	message(3, 0, "no key generation command specified");
 	return NULL;
     }
 
-    if ((fp = popen(KeyGenCmd, "r")) == NULL)
+    if ((fp = popen(keyGenCmd, "r")) == NULL)
     {
-	message(0, errno, "failed to spawn key generation command '%s'", KeyGenCmd);
+	message(0, errno, "failed to spawn key generation command '%s'", keyGenCmd);
 	return NULL;
     }
 
@@ -2685,7 +2687,7 @@ runKeyGenCommand(void)
 
     fclose(fp);
 
-    message(3, 0, "key generation result ", (result ? "not null" : "NULL"));
+    message(3, 0, "key generation result %s", (result ? "not null" : "NULL"));
     return result;
 }
 
@@ -3154,6 +3156,10 @@ freeKeyInfo(KeyInfo_t *info)
 ** purges expired entries from the list. Note that the head of the list
 ** is always a static entry (with ptr->expiry zero). This makes the list
 ** manipulation easier.
+**
+** If a static shared key or key generation command has been specified
+** then this will be used and the value returned regardless of token
+** value specified.
 */
 
 char *
@@ -3163,6 +3169,30 @@ findKeyByToken(KeyInfo_t *list, unsigned long token)
     char *found = NULL;
     KeyInfo_t *tmp = NULL;
     time_t now;
+    char *result = NULL;
+
+
+    /* If a shared private key has been supplied copy it and return it */
+
+    if (SharedKey)
+    {
+	if ((result = (char *)malloc(strlen(SharedKey) + 1)) == NULL)
+	{
+	    return NULL;
+	}
+	strcpy(result, SharedKey);
+	return result;
+    }
+
+    /*
+    ** If a key generator command was specified then use this to generate
+    ** the key rather than doing it directly here.
+    */
+
+    if (SharedKeyGenCmd && (result = runKeyGenCommand(SharedKeyGenCmd)) != NULL)
+    {
+	return result;
+    }
 
     if (token == 0 || token == TOKEN_NEW) return NULL;
 
@@ -5125,7 +5155,7 @@ client(FnArgs_t *argP)
 
 	if (!clientPerformChallenge(serverFd, msg))
 	{
-	    message(0, 0, "challenge/response failed to validate key reuse token");
+	    message(0, 0, "challenge/response failed to validate shared key (session token = %#08x)", CurrentToken);
 	    mutexLock(MUTEX_TOKEN);
 	    CurrentToken = TOKEN_NEW;
 	    mutexUnlock(MUTEX_TOKEN);
@@ -5968,7 +5998,7 @@ server(FnArgs_t *argP)
 
 	if (!serverPerformChallenge(clientFd, msg))
 	{
-	    message(0, 0, "challenge/response failed to validate key reuse token");
+	    message(0, 0, "challenge/response failed to validate shared key (session token = %#08x)", token);
 	    goto fatal;
 	}
     }
@@ -7037,6 +7067,8 @@ parseConfigLine(const char *lineBuf, int level)
 	    ProxyHost = NULL;
 	}
      }
+    else if (!strcasecmp(key, "sharedkey")) setString(value, &SharedKey);
+    else if (!strcasecmp(key, "sharedkeygencommand")) setString(value, &SharedKeyGenCmd);
     else
     {
 	return 0;

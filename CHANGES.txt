@@ -29,6 +29,10 @@ tunnels.
 
 Added -F option to specify configuration file field separator character.
 
+Added "sharedkey" and "sharedkeygencommand" to allow a pre-established shared
+secret key to be specified. This and the -F option have been added primarily
+for use in Ed Suominen's PRIVARIA.
+
 Numerous changes to the (English) documentation.
 
 * Release 2.3.2 (2002/04/18)

@@ -18,6 +18,7 @@ Source: "*.id"; DestDir: "{app}"
 Source: "vncloopback.reg"; DestDir: "{app}"
 Source: "*.html"; DestDir: "{app}"
 Source: "ftpgw.tcl"; DestDir: "{app}"
+Source: "passphrase.tcl"; DestDir: "{app}"
 Source: "README.txt"; DestDir: "{app}"; Flags: isreadme
 Source: "LICENCE.txt"; DestDir: "{app}"
 Source: "GPL2.txt"; DestDir: "{app}"
