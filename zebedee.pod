@@ -79,7 +79,7 @@ available. It does not pretend to compete with the likes of B<ssh> or B<SSL>
 in terms of breadth of function but if you want something quick, simple and
 I<completely free> then it may be the tool for you.
 
-This document describes the features of B<Zebedee> as at release 2.3.0.
+This document describes the features of B<Zebedee> as at release 2.3.2.
 
 =head2 What's in a name?
 
@@ -245,7 +245,7 @@ connections between client and server.
 
 =head2 Multiple Destinations
 
-Prior to version 2.1.0 a single B<Zebedee> client/server pair could only
+Originally a single B<Zebedee> client/server pair could only
 handle tunnels to a single target system. It is now possible, however,
 to direct tunnels to multiple targets.
 
@@ -352,7 +352,12 @@ words B<true> or B<false>.
 Several keywords require a list of ports to be specfied. Where this the case
 the value is string that consists of a comma or white-space delimited list of
 port names, numbers or numeric ranges. For example "C<telnet, ftp 5900-5903>".
-This is equivalent to the list "C<23,21,5900,5901,5902,5903>".
+This is equivalent to the list "C<23,21,5900,5901,5902,5903>". You can also
+specify that a particular port or range should only be used for TCP or UDP
+traffic by suffixing it with "C</tcp>" or "C</udp>". If this suffix is omitted
+it can be used for either type. So, the list "C<telnet/tcp,daytime/udp,echo>"
+specifies TCP-only traffic to the C<telnet> port, UDP-only traffic to the
+C<daytime> port and either to the C<echo> port.
 
 A number of the keywords are either only applicable to clients or only
 applicable to servers. The same B<Zebedee> program runs as either client or
@@ -549,14 +554,14 @@ handled by some "out-of-band" mechanism.
 This is the default list of the ports on the target system to which the server
 will accept requests to redirect data, when the B<L<target|/item_target>>
 specification does not otherwise specify a port range. An example port list
-might be "C<telnet, ftp, 5900-5910>". If no B<redirect> keyword is specified
-then requests to redirect traffic to B<any> port will be accepted. While this
-is convenient for testing it may pose a security risk so you should specify an
-explict list of allowed ports if at all possible.
+might be "C<telnet, ftp, 5900-5910>".
 
-As a special case, if the port range is given as "C<none>" then any current
-default redirection list will be cleared and no target ports will be accepted
-by default.
+If no B<redirect> keyword is specified then requests to redirect traffic to
+B<any> port will be accepted. While this is convenient for testing it may pose
+a security risk so you should specify an explict list of allowed ports if at
+all possible. As a special case, if the port range is given as "C<none>" then
+any current default redirection list will be cleared and no target ports will
+be accepted by default.
 
 The keyword (or B<-r> option) may be specified multiple times in which case
 redirection will be allowed to any of the ports specified.
@@ -771,9 +776,10 @@ B<L<target|/item_target>> keyword. The IP address can be in the form of a CIDR
 address.
 
 When a connection is established between a client and a server the IP address
-and, possibly, source port of the system at the other end of the connection is
-checked against the set of specified addresses and ports. If it does not match
-any of the entries the connection will be closed. So, for example, the entry:
+and, optionally, source port of the system at the other end of the connection
+is checked against the set of specified addresses and ports. If it does not
+match any of the entries the connection will be closed. So, for example, the
+entry:
 
  checkaddress 192.168.1.0/24
  checkaddress 192.168.2.0/24
@@ -1287,41 +1293,150 @@ Other options that have no keyword equivalents:
 
 By default B<Zebedee> just establishes an encrypted channel between two
 points. While you know that the data is protected from snooping "on the wire"
-there is no guarantee that the channel ends up where you think it does. It is
-open to "man-in-the-middle" attacks. If you are concerned primarily with using
-data compression or protecting against casual "network sniffing" then you may
-be happy with this situation. If, however, you want more assurance that your
-connection is not being "hijacked" then B<Zebedee> provides some basic
-facilities for doing so.
+there is no guarantee that the tunnel ends up where you think it does. By
+default, and unless you are applying any other kind of filtering or
+firewalling, a B<Zebedee> server will accept connections from any client that
+can reach it. If the service to which you are tunnelling does not provide any
+further authentication, or if it relies on checking the source IP address,
+then it will be potentially open to attack.
 
+The simplest, but most basic check, that you can make is to restrict the IP
+addresses from which a server will accept, or to which a client will make,
+connections. You can do this by using the
+B<L<checkaddress|/item_checkaddress>> keyword.
+
+IP address checking is useful but not that secure. B<Zebedee> is also open to
+open to "man-in-the-middle" attacks where an eavesdropper pretends to a client
+to be the server and intercepts all traffic before forwarding it on to the
+real server. If you are concerned primarily with using data compression or
+protecting against casual "network sniffing" then you may be happy with this
+situation. If, however, you want more assurance that your connection is not
+being "hijacked" then B<Zebedee> provides some basic facilities for doing so.
+
+A B<Zebedee> server can validate the identity of the client at the other end
+of a tunnel provided that you are using an encrypted connection. To do so the
+client must use a fixed private key. The easiest way to generate
+such a key is by using the B<-p> option, like this:
+
+ zebedee -p
+
+This will output a line something like this:
+
+ privatekey "410dea0cbd9c10da057848c43a610f6bb859b769"
+
+The string of hexadecimal digits will be different every time you run it. So,
+on your client system you should generate a key and save it in a file, for
+example:
+
+ zebedee -p > myclient.key
+
+The file C<myclient.key> now contains the private key that will be used by
+B<Zebedee> on this system. The private key must be kept secret so you should
+apply appropriate protection to this file to stop unauthorised users accessing
+it. You now need to generate the public "fingerprint" associated with this
+key, which you can do as follows:
+
+ zebedee -P -f myclient.key > myclient.id
+
+The contents of the file C<myclient.id> will look something like this:
+
+ 135f04050961d37553731250d5c6f7495f088b32 myclient
+
+The text after the string of hexadecimal digits will be the name of the
+machine on which you run this. It's just a descriptive tag so you
+can change it to be, for example:
+
+ 135f04050961d37553731250d5c6f7495f088b32 Neil's PC
+
+You should now modify your client configuration file to add a line:
+
+ include "path-to-dir/myclient.key"
+
+where "C<path-to-dir>" is the directory in which the key file is being kept.
+The C<myclient.id> file is used by any server that wishes to validate the
+identity of C<myclient>. The contents are not secret and you should copy this
+file to the B<Zebedee> server.
+
+On the server you should add the contents of C<myclient.id> to a single file
+containing the identity "fingerprints" of all clients you wish to validate.
+This file, for example called C<client.idlist>, might look like this:
+
+ ba077f6a42bea502f517cab5685e476a713d9621 Rebecca's PC
+ 3ad38cb1f16957d5c535272ce27557bdaa4389c6 Ben's PC
+ 135f04050961d37553731250d5c6f7495f088b32 Neil's PC
+
+Now, to the server configuration file add the following line:
+
+ checkidfile "path-to-dir/client.idlist"
+
+That's it! Now only clients whose identities appear in this file will be able
+to create tunnels to the server. If you remove a line the client will be
+denied further access.
+
+At the moment you can only have a single identity file and it is an "all or
+nothing" mechanism --- a client can either create a tunnel to any valid target
+or to none at all. This may be enhanced in future.
+
+It is also worth noting that this mechanism can equally well be used for a
+client to validate the identity of a server, if the server uses a fixed
+private key.
+
+=head3 How does this work?
+
+By default, B<Zebedee> generates a new private key every time it is started.
 If the same B<L<modulus|/item_modulus>>, B<L<generator|/item_generator>> and
 private key are used they will always generate the same public value for use
-in the Diffie-Hellman key exchange protocol. If you use a fixed private key
-(specified using the B<L<privatekey|/item_privatekey>>) keyword in a
-configuration file) then B<Zebedee> can generate a key "fingerprint" by
-hashing together the modulus, generator and public key value.  This is done
-using the B<-P> option, for example, if the file F<server.key> contains the
-following value:
+in the Diffie-Hellman key exchange protocol. The "fingerprint" is a hash of
+the modulus, generator and public key. Only a person knowing the private key
+will be able to produce public key and successfully decrypt traffic. So, if
+the same combination of modulus, generator and key are seen then the identity
+of the client can be tied to the owner of that private key. The modulus,
+generator and key strings are hashed together to produce the fingerprint
+merely for convenience and to keep the size of the identity file small.
 
- privatekey "1e34d6769502bae1087c18d2e8c8776e4a17ddaf"
+=head3 Step-by-step
 
-then the command
+If you didn't quite understand the above, the following step-by-step
+description of how to set up identity checking is derived from one written by
+Yves Smolders on the B<Zebedee> mailing list.
 
- $ zebedee -P -f server.key > server.id
+After you have tested B<Zebedee> without identify checking to make sure it is
+working correctly, on each "client" machine do the following:
 
-will generate output something like this:
+ zebedee -p
 
- 135f04050961d37553731250d5c6f7495f088b32 myhostname
+Each time you do this, you'll see another key gets created. Try this:
 
-The initial string of hexadecimal digits is the "fingerprint". Anything else
-on the line is a comment describing the owner of the identity. By default it
-is the name of the host on which the identity string was generated.
+ zebedee -p > cli.txt
 
-If the B<L<checkidfile|/item_checkidfile>> keyword is specified in a
-configuration file then its value is the name of a file containing
-"fingerprint" lines. If the identity of the system at the other end of the
-connection does not match any of those in the file then the connection will be
-closed.
+That's a small "C<p>", by the way. Now you have a private key in C<cli.txt>.
+You can make B<Zebedee> use this key all the time using the following line in
+your client configuration file. client.zbd file:
+
+include 'path/cli.txt' (change path to where cli.txt is)
+
+Now the client always uses the same key.  To restrict the server only to
+accept a certain set of keys do the following
+
+zebedee -P >pub.txt    (-P is caps)
+
+This makes a "hash" value that reads something like this:
+
+3498ea.....   machine
+
+Now on the server import these lines, one for each client into one big file
+containing
+
+3498ea....    machine
+1a9d3f.....    machine2
+
+on the server.zbd config file, add a line
+
+checkidfile 'path/bigfile'
+
+Now Zebedee server will only accept clients with a matching static key.  If
+you remove a line, that client doesn't have access to zebedee server
+anymore!
 
 =head2 Notes on Other Security Issues
 
@@ -1435,13 +1550,26 @@ B<Zebedee> distribution. This shows most of the common options.
  # options available for use by a server.
  #
  
- verbosity 2            # Slightly more than basic messages
+ verbosity 2    # Slightly more than basic messages
  
- server true            # Yes, it's a server!
- detached true          # Run detached from terminal
- udpmode false          # Are we operating in UDP mode?
+ # Comment out the following line once you have read the comments
+ # in this file and enabled or disabled the appropriate options!
  
- # Uncomment the following line to log messages to a file
+ message "DEFAULT CONFIGURATION FILE -- EDIT BEFORE USE"
+ 
+ detached false # You will probably want this 'true' for normal
+                # use but I want to make sure that you see the
+                # preceding message if you haven't edited this.
+ 
+ server true    # Yes, it's a server!
+ ipmode both    # Operate in mixed TCP/UDP mode
+ 
+ compression zlib:9     # Allow maximum zlib compression
+ keylength 256          # Allow keys up to 256 bits
+ keylifetime 36000      # Shared keys last 10 hours
+ maxbufsize 16383       # Allow maximum possible buffer size
+ 
+ # Uncomment the following line to log messages to a local file.
  #
  #  logfile './server.log'
  #
@@ -1449,34 +1577,62 @@ B<Zebedee> distribution. This shows most of the common options.
  #
  #  logfile SYSLOG
  
+ keygenlevel 2  # Generate maximum strength private keys
+ 
  # Uncomment the following line if you want to use a fixed private
  # key stored in a static file. The file should contain a line of
- # the form "privatekey hexadecimal-key-string"
+ # the form "privatekey hexadecimal-key-string". This file should
+ # be readable by the user running Zebedee but no-one else.
  #
  #  include './server.key'
  
- keygenlevel 2          # Generate maximum strength private keys
- 
- # To validate the identity of clients uncomment the following
- # line:
+ # To validate the identity of clients use a line something like
+ # the following:
  #
  #  checkidfile './clients.id'
  
- # Set up allowed redirection ports.
- # These should be pretty safe -- but it's not a good idea
- # to open up all ports.
+ # The "redirect" expression can be use to set the default ports
+ # allowed when a target specification consists of a hostname but
+ # no other ports. The "redirect none" statement prohibits
+ # tunnelling anywhere by default.
  
- redirect "telnet ftp"          # Basic services
- redirect 5900-5999             # VNC traffic
- redirect 6000-6010             # X Window System
- redirect "daytime chargen"     # Ports useful for testing
+ redirect none
  
- targethost localhost           # Redirection is to the local machine
+ # Set up allowed targets. Note that there are NO targets allowed
+ # by this file by default. You must explicitly edit it to enable
+ # them.
  
- compression zlib:9             # Allow maximum zlib compression
- keylength 256                  # Allow keys up to 256 bits
- keylifetime 36000              # Shared keys last 10 hours
- maxbufsize 16383               # Allow maximum possible buffer size
+ # The following are good for testing purposes. Either TCP or UDP
+ # are allowed.
+ #
+ #  target localhost:daytime,echo,chargen
+ 
+ # Basic interactive services, TCP only.
+ #
+ #  target localhost:telnet/tcp,ftp/tcp
+ 
+ # VNC traffic -- usually you will only need a subset of this
+ # range, perhaps 5900 or 5901.
+ #
+ #  target localhost:5900-5999/tcp
+ 
+ # X Window System -- again, usually you will only need
+ # a subset of this range.
+ #
+ #  target localhost:6000-6010/tcp
+ 
+ # Here is an example of specifying targets using a subnet. In
+ # this case allowing tunnels to be established to VNC servers
+ # on the 10.1.1.xx subnet.
+ #
+ #  target 10.1.1.0/24:5900/tcp
+ 
+ # The following line ensures that the default target host
+ # is the local machine. The last named host becomes the
+ # default so leaving this here ensures that "localhost" is,
+ # the default unless overridden on the command line.
+ 
+ target localhost
 
 To test the identity checking facilities you can uncomment the
 B<L<checkidfile|/item_checkidfile>> line and then use one of the supplied
@@ -1972,4 +2128,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.9 2002-04-16 13:03:59 ndwinton Exp $
+ $Id: zebedee.pod,v 1.10 2002-04-16 16:49:42 ndwinton Exp $

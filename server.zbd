@@ -4,7 +4,7 @@
 # This shows the use of many, but not all, of the configuration file
 # options available for use by a server.
 #
-# $Id: server.zbd,v 1.3 2002-04-16 13:03:58 ndwinton Exp $
+# $Id: server.zbd,v 1.4 2002-04-16 16:49:42 ndwinton Exp $
 
 verbosity 2	# Slightly more than basic messages
 
@@ -58,29 +58,30 @@ redirect none
 # by this file by default. You must explicitly edit it to enable
 # them.
 
-# The following are good for testing purposes
+# The following are good for testing purposes. Either TCP or UDP
+# are allowed.
 #
 #  target localhost:daytime,echo,chargen
 
-# Basic interactive services
+# Basic interactive services, TCP only.
 #
-#  target localhost:telnet,ftp
+#  target localhost:telnet/tcp,ftp/tcp
 
 # VNC traffic -- usually you will only need a subset of this
 # range, perhaps 5900 or 5901.
 #
-#  target localhost:5900-5999
+#  target localhost:5900-5999/tcp
 
 # X Window System -- again, usually you will only need
 # a subset of this range.
 #
-#  target localhost:6000-6010
+#  target localhost:6000-6010/tcp
 
 # Here is an example of specifying targets using a subnet. In
 # this case allowing tunnels to be established to VNC servers
 # on the 10.1.1.xx subnet.
 #
-#  target 10.1.1.0/24:5900,5901
+#  target 10.1.1.0/24:5900/tcp
 
 # The following line ensures that the default target host
 # is the local machine. The last named host becomes the

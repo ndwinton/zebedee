@@ -1,4 +1,4 @@
-* Release 2.3.2
+* Release 2.3.2 (2002/04/16)
 
 Tunnel and target ports can now be suffixed with "/tcp" or "/udp" in order to
 restrict the protocol used. This is useful when "ipmode both" is in effect.
@@ -23,14 +23,13 @@ or server in order to clean up better in the case of the peer hanging.
 Modified "redirect" to support "redirect none" to turn off any default target
 ports.
 
-Added further documentation about server security issues.
+Rewrote the description of identity checking. Added further documentation
+about server security issues.
 
 Prohibit the default target from having an address mask. It's too confusing
 otherwise!
 
 Fix handling of TCP connections in mixed mode.
-
-Improved some comments in the code.
 
 Fix short writes that show up on OpenBSD (thanks to Jon Leonard for this).
 
