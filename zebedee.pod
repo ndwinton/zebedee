@@ -8,17 +8,20 @@ Zebedee --- a simple, free, secure TCP and UDP tunnel program
 
 =item Server:
 
-B<zebedee> B<-s> [B<-dDtuU>] [B<-b> I<address>] [B<-c> I<host>] [B<-F>
-I<char>] [B<-f> I<file>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<logfile>]
-[B<-r> I<ports>] [B<-T> I<port>] [B<-v> I<level>] [B<-x> I<config>] [B<-z>
-I<level>] [I<target> ...]
+B<zebedee> B<-s> [I<common-options>] [B<-c> I<host>] [B<-r> I<ports>]
+[I<target> ...]
 
 =item Client:
 
-B<zebedee> [B<-dDlmtuU>] [B<-b> I<address>] [B<-e> I<command>] [B<-F> I<char>]
-[B<-f> I<file>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<log>] [B<-T>
-I<port>] [B<-v> I<level>] [B<-x> I<config>] [B<-z> I<level>] [server]
+B<zebedee> [B<-m>] [B<-e> I<command>] 
+ [server]
 [I<tunnel-spec> ...]
+
+=item Common Options:
+
+B<zebedee> [B<-dDLtuU] [B<-b> I<address>] [B<-F> I<char>] [B<-f> I<file>]
+[B<-K> I<checksumlevel>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<log>]
+[B<-T> I<port>] [B<-v> I<level>] [B<-x> I<config>] [B<-z> I<level>] ...
 
 =item Key generation:
 
@@ -36,6 +39,10 @@ B<zebedee> B<-H> I<string> ...
 
 B<zebedee> [B<-n> I<name>] B<-S> [install[=I<file>] | remove | run]
 
+=item UNIX-like only
+
+B<zebedee> [B<-N> I<userid>] ...
+
 =back
 
 =head1 DESCRIPTION
@@ -46,7 +53,7 @@ example, B<telnet>, B<ftp> and B<X> sessions to be protected from snooping.
 You can also use compression, either with or without data encryption, to gain
 performance over low-bandwidth networks.
 
-This document describes the features of B<Zebedee> as at release 2.4.1. For
+This document describes the features of B<Zebedee> as at release 2.5.0. For
 details of the new features in this release see L<CHANGES|/changes>.
 
 The main goals for B<Zebedee> are to:
@@ -560,6 +567,17 @@ Note that B<Zebedee> does not itself provide a mechanism for co-ordinating the
 starting of client and server to set up a "reverse" tunnel. That must be
 handled by some "out-of-band" mechanism.
 
+=item B<dropunknownprotocol>
+
+This is a boolean indicating whether a B<Zebedee> server should attempt to
+continue negotiating a connection with a client that requests a version of the
+B<Zebedee> protocol that the server can not support. By default this is false,
+meaning that the server will reply with the highest protocol version it
+supports, allowing the client to decide if it can continue. If set to true,
+the server will immediately terminate the connection.
+
+See also B<L<lockprotocol|/item_lockprotocol>>.
+
 =item B<redirect> (command-line B<-r>)
 
 This is the default list of the ports on the target system to which the server
@@ -620,6 +638,31 @@ Be careful when using CIDR addresses as targets that the last target specified
 will be valid default address. If the default target has an address mask
 then B<Zebedee> will flag this as an error and exit.
 
+It is also possible to apply identity checking and source IP address
+validation, like that provided by B<L<checkidfile|/item_checkidfile>> and
+B<L<checkaddress|/item_checkaddress>>, to individual targets. If the target is
+suffixed with a "C<?>" followed by a file name, such as this:
+
+ target 10.10.10.0/24:http?httpusers.ids
+
+then the file (C<httpusers.ids> in this example) must be a file in the same
+format as that described in the B<L<identity checking|Identity Checking>>
+section. The effect of this B<target> specification is to allow connections to
+be created to the HTTP port of any machine in the 10.10.10.0/24 sub-net, but
+only by clients whose identities are found in C<httpusers.ids>.
+
+Similarly, the target can be suffixed with "C<@>" followed by an address
+specification in the same form as that used by
+B<L<checkaddress|/item_checkaddress>>. For example:
+
+ target 10.10.10.0/24:http@10.20.30.0/24
+
+In this case only clients in the 10.20.30.0/24 sub-net will be permitted to
+create tunnels to this target.
+
+You can't combine both the "C<?>" and "C<@>" forms. But you really wouldn't
+want to do that anyway, would you?
+
 =item B<transparent>
 
 This is a boolean value, which is B<false> by default. If set B<true> it
@@ -636,22 +679,71 @@ hope that it may work in future versions.
 
 Support for a limited form of transparency for UDP traffic is available for a
 wider range of UNIX-like platforms, although this must have been enabled at
-compile time. If it has been enabled then unidirectional UDP traffic from
-client to server will preserve the B<Zebedee> client's IP address on datagrams
-sent to the target server. This will be sufficient for applications such as
-C<syslog> where there is no requirement that the target server should reply to
-such traffic. Applications that attempt to reply to the address in these
-datagrams will not send replies via the B<Zebedee> tunnel and, in fact, are
-likely to send their data to non-existent or invalid endpoints.
+compile time (it is not enabled by default in the "standard" builds). If it
+has been enabled then unidirectional UDP traffic from client to server will
+preserve the B<Zebedee> client's IP address on datagrams sent to the target
+server. This will be sufficient for applications such as C<syslog> where there
+is no requirement that the target server should reply to such traffic.
+Applications that attempt to reply to the address in these datagrams will not
+send replies via the B<Zebedee> tunnel and, in fact, are likely to send their
+data to non-existent or invalid endpoints.
 
 =back
 
-=head3 Compression and Encryption Keywords
+=head3 Compression, Encryption and Checksum Keywords
 
-The following keywords control the compression and encryption of data passing
-through the tunnel. They apply to both clients and servers:
+The following keywords control the compression, encryption and checksumming
+of data passing through the tunnel. They apply to both clients and servers:
 
 =over 4
+
+=item B<checksumlevel> (command-line B<-K>)
+
+B<Zebedee> will, by default, calculate a checksum for every message sent over
+the tunnel. This checksum is appended to the message and verified by the
+recipient. If the checksum calculated by the recipient does not match that in
+the message the tunnel connection will be terminated. You should note that
+for the checksum to be effective as a means of assuring that data has not been
+maliciously modified, you should ensure that the data is also encrypted.
+
+The B<checksumlevel> is an integer between 0 and 3 that determines the
+checksumming algorithm used to check the integrity of data transferred by
+B<Zebedee>. The default is 2. This provides a reasonable level of assurance,
+at the price of a 4-byte overhead on each message and some extra computation.
+Setting this to 0 turns off checksumming (which was the behaviour prior to
+B<Zebedee> version 2.5).
+
+The checksum level used will be the minimum of the client's and server's
+values (subject to any setting of
+B<L<minchecksumlevel|/item_minchecksumlevel>>).
+
+The algorithms used and the overhead they imply are as follows:
+
+=over 4
+
+=item B<Level 0>
+
+No checksum, no additional overhead.
+
+=item B<Level 1>
+
+This uses the C<ADLER32> algorithm from B<zlib>. It requires a 4-byte
+overhead per message. The algorithm is fast but gives the lowest degree of
+assurance that the message has not been modified or corrupted in transit.
+
+=item B<Level 2>
+
+This uses the C<CRC32> algorithm from B<zlib>. It requires a 4-byte overhead
+per message. This is a little slower than C<ADLER32> but provides a better
+level of assurance of the data integrity.
+
+=item B<Level 3>
+
+This uses the C<SHA> algorithm. It requires a 20-byte overhead per message.
+This is the most CPU-intensive operation but provides a very high degree of
+assurance that the contents of the message have not been altered in transit.
+
+=back
 
 =item B<compression> (command-line B<-z>)
 
@@ -706,6 +798,20 @@ interpreter):
 If a B<L<privatekey|/item_privatekey>> value is specified it takes precedence
 over any B<keygencommand>.
 
+If the command string ends with a "C<+>" character then the command will be
+run with three extra command line arguments. The first is IP address of the
+system to which the tunnel is connected (the server address for a client, and
+client for a server). This is in numeric form, not the DNS name. The next
+argument is the IP address of the target for the tunnel (note that if this is
+the default target it will be given as 0.0.0.0). The final argument is the
+target port number. So, for a B<Zebedee> client run like this:
+
+ zebedee -x "keygencommand 'newkey -x +'" 1000:192.168.100.100:23
+
+the key generation command run would be as follows:
+
+ newkey -x 192.168.100.100 0.0.0.0 23
+
 =item B<keygenlevel>
 
 This is an integer between 0 and 2 inclusive that determines how strong the
@@ -730,7 +836,7 @@ Blowfish encryption. It should be a multiple of 4 between 4 and 576.
 The key length used will be the minimum of the client's and server's
 values (subject to any setting of B<L<minkeylength|/item_minkeylength>>).
 
-The default valuse is 128. As a special case setting this value to 0 will turn
+The default value is 128. As a special case setting this value to 0 will turn
 off key negotiation and encryption.
 
 =item B<keylifetime>
@@ -756,12 +862,23 @@ that both client and server also generate a new private key each time. This
 will impact performance and is recommended only if you have a very high
 paranoia level!
 
+=item B<minchecksumlevel>
+
+If supplied, this specifies the minimum acceptable checksum level (see
+B<L<checksumlevel|/item_checksumlevel>>) to be used by the client or server. If
+a client requests a lower level of a server the server will reply with this
+minimum. If a server replies with a lower level to a client then the client
+will terminate the connection.
+
+The default value is zero.
+
 =item B<minkeylength>
 
-If supplied this specified the minimum acceptable key length to be used by
-client or server. If a client requests a lower level of a server the server
-will reply with this minimum. If a server replies with a lower level to a
-client then the client will terminate the connection.
+If supplied, this specifies the minimum acceptable key length (see
+B<L<keylength|/item_keylength>>) to be used by client or server. If a client
+requests a lower level of a server the server will reply with this minimum. If
+a server replies with a lower level to a client then the client will terminate
+the connection.
 
 The default value is zero.
 
@@ -947,6 +1064,17 @@ the use of their proxy servers B<Zebedee> does identify itself with a
 user-agent string of C<Zebedee> when it connects to the proxy server. Well, it
 does in the "official" version anyway.
 
+=item B<httpproxyauth>
+
+If tunnelling via an HTTP proxy, using B<L<httpproxy|/item_httpproxy>>, some
+proxy servers require authentication information to be supplied in order to
+permit the connection to be made. B<Zebedee> supports the "basic"
+authentication type. The username and password required for this can be
+specified using the B<httpproxyauth> keyword. The username and password
+are given in plain text, separated by a colon, as follows:
+
+ httpproxyauth "username:password"
+
 =item B<idletimeout>
 
 This sets both the B<L<tcptimeout|/item_tcptimeout>> and
@@ -1004,6 +1132,25 @@ belonging to the system.
 Note that B<listenip> is a more general form of
 B<L<localsource|/item_localsource>> and setting B<localsource> will override
 B<listenip> and vice versa.
+
+=item B<lockprotocol> (command-line B<-L>)
+
+In normal usage, different versions of B<Zebedee> will try to negotiate
+a compatible version of the B<Zebedee> protocol between themselves. Provided
+that no incompatible features are used, all versions of B<Zebedee> from 2.0
+onwards can interwork with eachother.
+
+The B<lockprotocol> keyword is a boolean value that, if set true,
+causes a client or server to reject requests for protocol versions that do not
+match the default version being used by the program. The default protocol
+version is always the highest that the program supports so this has the effect
+of stopping the protocol being "downgraded" to a previous version.
+
+The main reason for using this is to ensure that features only available in
+later versions of the protocol, such as checksumming of data introduced in
+B<Zebedee> version 2.5, can not be silently dropped.
+
+The default value is false.
 
 =item B<maxbufsize>
 
@@ -1069,7 +1216,37 @@ you wish to cause valid but apparently idle connections to be timed out you
 should use B<L<tcptimeout|/item_tcptimeout>> or
 B<L<udptimeout|/item_udptimeout>>.
 
-=item B<serverport> (command-line <-T>)
+=item B<runasuser> (command-line B<-N>)
+
+This keyword and option apply to UNIX/Linux systems only.
+
+It may sometimes be necessary to run B<Zebedee> as C<root> (UID 0), for
+example so that a server can listen on a so-called "privileged" port below
+port 1024, or to access configuration or log files that should not be readable
+by other users. However, having a program, and particularly a network server,
+run as C<root> for longer than necessary is a potential security risk. If
+B<Zebedee> is run as C<rootL> then this keyword can be used to specify a user
+identity to which B<Zebedee> should switch after it has opened all files and
+set up listening sockets.
+
+The user identity specified as an argument should be the name of a valid
+account on the host machine. For example:
+
+ runasuser "nobody"
+
+B<Zebedee> will switch to the user-ID and primary group-ID associated with
+that account. Note that it is considered a fatal error if the account does
+not exist. This protects you against B<Zebedee> failing to switch away from
+C<root> if you were expecting it do so. If B<Zebedee> is not running as
+C<root> a warning will be issued and the keyword ignored, but it will not
+cause a fatal error.
+
+B<WARNING:> Please note that it is B<not> safe to make B<Zebedee> a setuid
+C<root> program, even if this keyword is used. This keyword is only intended
+for use where B<Zebedee> is run by C<root>. Making B<Zebedee> a setuid C<root>
+program will open a gaping security hole in your system!
+
+=item B<serverport> (command-line B<-T>)
 
 This is the port on which the B<Zebedee> server will listen for tunnel
 connections. The default is 11965 (0x2EBD) when running in TCP mode or mixed
@@ -1967,72 +2144,43 @@ form:
 =head1 CHANGES
 
 This section outlines the main user-visible changes since the previous
-"stable" release, 2.2.2. Full details, including bug fixes and other
+"stable" release, 2.4.1. Full details, including bug fixes and other
 non-visible enhancements, are in the C<CHANGES.txt> file in the
 B<Zebedee> distribution.
 
-The B<L<ipmode|/item_ipmode>> keyword and B<-U> option have been added in
-order to allow a single B<Zebedee> client/server pair to support both TCP and
-UDP traffic. Tunnel and target ports can now be suffixed with "C</tcp>" or
-"C</udp>" in order to restrict the protocol used when running in "mixed" mode.
+Backwards compatibility with B<Zebedee> 1.x versions of the protocol (which is
+now more than 3 years old) has been dropped. Compatibility is maintained for
+releases 2.0.0 and upward.
 
-The B<L<listenip|/item_listenip>> keyword (or B<-b> command line option) now
-allows you to specify the local IP address at which B<Zebedee> will listen for
-incoming connections. This useful on machines with multiple network cards.
+New message integrity checking keywords
+(B<L<checksumlevel|/item_checksumlevel>> and
+B<L<minchecksumlevel|/item_minchecksumlevel>>) have been added. These give
+assurance that messages have not been tampered with in transit. Also the
+keywords B<L<dropunknownprotocol|/item_dropunknownprotocol>> and
+B<L<lockprotocol|/item_dropunknownprotocol>> help enforce the use of these
+features, if required. These are all derived from patches submitted by,
+Henrick Lund. Great work Henrick!
 
-Target specifications (see B<L<target|/item_target>>) can now include
-sub-nets, given in CIDR address format, such as C<10.1.1.0/24>. This allows
-you to select a range of allowable targets with a single specification.
+Added the ability to hand the peer address, target address and target port to
+key generation commands (add a "C<+>" to the end of the command to get three
+extra arguments provided). See B<L<keygencommand|/item_keygencommand>> and
+B<L<sharedkeygencommand|/item_keygencommand>> for further details.
 
-You can now permit or deny tunnel setup based on the IP address of the
-connected client or server by using the B<L<checkaddress|/item_checkaddress>>
-keyword.
+Added "httpproxyauth" -- thanks to James CE Johnson.
 
-The B<L<redirect|/item_redirect>> keyword now has an option B<none> to turn
-off tunnelling to any default target ports.
+Added "runasuser/-N" -- thanks to Thomas Melzer.
 
-B<Zebedee> connections, both client and server initiated, can now be made via
-HTTP proxy servers that support the C<CONNECT> method by using the
-B<L<httpproxy|/item_httpproxy>> keyword.
-
-There is partial support, with the B<L<transparent|/item_transparent>>
-keyword, for a B<Zebedee> server to attempt to act as a transparent proxy and
-forward on the client IP address.
-
-The example configuration files shipped with the distribution have been
-"modernised", to give better examples of newer features. The have also been
-made more secure "out of the box." This may cause you an issue if you try
-to use the files without further modification.
-
-An example key generation command, C<passphrase.tcl> is included in the
-distribution.
-
-The new B<L<tcptimeout|/item_tcptimeout>> and
-B<L<idletimeout|/item_idletimeout>> settings allow inactive TCP tunnels to be
-closed.
-
-The B<L<readtimeout|/item_readtimeout>> keyword has been added to allow some
-defence against denial of service attacks.
-
-The B<-F> option can be used to specify a new (in addition to whitespace)
-configuration file field separator character.
-
-You can now specify an explicit shared secret key using the
-B<L<sharedkey|/item_sharedkey>> and
-B<L<sharedkeygencommand|/item_sharedkeygencommand>> rather than have
-B<Zebedee> negotiate one itself. This, and the B<-F> option, has been added
-primarily for use in Ed Suominen's PRIVARIA (see L<http://privaria.org>)
-secure communication suite.
-
-Version 2.4.1 adds the B<L<dumpdata|/item_dumpdata>> keyword to allow local
-data details to be shown in logging output.
+The B<L<target|/item_target>> specification has been extended to allow
+per-target client identity and address checking. The identity checking was
+originally submitted by Alain Turbide and address checking by Henrik Lund
+(again!)
 
 =head1 CREDITS AND LEGALITIES
 
 The following information can also be found in the file F<LICENCE.txt> in the
 B<Zebedee> distribution.
 
- Copyright (c) 1999, 2000, 2001, 2002 by Neil Winton. All Rights Reserved.
+ Copyright (c) 1999-2003 by Neil Winton. All Rights Reserved.
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -2284,4 +2432,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.19 2002-05-29 07:59:58 ndwinton Exp $
+ $Id: zebedee.pod,v 1.20 2003-06-19 13:58:07 ndwinton Exp $

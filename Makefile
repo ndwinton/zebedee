@@ -1,11 +1,11 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.16 2003-06-04 08:03:52 ndwinton Exp $
+# $Id: Makefile,v 1.17 2003-06-19 13:58:07 ndwinton Exp $
 
-ZBD_VERSION = 2.4.1
+ZBD_VERSION = 2.5.0
 
-OS = 
+OS =
 
 ###
 ### Locations of tools, libraries and installation directories.
@@ -133,8 +133,15 @@ ISCOMP = "c:/Program Files/Inno Setup 2/compil32.exe"
 # Thread stack size:
 #   The default is 32k but this can be overridded with the THREAD_STACK_SIZE
 #   definition. Currently this has only been found to be necessary on MacOSX.
+#
+# Windows FD_SETSIZE:
+#   Windows suffers from a fixed (at compile time) limit on the number of
+#   sockets that can be handled by a select() call. The default is set to
+#   512, which should enable a server to handle about 250 simultaneous
+#   connections. If you need more then change the definition.
+#
 
-DEFINES_win32 =
+DEFINES_win32 = -DFD_SETSIZE=512
 DEFINES_linux = -DHAVE_PTHREADS
 DEFINES_solaris = -D_REENTRANT -DHAVE_PTHREADS
 DEFINES_freebsd = -DHAVE_PTHREADS -DBUGGY_FORK_WITH_THREADS
