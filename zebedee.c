@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.37 2003-09-17 07:54:44 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.38 2003-09-17 12:53:08 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -157,6 +157,7 @@ extern int svcRemove(char *name);
 #include <libnet.h>
 #endif
 #include <pwd.h>
+#include <sys/filio.h>
 
 #ifndef INADDR_NONE
 #define INADDR_NONE 0xffffffff
@@ -1471,42 +1472,56 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 
     case CHECKSUM_ADLER:
 	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
+	crc32exp = ntohl(crc32exp);
 	crc32in = (unsigned long)adler32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
 	crc32in = (unsigned long)adler32(crc32in, (unsigned char *)&msg->tmp, size);
 	checksumOk = (crc32exp == crc32in);
-	memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
 	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
+	crc32in = htonl(crc32in);
+	memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
 	break;
 
     case CHECKSUM_CRC32:
 	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
+	crc32exp = ntohl(crc32exp);
 	crc32in = (unsigned long)crc32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
 	crc32in = (unsigned long)crc32(crc32in, (unsigned char *)&msg->tmp, size);
 	checksumOk = (crc32exp == crc32in);
-	memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
 	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
+	crc32in = htonl(crc32in);
+	memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
 	break;
 
     case CHECKSUM_SHA:
 	sha_init(&shaExp);
 	sha_init(&shaIn);
 	memcpy(shaExp.digest, msg->tmp + size, sizeof(shaExp.digest));
+	shaExp.digest[0] = ntohl(shaExp.digest[0]);
+	shaExp.digest[1] = ntohl(shaExp.digest[1]);
+	shaExp.digest[2] = ntohl(shaExp.digest[2]);
+	shaExp.digest[3] = ntohl(shaExp.digest[3]);
+	shaExp.digest[4] = ntohl(shaExp.digest[4]);
 	sha_update(&shaIn, (SHA_BYTE *)&msg->inSeed, sizeof(msg->inSeed));
 	sha_update(&shaIn, (SHA_BYTE *)&msg->tmp, size);
 	sha_final(&shaIn);
 	checksumOk = (memcmp(&shaIn.digest, &shaExp.digest, sizeof(shaIn.digest)) == 0);
+	shaIn.digest[0] = htonl(shaIn.digest[0]);
+	shaIn.digest[1] = htonl(shaIn.digest[1]);
+	shaIn.digest[2] = htonl(shaIn.digest[2]);
+	shaIn.digest[3] = htonl(shaIn.digest[3]);
+	shaIn.digest[4] = htonl(shaIn.digest[4]);
 	memcpy(&(msg->inSeed), &shaIn.digest, sizeof(shaIn.digest));
 	message(5, 0, "expected checksum %08lx%08lx%08lx%08lx%08lx, calculated checksum %08lx%08lx%08lx%08lx%08lx",
-		(unsigned long)shaExp.digest[0],
-		(unsigned long)shaExp.digest[1],
-		(unsigned long)shaExp.digest[2],
-		(unsigned long)shaExp.digest[3],
-		(unsigned long)shaExp.digest[4],
-		(unsigned long)shaIn.digest[0],
-		(unsigned long)shaIn.digest[1],
-		(unsigned long)shaIn.digest[2],
-		(unsigned long)shaIn.digest[3],
-		(unsigned long)shaIn.digest[4]);
+		ntohl((unsigned long)shaExp.digest[0]),
+		ntohl((unsigned long)shaExp.digest[1]),
+		ntohl((unsigned long)shaExp.digest[2]),
+		ntohl((unsigned long)shaExp.digest[3]),
+		ntohl((unsigned long)shaExp.digest[4]),
+		ntohl((unsigned long)shaIn.digest[0]),
+		ntohl((unsigned long)shaIn.digest[1]),
+		ntohl((unsigned long)shaIn.digest[2]),
+		ntohl((unsigned long)shaIn.digest[3]),
+		ntohl((unsigned long)shaIn.digest[4]));
 	break;
 
     default:
@@ -1660,15 +1675,15 @@ writeMessage(int fd, MsgBuf_t *msg)
 
     case CHECKSUM_ADLER:
 	crc = (unsigned long)adler32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
-	crc = (unsigned long)adler32(crc, data, size);
+	crc = htonl((unsigned long)adler32(crc, data, size));
 	memcpy(data + size, &crc, sizeof(crc));
 	memcpy(&msg->outSeed, &crc, sizeof(crc));
-	message(5, 0, "calculated checksum %#08lx", crc);
+	message(5, 0, "calculated checksum %#08lx", ntohl(crc));
 	break;
 
     case CHECKSUM_CRC32:
 	crc = (unsigned long)crc32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
-	crc = (unsigned long)crc32(crc, data, size);
+	crc = htonl((unsigned long)crc32(crc, data, size));
 	memcpy(data + size, &crc, sizeof(crc));
 	memcpy(&msg->outSeed, &crc, sizeof(crc));
 	message(5, 0, "calculated checksum %#08lx", crc);
@@ -1679,14 +1694,19 @@ writeMessage(int fd, MsgBuf_t *msg)
 	sha_update(&sha, (SHA_BYTE *)&msg->outSeed, sizeof(msg->outSeed));
 	sha_update(&sha, (SHA_BYTE *)data, size);
 	sha_final(&sha);
+	sha.digest[0] = htonl(sha.digest[0]);
+	sha.digest[1] = htonl(sha.digest[1]);
+	sha.digest[2] = htonl(sha.digest[2]);
+	sha.digest[3] = htonl(sha.digest[3]);
+	sha.digest[4] = htonl(sha.digest[4]);
 	memcpy(data + size, &sha.digest, sizeof(sha.digest));
 	memcpy(&msg->outSeed, &sha.digest, sizeof(sha.digest));
 	message(5, 0, "calculated checksum %08lx%08lx%08lx%08lx%08lx",
-		(unsigned long)sha.digest[0],
-		(unsigned long)sha.digest[1],
-		(unsigned long)sha.digest[2],
-		(unsigned long)sha.digest[3],
-		(unsigned long)sha.digest[4]);
+		(unsigned long)ntohl(sha.digest[0]),
+		(unsigned long)ntohl(sha.digest[1]),
+		(unsigned long)ntohl(sha.digest[2]),
+		(unsigned long)ntohl(sha.digest[3]),
+		(unsigned long)ntohl(sha.digest[4]));
 	break;
 
     default:
@@ -5689,6 +5709,11 @@ client(FnArgs_t *argP)
     */
     if (protocol >= PROTOCOL_V202)
     {
+	sha.digest[0] = htonl(sha.digest[0]);
+	sha.digest[1] = htonl(sha.digest[1]);
+	sha.digest[2] = htonl(sha.digest[2]);
+	sha.digest[3] = htonl(sha.digest[3]);
+	sha.digest[4] = htonl(sha.digest[4]);
 	memcpy(msg->inSeed, &sha.digest, sizeof(sha.digest));
 	memcpy(msg->outSeed, &sha.digest, sizeof(sha.digest));
     }
@@ -6520,6 +6545,11 @@ server(FnArgs_t *argP)
     {
 	sha_update(&sha, hdrData, hdrSize);
 	sha_final(&sha);
+	sha.digest[0] = htonl(sha.digest[0]);
+	sha.digest[1] = htonl(sha.digest[1]);
+	sha.digest[2] = htonl(sha.digest[2]);
+	sha.digest[3] = htonl(sha.digest[3]);
+	sha.digest[4] = htonl(sha.digest[4]);
 	memcpy(msg->inSeed, &sha.digest, sizeof(sha.digest));
 	memcpy(msg->outSeed, &sha.digest, sizeof(sha.digest));
     }

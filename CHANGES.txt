@@ -1,5 +1,8 @@
 * Release 2.5.2
 
+Cross-platform fix for checksumming code. This is *incompatible* with version
+2.5.1. Sorry :-(
+
 Upgrade to Inno Setup 4.
 
 More documentation fixes.
