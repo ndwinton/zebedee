@@ -580,10 +580,11 @@ This keyword is equivalent to the comnmand-line arguments of the same form
 (see L<Multiple Destinations>). It may be repeated multiple times. The final
 target host specified, either using the this keyword or on the command line,
 becomes the default destination for tunnels when a client specifies the
-server's host-name as the destination. Be careful when using CIDR addresses as
-targets that the last target specified will be valid default address. In the
-case of a CIDR address the IP portion alone will be taken as the target. This
-may not be what you want or expect.
+server's host-name as the destination.
+
+Be careful when using CIDR addresses as targets that the last target specified
+will be valid default address. If the default target has an address mask
+then B<Zebedee> will flag this as an error and exit.
 
 =item B<transparent>
 
@@ -1916,4 +1917,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.6 2002-03-15 10:47:07 ndwinton Exp $
+ $Id: zebedee.pod,v 1.7 2002-03-22 15:47:18 ndwinton Exp $
