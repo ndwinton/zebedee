@@ -5,6 +5,9 @@ If set to non-zero then remote data reads must be completed within this number
 of seconds. This primarily affects the Zebedee protocol exchanges, idle
 connection timeouts are handled through "idletimeout".
 
+Added "no linger" and "keep alive" options to sockets accepted by client
+or server in order to clean up better in the case of the peer hanging.
+
 Prohibit the default target from having an address mask. It's too confusing
 otherwise!
 
@@ -12,7 +15,7 @@ Fix handling of TCP connections in mixed mode.
 
 Improved some comments in the code.
 
-Fix short writes on OpenBSD (thanks to Jon Leonard for this).
+Fix short writes that show up on OpenBSD (thanks to Jon Leonard for this).
 
 Revised the example config files to make them more secure by default and to
 use more modern constructs.
