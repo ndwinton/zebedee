@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.9 2002-03-11 16:24:16 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.10 2002-03-12 15:12:30 ndwinton Exp $";
 #define RELEASE_STR "2.3.1"
 
 #include <stdio.h>
@@ -435,6 +435,8 @@ char *ClientHost = NULL;	/* Server initiates connection to client */
 int ListenSock = -1;		/* Socket on which to listen for server */
 unsigned short ConnectTimeout = DFLT_CONN_TIMEOUT;  /* Timeout for server connections */
 int ActiveCount = 0;		/* Count of active handlers */
+char *ProxyHost = NULL;		/* HTTP proxy host, if used */
+unsigned short ProxyPort = 0;	/* HTTP proxy port, if used */
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -492,7 +494,8 @@ int writeMessage(int fd, MsgBuf_t *msg);
 int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 
 int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr **addrList, unsigned long *maskP);
-int makeConnection(const char *host, const unsigned short port, int udpMode, struct sockaddr_in *localAddrP);
+int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *localAddrP);
+int proxyConnection(const char *host, const unsigned short port, struct sockaddr_in *localAddrP);
 int makeListener(unsigned short *portP, char *listenIp, int udpMode);
 int acceptConnection(int listenFd, const char *host, int loop, unsigned short timeout);
 
@@ -1566,7 +1569,9 @@ getHostAddress(const char *host,
 **
 ** Set up a socket connection to the specified host and port. The host
 ** name can either be a DNS name or a string IP address. If udpMode is
-** true then a UDP socket is created but it is not "connected".
+** true then a UDP socket is created but it is not "connected". If useProxy
+** is true and a TCP connection is requested then we will try to connect
+** via a HTTP proxy.
 **
 ** If toAddrP is not NULL then the address of the destination
 ** endpoint is returned.
@@ -1574,7 +1579,7 @@ getHostAddress(const char *host,
 
 int
 makeConnection(const char *host, const unsigned short port,
-	       int udpMode, struct sockaddr_in *toAddrP)
+	       int udpMode, int useProxy, struct sockaddr_in *toAddrP)
 {
     int sfd = -1;
     struct sockaddr_in addr;
@@ -1584,6 +1589,21 @@ makeConnection(const char *host, const unsigned short port,
     /* Sanity check */
 
     assert(host != NULL && port != 0);
+
+    /*
+    ** Check for connection via proxy and handle if necessary. This should
+    ** only be applied to TCP connections between client and server.
+    */
+
+    if (!udpMode && useProxy)
+    {
+	/* Only try if a proxy has been set */
+
+	if (ProxyHost && ProxyPort)
+	{
+	    return proxyConnection(host, port, toAddrP);
+	}
+    }
 
     /* Translate hostname from DNS or IP-address form */
 
@@ -1631,6 +1651,73 @@ makeConnection(const char *host, const unsigned short port,
     }
 
     return sfd;
+}
+
+/*
+** proxyConnection
+**
+*/
+
+int
+proxyConnection(const char *host, const unsigned short port,
+		struct sockaddr_in *toAddrP)
+{
+    int fd = -1;
+    char buf[MAX_LINE_SIZE + 1];
+    int num = 0;
+    int total = 0;
+    char *bufP = NULL;
+
+
+    message(4, 0, "connecting to %s:%hu via proxy %s:%hu", host, port, ProxyHost, ProxyPort);
+
+    if ((fd = makeConnection(ProxyHost, ProxyPort, 0, 0, toAddrP)) == -1)
+    {
+	message(0, errno, "can't connect to proxy server at %s:%hu", ProxyHost, ProxyPort);
+	return -1;
+    }
+
+    message(5, 0, "connected to proxy");
+
+    buf[MAX_LINE_SIZE] = '\0';
+    snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nUser-Agent: Zebedee\r\n\r\n", host, port);
+    if (send(fd, buf, strlen(buf), 0) <= 0)
+    {
+	message(0, errno, "failed writing to proxy server");
+    }
+
+    message(5, 0, "written connect string");
+
+    bufP = buf;
+    do
+    {
+	if ((num = recv(fd, bufP, (MAX_LINE_SIZE - total), 0)) <= 0)
+	{
+	    message(0, errno, "failed reading response from proxy");
+	    closesocket(fd);
+	    return -1;
+	}
+	total += num;
+	bufP += num;
+	*bufP = '\0';
+	message(5, 0, "read %d bytes from proxy: %s", num, bufP - num);
+    }
+    while(total < MAX_LINE_SIZE && strncmp(bufP - 4, "\r\n\r\n", 4));
+
+    if (strncmp(buf, "HTTP/1.0 200", 12))
+    {
+	if ((bufP = strchr(buf, '\r')) != NULL)
+	{
+	    *bufP = '\0';
+	}
+	message(0, 0, "proxy server refused connection to %s:%h (%s)", host, port, buf);
+	closesocket(fd);
+	return -1;
+    }
+
+    message(4, 0, "connection via proxy successful");
+
+    return fd;
 }
 
 /*
@@ -1769,7 +1856,7 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 	if (!getHostAddress(host, &hostAddr, &addrList, &mask))
 	{
 	    message(0, 0, "can't resolve host or address '%s'", host);
-	    close(serverFd);
+	    closesocket(serverFd);
 	    errno = 0;
 	    return -1;
 	}
@@ -1853,7 +1940,7 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 
 	message(1, 0, "Warning: connection from %s rejected, does not match server host %s",
 		inet_ntoa(fromAddr.sin_addr), host);
-	close(serverFd);
+	closesocket(serverFd);
 	errno = 0;
 	if (!loop)
 	{
@@ -4393,7 +4480,7 @@ client(FnArgs_t *argP)
     {
 	message(3, 0, "making connection to %s:%hu", serverHost, serverPort);
 
-	if ((serverFd = makeConnection(serverHost, serverPort, 0, NULL)) == -1)
+	if ((serverFd = makeConnection(serverHost, serverPort, 0, 1, NULL)) == -1)
 	{
 	    message(0, errno, "can't connect to %s port %hu", serverHost, serverPort);
 	    goto fatal;
@@ -5002,7 +5089,7 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
     {
 	message(2, 0, "initiating connection back to client at %s:%hu", clientHost, port);
 
-	if ((clientFd = makeConnection(clientHost, port, 0, NULL)) == -1)
+	if ((clientFd = makeConnection(clientHost, port, 0, 1, NULL)) == -1)
 	{
 	    message(0, errno, "failed to connect back to client at %s:%hu", clientHost, port);
 	    exit(EXIT_FAILURE);
@@ -5043,7 +5130,7 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
 	}
     }
 
-    close(clientFd);
+    closesocket(clientFd);
 
     /* Wait for all other threads to exit */
 
@@ -5247,7 +5334,7 @@ server(FnArgs_t *argP)
 	    message(3, 0, "opening connection to port %hu on %s", request, targetHost);
 
 	    memset(&localAddr, 0, sizeof(localAddr));
-	    if ((localFd = makeConnection(targetHost, request, udpMode, &localAddr)) == -1)
+	    if ((localFd = makeConnection(targetHost, request, udpMode, 0, &localAddr)) == -1)
 	    {
 		port = 0;
 		message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
@@ -5413,7 +5500,7 @@ server(FnArgs_t *argP)
 	message(3, 0, "opening connection to port %hu on %s", request, targetHost);
 
 	memset(&localAddr, 0, sizeof(localAddr));
-	if ((localFd = makeConnection(targetHost, request, udpMode, &localAddr)) == -1)
+	if ((localFd = makeConnection(targetHost, request, udpMode, 0, &localAddr)) == -1)
 	{
 	    message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
 	    writeUShort(clientFd, 0);
@@ -6497,6 +6584,15 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "connecttimeout")) setUShort(value, &ConnectTimeout);
     else if (!strcasecmp(key, "target")) setTarget(value);
     else if (!strcasecmp(key, "tunnel")) setTunnel(value);
+    else if (!strcasecmp(key, "httpproxy"))
+    {
+	setString(value, &ProxyHost);
+	if (sscanf(value, "%[^:]:%hu", ProxyHost, &ProxyPort) != 2)
+	{
+	    message(0, 0, "invalid httpproxy specification: %s", value);
+	    ProxyHost = NULL;
+	}
+     }
     else
     {
 	return 0;
@@ -6550,7 +6646,7 @@ void
 usage(void)
 {
     fprintf(stderr, "Zebedee -- A Secure Tunnel Program: Release %s\n", RELEASE_STR);
-    fprintf(stderr, "Copyright (c) 1999, 2000, 2001 by Neil Winton. All Rights Reserved.\n");
+    fprintf(stderr, "Copyright (c) 1999, 2000, 2001, 2002 by Neil Winton. All Rights Reserved.\n");
     fprintf(stderr,
 	    "This program is free software and may be distributed under the terms of the\n"
 	    "GNU General Public License, Version 2.\n");
