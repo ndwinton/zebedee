@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.25 2002-05-28 06:31:15 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.26 2003-02-04 07:34:05 ndwinton Exp $";
 #define RELEASE_STR "2.4.1"
 
 #include <stdio.h>
@@ -93,6 +93,15 @@ typedef Huge *mpz_t;
 ** Windows-specific include files and macros
 */
 
+#ifndef FD_SETSIZE
+/*
+** This allows us to manipulate up to 512 sockets in a select call (i.e.
+** handle up to about 256 simultaneous tunnels). It can be overridden at
+** compile time.
+*/
+#define FD_SETSIZE	512
+#endif
+
 #include <windows.h>
 #include <io.h>
 #include <winsock.h>
@@ -106,6 +115,7 @@ typedef Huge *mpz_t;
 #define FILE_SEP_CHAR	'\\'
 #define snprintf	_snprintf
 #define vsnprintf	_vsnprintf
+#define strcasecmp	_stricmp
 
 /*
 ** Winsock state data
@@ -144,6 +154,7 @@ extern int svcRemove(char *name);
 #ifdef USE_UDP_SPOOFING
 #include <libnet.h>
 #endif
+#include <pwd.h>
 
 #define DFLT_SHELL	"/bin/sh"
 #define FILE_SEP_CHAR	'/'
@@ -294,7 +305,9 @@ BFState_t;
 ** The host element holds the name of the host associated with the port
 ** range, addr the matching IP address and addrList, a list of alias
 ** addresses. The mask is used if an address mask was specified. The type
-** is a bitmask combination of PORTLIST_UDP and PORTLIST_UDP.
+** is a bitmask combination of PORTLIST_UDP and PORTLIST_UDP. The idFile
+** is the name of the identity file that should be checked for connections
+** to this endpoint.
 */
  
 typedef struct PortList_s
@@ -302,6 +315,7 @@ typedef struct PortList_s
     unsigned short lo;
     unsigned short hi;
     char *host;
+    char *idFile;
     struct sockaddr_in addr;
     struct in_addr *addrList;
     struct PortList_s *next;
@@ -450,12 +464,17 @@ unsigned short ConnectTimeout = DFLT_CONN_TIMEOUT;  /* Timeout for server connec
 unsigned short ReadTimeout = 0; /* Timeout for remote data reads */
 int ActiveCount = 0;		/* Count of active handlers */
 char *ProxyHost = NULL;		/* HTTP proxy host, if used */
+char *ProxyAuth = NULL;		/* HTTP proxy username:password, if used */
 unsigned short ProxyPort = 0;	/* HTTP proxy port, if used */
 int Transparent = 0;		/* Try to propagate the client IP address */
 char *FieldSeparator = NULL;	/* Input field separator character */
 char *SharedKey = NULL;		/* Static shared secret key */
 char *SharedKeyGenCmd = NULL;	/* Command to generate shared secret key */
 int DumpData = 0;		/* Dump out message contents only if true */
+#ifndef WIN32
+uid_t ProcessUID = -1;		/* User id to run zebedee process if started as root */
+gid_t ProcessGID = -1;          /* Group id to run zebedee process if started as root */
+#endif
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -568,7 +587,7 @@ void prepareToDetach(void);
 void makeDetached(void);
 void serverListener(unsigned short *portPtr);
 void serverInitiator(char *client, unsigned short port, unsigned short timeout);
-int allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char **hostP);
+int allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char **hostP, char **idFileP);
 int checkPeerAddress(int fd, struct sockaddr_in *addrP);
 int countPorts(PortList_t *list);
 unsigned short mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP);
@@ -579,9 +598,9 @@ unsigned short scanPortRange(const char *str, unsigned short *loP,
 void setBoolean(char *value, int *resultP);
 void setUShort(char *value, unsigned short *resultP);
 void setPort(char *value, unsigned short *resultP);
-PortList_t *newPortList(unsigned short lo, unsigned short hi, char *host, unsigned short type);
-PortList_t *allocPortList(unsigned short lo, unsigned short hi, char *host, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask, unsigned short type);
-void setPortList(char *value, PortList_t **listP, char *host, int zeroOk);
+PortList_t *newPortList(unsigned short lo, unsigned short hi, char *host, char *idFile, unsigned short type);
+PortList_t *allocPortList(unsigned short lo, unsigned short hi, char *host, char *idFile, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask, unsigned short type);
+void setPortList(char *value, PortList_t **listP, char *host, char *idFile, int zeroOk);
 void setTarget(char *value);
 void setTunnel(char *value);
 void setAllowedPeer(char *value);
@@ -598,6 +617,9 @@ void usage(void);
 void sigpipeCatcher(int sig);
 void sigchldCatcher(int sig);
 void sigusr1Catcher(int sig);
+
+void runAsUser(const char *user);
+void switchUser(void);
 
 /*************************************\
 **				     **
@@ -1800,6 +1822,98 @@ makeConnection(const char *host, const unsigned short port,
 }
 
 /*
+** base64Encode
+**
+** Encode a string using base64 encoding.
+*/
+
+char *
+base64Encode(char *str)
+{
+    static char *encoding = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			    "abcdefghijklmnopqrstuvwxyz"
+			    "0123456789+/";
+    char *s = NULL;
+    char *buf = NULL;
+    int len = -1;
+    int i = 0;
+    unsigned long bits;
+
+
+    if (str == NULL)
+    {
+	return NULL;
+    }
+
+    len = strlen(str);
+
+    /*
+    ** Base64 encoding expands 6 bits to 1 char, padded with '=', if
+    ** necessary.
+    */
+
+    if ((buf = malloc(4 * ((len + 2) / 3) + 1)) == NULL)
+    {
+	return NULL;
+    }
+    
+    s = buf;
+    for (i = 0; i <= len - 3; i += 3)
+    {
+	bits = ((unsigned long)(str[i])) << 24;
+	bits |= ((unsigned long)(str[i + 1])) << 16;
+	bits |= ((unsigned long)(str[i + 2])) << 8;
+
+	*s++ = encoding[bits >> 26];
+	bits <<= 6;
+	*s++ = encoding[bits >> 26];
+	bits <<= 6;
+	*s++ = encoding[bits >> 26];
+	bits <<= 6;
+	*s++ = encoding[bits >> 26];
+    }
+
+    switch (len % 3)
+    {
+    case 0:
+	bits = ((unsigned long)(str[i])) << 24;
+	bits |= ((unsigned long)(str[i + 1])) << 16;
+	bits |= ((unsigned long)(str[i + 2])) << 8;
+	*s++ = encoding[bits >> 26];
+	bits <<= 6;
+	*s++ = encoding[bits >> 26];
+	bits <<= 6;
+	*s++ = encoding[bits >> 26];
+	bits <<= 6;
+	*s++ = encoding[bits >> 26];
+	break;
+
+    case 2:
+	bits = ((unsigned long)(str[len - 2])) << 24;
+	bits |= ((unsigned long)(str[len - 1])) << 16;
+	*s++ = encoding[bits >> 26];
+	bits <<= 6;
+	*s++ = encoding[bits >> 26];
+	bits <<= 6;
+	*s++ = encoding[bits >> 26];
+	*s++ = '=';
+	break;
+
+    case 1:
+	bits = ((unsigned long)(str[len - 2])) << 24;
+	*s++ = encoding[bits >> 26];
+	bits <<= 6;
+	*s++ = encoding[bits >> 26];
+	*s++ = '=';
+	*s++ = '=';
+	break;
+    }
+
+    *s = '\0';
+    return buf;
+}
+
+/*
 ** proxyConnection
 **
 ** Make a connection to the specified host and port via an HTTP proxy
@@ -1812,6 +1926,9 @@ makeConnection(const char *host, const unsigned short port,
 ** proxy server owners some chance of blocking Zebedee if they wish to,
 ** the connect method header contains a "User-Agent: Zebedee" line. Unless
 ** someone has modified this code, that is :-)
+**
+** If ProxyAuth is not NULL it should be the base64-encoded username:password
+** which will be passed to the proxy server.
 */
 
 int
@@ -1847,9 +1964,17 @@ proxyConnection(const char *host, const unsigned short port,
     ** also be that no proxies currently look at or use this information
     ** but it is there if necessary.
     */
-
+    
     buf[MAX_LINE_SIZE] = '\0';
-    snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nUser-Agent: Zebedee\r\n\r\n", host, port);
+    if (ProxyAuth)
+    {
+	snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nProxy-Authorization: Basic %s\r\nUser-Agent: Zebedee\r\n\r\n", host, port, ProxyAuth);
+    }
+    else
+    {
+	snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nUser-Agent: Zebedee\r\n\r\n", host, port);
+    }
+
     if (send(fd, buf, strlen(buf), 0) <= 0)
     {
 	message(0, errno, "failed writing to proxy server");
@@ -3920,12 +4045,14 @@ makeDetached(void)
 **
 ** Returns 1 if it is or 0 otherwise.
 **
-** The target hostname is also returned via hostP (this storage must be
-** later freed by the caller).
+** The target hostname is returned via hostP (this storage must be
+** later freed by the caller). The associated identity file, if any
+** is returned via idFileP.
 */
 
 int
-allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char **hostP)
+allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode,
+	      char **hostP, char **idFileP)
 {
     PortList_t *lp1, *lp2;
     struct in_addr *alp = NULL;
@@ -3934,6 +4061,9 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char 
 
 
     assert(AllowedTargets != NULL);
+
+    *hostP = NULL;
+    *idFileP = NULL;
 
     /*
     ** If the address is all zeroes then we will assume the default target
@@ -3998,6 +4128,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char 
 	    if (AllowedDefault == NULL)
 	    {
 		message(4, 0, "no default port restrictions, port is allowed");
+		*idFileP = lp1->idFile;
 		return 1;
 	    }
 
@@ -4009,6 +4140,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char 
 		{
 		    if (lp2->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP))
 		    {
+			*idFileP = lp1->idFile;
 			return 1;
 		    }
 		}
@@ -4021,6 +4153,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char 
 	{
 	    if (lp1->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP))
 	    {
+		*idFileP = lp1->idFile;
 		return 1;
 	    }
 	}
@@ -4553,26 +4686,6 @@ clientListener(PortList_t *ports)
 	exit(EXIT_FAILURE);
     }
 
-    /* Spawn the sub-command, if specified */
-
-    if (CommandString)
-    {
-	message(3, 0, "spawning command '%s'", CommandString);
-
-	if (!spawnCommand(ports->lo, CommandString))
-	{
-	    exit(EXIT_FAILURE);
-	}
-    }
-
-    /* Detach from terminal, if required */
-
-    if (IsDetached)
-    {
-	message(3, 0, "detaching from terminal");
-	makeDetached();
-    }
-
     /*
     ** If running in "listen mode" the client must listen for the server
     ** to connect back to it.
@@ -4585,6 +4698,30 @@ clientListener(PortList_t *ports)
 	if ((ListenSock = makeListener(&ServerPort, ListenIp, 0)) == -1)
 	{
 	    message(0, errno, "can't create listener socket for server connection");
+	    exit(EXIT_FAILURE);
+	}
+    }
+
+    /* Detach from terminal, if required */
+
+    if (IsDetached)
+    {
+	message(3, 0, "detaching from terminal");
+	makeDetached();
+    }
+
+    /* Change user ID, if required */
+
+    switchUser();
+
+    /* Spawn the sub-command, if specified */
+
+    if (CommandString)
+    {
+	message(3, 0, "spawning command '%s'", CommandString);
+
+	if (!spawnCommand(ports->lo, CommandString))
+	{
 	    exit(EXIT_FAILURE);
 	}
     }
@@ -4863,6 +5000,7 @@ client(FnArgs_t *argP)
     unsigned char clientNonce[NONCE_SIZE];
     unsigned char serverNonce[NONCE_SIZE];
     char *targetHost = NULL;
+    char *idFile = NULL;
     struct sockaddr_in peerAddr;
     struct sockaddr_in targetAddr;
     int inLine = argP->inLine;
@@ -5484,6 +5622,10 @@ serverListener(unsigned short *portPtr)
 	makeDetached();
     }
 
+    /* Change user ID, if required */
+
+    switchUser();
+
     while (1)
     {
 	message(1, 0, "waiting for connection on port %hu", *portPtr);
@@ -5520,6 +5662,7 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
     struct timeval delay;
     fd_set testSet;
     int ready;
+    int firstTime = 1;
 
 
     while (1)
@@ -5532,15 +5675,23 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
 	    exit(EXIT_FAILURE);
 	}
 
-	/*
-	** Now is the time to detach, if we are going to do so. The check
-	** against -1 is so that we don't try to do this multiple times.
-	*/
-
-	if (IsDetached && IsDetached != -1)
+	if (firstTime)
 	{
-	    message(3, 0, "detaching from terminal");
-	    makeDetached();
+	    /*
+	    ** Now is the time to detach, if we are going to do so.
+	    */
+
+	    if (IsDetached)
+	    {
+		message(3, 0, "detaching from terminal");
+		makeDetached();
+	    }
+
+	    /* Change user ID, if required */
+
+	    switchUser();
+
+	    firstTime = 0;
 	}
 
 	/*
@@ -5600,6 +5751,7 @@ server(FnArgs_t *argP)
     int localFd = -1;
     unsigned short request = 0;
     unsigned short response = 0;
+    unsigned short result = 0;
     unsigned short cmpInfo = CompressInfo;
     unsigned short keyBits = KeyLength;
     unsigned short port = 0;
@@ -5620,6 +5772,7 @@ server(FnArgs_t *argP)
     unsigned char clientNonce[NONCE_SIZE];
     unsigned char serverNonce[NONCE_SIZE];
     char *targetHost = TargetHost;
+    char *idFile = NULL;
     int inLine = argP->inLine;
     int udpMode = argP->udpMode;    /* Overridden by client request */
     char ipBuf[IP_BUF_SIZE];
@@ -5774,7 +5927,7 @@ server(FnArgs_t *argP)
 
 	message(3, 0, "checking if redirection is allowed");
 
-	if (allowRedirect(request, &localAddr, udpMode, &targetHost))
+	if (allowRedirect(request, &localAddr, udpMode, &targetHost, &idFile))
 	{
 	    message(3, 0, "allowed redirection request to %s:%hu", targetHost, request);
 
@@ -5785,7 +5938,7 @@ server(FnArgs_t *argP)
 	    */
 
 	    message(3, 0, "opening connection to port %hu on %s", request, targetHost);
-
+	    
 	    memset(&localAddr, 0, sizeof(localAddr));
 	    if ((localFd = makeConnection(targetHost, request, udpMode, 0,
 					  (Transparent ? &peerAddr : NULL),
@@ -5943,7 +6096,7 @@ server(FnArgs_t *argP)
 
 	message(3, 0, "checking if redirection is allowed");
 
-	if (!allowRedirect(request, &localAddr, udpMode, &targetHost))
+	if (!allowRedirect(request, &localAddr, udpMode, &targetHost, &idFile))
 	{
 	    message(0, 0, "client requested redirection to a disallowed port (%s:%hu/%s)", request);
 	    writeUShort(clientFd, 0);
@@ -6164,17 +6317,22 @@ server(FnArgs_t *argP)
 	** to validate the client identity.
 	*/
 
-	if (IdentityFile)
+	if (idFile == NULL)
 	{
-	    message(3, 0, "checking key against identity file '%s'", IdentityFile);
+	    /* Use the default file if no specific file was given */
+	    idFile = IdentityFile;
+	}
 
-	    if (!checkIdentity(IdentityFile, Generator, Modulus, clientDhKey))
+	if (idFile)
+	{
+	    message(3, 0, "checking key against identity file '%s'", idFile);
+
+	    if (!(result = checkIdentity(idFile, Generator, Modulus, clientDhKey)))
 	    {
-		message(0, 0, "client's key identity not found in '%s'", IdentityFile);
+		message(0, 0, "client's key identity not found in '%s'", idFile);
 		goto fatal;
 	    }
 	}
-
 
 	/* Now generate the shared secret key */
 
@@ -6467,7 +6625,11 @@ setPort(char *value, unsigned short *resultP)
 */
 
 PortList_t *
-newPortList(unsigned short lo, unsigned short hi, char *host, unsigned short type)
+newPortList(unsigned short lo,
+	    unsigned short hi,
+	    char *host,
+	    char *idFile,
+	    unsigned short type)
 {
     PortList_t *new = NULL;
     struct sockaddr_in addr;
@@ -6483,11 +6645,11 @@ newPortList(unsigned short lo, unsigned short hi, char *host, unsigned short typ
 
     if (addrList)
     {
-	new = allocPortList(lo, hi, host, &(addr.sin_addr), addrList, mask, type);
+	new = allocPortList(lo, hi, host, idFile, &(addr.sin_addr), addrList, mask, type);
     }
     else
     {
-	new = allocPortList(lo, hi, NULL, NULL, NULL, 0xffffffff, type);
+	new = allocPortList(lo, hi, NULL, idFile, NULL, NULL, 0xffffffff, type);
     }
 
     return new;
@@ -6503,7 +6665,9 @@ newPortList(unsigned short lo, unsigned short hi, char *host, unsigned short typ
 
 PortList_t *
 allocPortList(unsigned short lo,
-	      unsigned short hi, char *host,
+	      unsigned short hi,
+	      char *host,
+	      char *idFile,
 	      struct in_addr *addrP,
 	      struct in_addr *addrList,
 	      unsigned long mask,
@@ -6521,6 +6685,7 @@ allocPortList(unsigned short lo,
     new->hi = hi;
     memset(&(new->addr), 0, sizeof(struct in_addr));
     new->host = NULL;
+    new->idFile = idFile;
     if (host && addrP)
     {
 	memcpy(&(new->addr.sin_addr), addrP, sizeof(struct in_addr));
@@ -6531,6 +6696,16 @@ allocPortList(unsigned short lo,
 	}
 	strcpy(new->host, host);
     }
+    if (idFile)
+    {
+    	if ((new->idFile =(char *)malloc(strlen(idFile) +1 )) == NULL)
+	{
+	    message(0, errno, "out of memory");
+	    return NULL;
+	}
+	strcpy(new->idFile, idFile);
+    }
+
     new->addrList = addrList;
     new->mask = mask;
     new->type = type;
@@ -6553,7 +6728,11 @@ allocPortList(unsigned short lo,
 */
 
 void
-setPortList(char *value, PortList_t **listP, char *host, int zeroOk)
+setPortList(char *value,
+	    PortList_t **listP,
+	    char *host,
+	    char *idFile,
+	    int zeroOk)
 {
     PortList_t *new = NULL;
     char *token = NULL;
@@ -6593,7 +6772,7 @@ setPortList(char *value, PortList_t **listP, char *host, int zeroOk)
 	{
 	    /* Allocate new list element */
 
-	    if ((new = newPortList(lo, hi, host, type)) == NULL)
+	    if ((new = newPortList(lo, hi, host, idFile, type)) == NULL)
 	    {
 		message(0, errno, "failed allocating memory for port list");
 		exit(EXIT_FAILURE);
@@ -6621,8 +6800,9 @@ setPortList(char *value, PortList_t **listP, char *host, int zeroOk)
 /*
 ** setTarget
 **
-** The target value is either of the form "hostname:portlist" or just a
-** plain hostname. In the latter case it will use the default port list
+** The target value is either of the form "hostname:portlist",
+** "hostname:portlist?idfile", or just a plain hostname.
+** In the latter case it will use the default port list
 ** (held in AllowedDefault) and also become the default target. Note that
 ** the last named target becomes the default.
 */
@@ -6632,15 +6812,21 @@ setTarget(char *value)
 {
     char target[MAX_LINE_SIZE];
     char portList[MAX_LINE_SIZE];
-
-
-    if (sscanf(value, "%[^:]:%s", target, portList) == 2)
+    char idFile[MAX_LINE_SIZE];
+    
+    if (sscanf(value, "%[^:]:%[^?]?%s", target, portList, idFile) == 3)
     {
-	setPortList(portList, &AllowedTargets, target, 0);
+    	setPortList(portList, &AllowedTargets, target, idFile, 0);	
+    }
+
+    else if (sscanf(value, "%[^:]:%s", target, portList) == 2)
+
+    {
+	setPortList(portList, &AllowedTargets, target, NULL, 0);
     }
     else
     {
-	setPortList("0", &AllowedTargets, target, 1);
+	setPortList("0", &AllowedTargets, target, NULL, 1);
     }
 
     /* Set the default target host */
@@ -6666,18 +6852,18 @@ setTunnel(char *value)
 
     if (sscanf(value, "%[^:]:%[^:]:%[^:]", clientList, hostName, targetList) == 3)
     {
-	setPortList(clientList, &ClientPorts, NULL, 0);
+	setPortList(clientList, &ClientPorts, NULL, NULL, 0);
 	if (ServerHost == NULL)
 	{
 	    setString(hostName, &ServerHost);
 	}
 	if (strcmp(hostName, "*") == 0)
 	{
-	    setPortList(targetList, &TargetPorts, NULL, 0);
+	    setPortList(targetList, &TargetPorts, NULL, NULL, 0);
 	}
 	else
 	{
-	    setPortList(targetList, &TargetPorts, hostName, 0);
+	    setPortList(targetList, &TargetPorts, hostName, NULL, 0);
 	}
     }
     else if (sscanf(value, "%[^:]:%[^:]", hostName, targetList) == 2)
@@ -6688,11 +6874,11 @@ setTunnel(char *value)
 	}
 	if (strcmp(hostName, "*") == 0)
 	{
-	    setPortList(targetList, &TargetPorts, NULL, 0);
+	    setPortList(targetList, &TargetPorts, NULL, NULL, 0);
 	}
 	else
 	{
-	    setPortList(targetList, &TargetPorts, hostName, 0);
+	    setPortList(targetList, &TargetPorts, hostName, NULL, 0);
 	}
 	if (countPorts(TargetPorts) != 1)
 	{
@@ -6729,11 +6915,11 @@ setAllowedPeer(char *value)
 
     if (sscanf(value, "%[^:]:%s", addr, portList) == 2)
     {
-	setPortList(portList, &AllowedPeers, addr, 0);
+	setPortList(portList, &AllowedPeers, addr, NULL, 0);
     }
     else
     {
-	setPortList("0", &AllowedPeers, addr, 1);
+	setPortList("0", &AllowedPeers, addr, NULL, 1);
     }
 }
 
@@ -7015,10 +7201,10 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "maxbufsize")) setUShort(value, &MaxBufSize);
     else if (!strcasecmp(key, "verbosity")) setUShort(value, &LogLevel);
     else if (!strcasecmp(key, "serverport")) setPort(value, &ServerPort);
-    else if (!strcasecmp(key, "localport")) setPortList(value, &ClientPorts, NULL, 0);
-    else if (!strcasecmp(key, "clientport")) setPortList(value, &ClientPorts, NULL, 0);
-    else if (!strcasecmp(key, "remoteport")) setPortList(value, &TargetPorts, NULL, 0);
-    else if (!strcasecmp(key, "targetport")) setPortList(value, &TargetPorts, NULL, 0);
+    else if (!strcasecmp(key, "localport")) setPortList(value, &ClientPorts, NULL, NULL, 0);
+    else if (!strcasecmp(key, "clientport")) setPortList(value, &ClientPorts, NULL, NULL, 0);
+    else if (!strcasecmp(key, "remoteport")) setPortList(value, &TargetPorts, NULL, NULL, 0);
+    else if (!strcasecmp(key, "targetport")) setPortList(value, &TargetPorts, NULL, NULL, 0);
     else if (!strcasecmp(key, "remotehost")) setString(value, &ServerHost);
     else if (!strcasecmp(key, "serverhost")) setString(value, &ServerHost);
     else if (!strcasecmp(key, "command"))
@@ -7047,11 +7233,11 @@ parseConfigLine(const char *lineBuf, int level)
 	    */
 
 	    AllowedDefault = NULL;
-	    setPortList("0-0", &AllowedDefault, NULL, 1);
+	    setPortList("0-0", &AllowedDefault, NULL, NULL, 1);
 	}
 	else
 	{
-	    setPortList(value, &AllowedDefault, NULL, 0);
+	    setPortList(value, &AllowedDefault, NULL, NULL, 0);
 	}
     }
     else if (!strcasecmp(key, "message")) message(1, 0, "%s", value);
@@ -7117,10 +7303,14 @@ parseConfigLine(const char *lineBuf, int level)
 	    message(0, 0, "invalid httpproxy specification: %s", value);
 	    ProxyHost = NULL;
 	}
-     }
+    }
+    else if (!strcasecmp(key, "httpproxyauth")) setString(base64Encode(value), &ProxyAuth);
     else if (!strcasecmp(key, "sharedkey")) setString(value, &SharedKey);
     else if (!strcasecmp(key, "sharedkeygencommand")) setString(value, &SharedKeyGenCmd);
     else if (!strcasecmp(key, "dumpdata")) setBoolean(value, &DumpData);
+#ifndef WIN32
+    else if (!strcasecmp(key, "runasuser")) setRunAsUser(value);
+#endif
     else
     {
 	return 0;
@@ -7205,6 +7395,9 @@ usage(void)
 	    "    -l          Client listens for server connection\n"
 	    "    -m          Client accepts multiple connections (default)\n"
 	    "    -n name     Specify program name\n"
+#ifndef WIN32 
+	    "    -N username If running as root, switch to this user\n"
+#endif  	
 	    "    -o file     Log output to specified file\n"
 	    "    -p          Generate private key\n"
 	    "    -P          Generate public key \"fingerprint\"\n"
@@ -7269,6 +7462,75 @@ sigusr1Catcher(int sig)
 #endif
 }
 
+/*
+** setRunAsUser
+**
+** Specify the user as which Zebedee should run, if currently running as root.
+*/
+
+void
+setRunAsUser(const char *user)
+{
+#ifndef WIN32
+    struct passwd *userent = NULL;
+
+    if (geteuid() != 0)
+    {
+	message(1, 0, "Warning: username to run as can only be specified if effective UID is root");
+	return;
+    }
+
+    if (user != NULL)
+    {
+	if ((userent = getpwnam(user)) != NULL)
+	{
+	    ProcessUID = userent->pw_uid;
+            ProcessGID = userent->pw_gid;
+        }
+	else
+	{
+	    /*
+	    ** This is a fatal error because failing to switch identity
+	    ** away from root if you are expecting to do so would be
+	    ** a Bad Thing.
+	    */
+
+	    message(0, 0, "invalid username '%s'", user);
+	    exit(EXIT_FAILURE);
+	}
+    }   
+#endif
+}
+
+/*
+** switchUser
+**
+** If we are running as root and another user has been specified
+** switch to this user and user's primary group and give up root
+** privilege.
+*/
+
+void
+switchUser(void)
+{
+#ifndef WIN32
+    if (ProcessUID != -1 && ProcessGID != -1)
+    {
+	if (setgid(ProcessGID) == -1)
+	{
+            message(0, errno, "cannot switch group ID to gid = %u", ProcessGID);
+            exit(EXIT_FAILURE);
+	}
+
+	if (setuid(ProcessUID) == -1)
+	{
+	    message(0, errno, "cannot switch user ID to uid = %u", ProcessUID);
+  	    exit(EXIT_FAILURE);		
+	}
+    }
+#endif   	
+}
+
 /******************\
 **		  **
 **  Main Routine  **
@@ -7286,6 +7548,7 @@ main(int argc, char **argv)
     char hashBuf[HASH_STR_SIZE];
     char *last;
     char *serviceArgs = NULL;
+
 
 
     /* Set program name to the last element of the path minus extension */
@@ -7315,7 +7578,7 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:lmn:o:pPr:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:lmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
@@ -7382,6 +7645,12 @@ main(int argc, char **argv)
 	    Program = optarg;
 	    break;
 
+#ifndef WIN32
+	case 'N':
+	    setRunAsUser(optarg);
+	    break;
+#endif
+
 	case 'o':
 	    setLogFile(optarg);
 	    break;
@@ -7405,16 +7674,18 @@ main(int argc, char **argv)
 	    break;
 
 	case 'r':
-	    setPortList(optarg, &AllowedDefault, NULL, 0);
+	    setPortList(optarg, &AllowedDefault, NULL, NULL, 0);
 	    break;
 
 	case 's':
 	    IsServer = 1;
 	    break;
 
+#ifdef WIN32
 	case 'S':
 	    serviceArgs = optarg;
 	    break;
+#endif
 
 	case 't':
 	    TimestampLog = 1;
@@ -7687,7 +7958,7 @@ main(int argc, char **argv)
 
 	if (AllowedTargets == NULL)
 	{
-	    AllowedTargets = newPortList(0, 0, "localhost", PORTLIST_ANY);
+	    AllowedTargets = newPortList(0, 0, "localhost", NULL, PORTLIST_ANY);
 	}
 
 #ifdef WIN32
@@ -7735,7 +8006,7 @@ main(int argc, char **argv)
 
 	if (TargetPorts == NULL)
 	{
-	    setPortList("telnet", &TargetPorts, ServerHost, 0);
+	    setPortList("telnet", &TargetPorts, ServerHost, NULL, 0);
 	}
 
 	/*
@@ -7747,7 +8018,7 @@ main(int argc, char **argv)
 
 	if (ClientPorts == NULL)
 	{
-	    if ((ClientPorts = newPortList(0, 0, NULL, PORTLIST_ANY)) == NULL)
+	    if ((ClientPorts = newPortList(0, 0, NULL, NULL, PORTLIST_ANY)) == NULL)
 	    {
 		message(0, errno, "can't allocate space for port list");
 		exit(EXIT_FAILURE);

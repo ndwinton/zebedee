@@ -1,3 +1,11 @@
+* Release 2.5
+
+Added "httpproxyauth" (thanks to James CE Johnson)
+
+Added "runasuser/-N" (thanks to Thomas Melzer)
+
+Added per-target ID checking (originally by Alain Turbide).
+
 * Release 2.4.1 (2002/05/29)
 
 Fixed incorrect selection of client TCP/UDP mode when handler function is
