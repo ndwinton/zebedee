@@ -9,6 +9,8 @@ Added per-target ID checking (originally by Alain Turbide).
 Fixed a bug with "anonymous" tunnel specs (using a "*" to default to
 the server address).
 
+Fixed bug writing to syslog when detached (thanks to Kyle Dent).
+
 * Release 2.4.1 (2002/05/29)
 
 Fixed incorrect selection of client TCP/UDP mode when handler function is

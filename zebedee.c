@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.27 2003-02-05 19:20:25 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.28 2003-02-20 07:31:47 ndwinton Exp $";
 #define RELEASE_STR "2.4.1"
 
 #include <stdio.h>
@@ -976,11 +976,11 @@ message(unsigned short level, int err, char *fmt, ...)
 
     /*
     ** If we are running detached and no logfile has been set then there
-    ** is nowhere for the messages to go. Worse still, under UNIX this
-    ** trying to write to stderr can hang the process.
+    ** is nowhere for the messages to go. Worse still, under UNIX,
+    ** trying to write to stderr when detached can hang the process.
     */
 
-    if (IsDetached == -1 && fp == NULL) return;
+    if (IsDetached == -1 && fp == NULL && LogFileType != LOGFILE_SYSLOG) return;
 
     va_start(args, fmt);
 
