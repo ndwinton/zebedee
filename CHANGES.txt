@@ -1,3 +1,11 @@
+* Release 2.5.1 (2003/07/05)
+
+Critical fix to the checksumming code, which wouldn't work if messages
+got out of sync between client and server. This is *incompatible* with
+version 2.5.0.
+
+Fixed documentation comments on message integrity.
+
 * Release 2.5.0 (2003/07/02)
 
 Dropped backwards compatibility with Zebedee 1.x versions of the protocol.

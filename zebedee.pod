@@ -1680,13 +1680,15 @@ merely for convenience and to keep the size of the identity file small.
 
 =item Message Integrity
 
-In keeping with the desire to keep the protocol overhead as low as possible,
-B<Zebedee> does not perform any data integrity validation on the transmitted
-data stream. It is, therefore, possible for an attacker to alter data packets
-in transit. The encryption used should make it extremely hard for someone to
-transform them arbitrarily at will --- for example turning "C<ls -l>" into
-"C<rm -f>" --- but do not depend on B<Zebedee> to protect your application from
-the effects of being fed random data!
+Starting with version 2.5, B<Zebedee> has the ability to perform data
+integrity validation on the transmitted data stream. This is controlled by the
+B<L<checksumlevel|/item_checksumlevel>> and
+B<L<minchecksumlevel|/ietm_minchecksumlevel>> keywords. This integrity
+checking is on by default (although not set to the highest level).
+
+This integrity checking does give a greater assurance that data packets have
+not been corrupted "in flight", but is does add a little overhead in terms of
+both data traffic and CPU effort.
 
 =item Replay and Insertion Attacks
 
@@ -2432,4 +2434,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.21 2003-07-02 13:38:29 ndwinton Exp $
+ $Id: zebedee.pod,v 1.22 2003-07-06 13:59:49 ndwinton Exp $

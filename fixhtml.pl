@@ -2,14 +2,14 @@
 #
 # Prettify and fix pod2html output
 #
-# $Id: fixhtml.pl,v 1.1.1.1 2001-04-12 18:06:54 ndwinton Exp $
+# $Id: fixhtml.pl,v 1.2 2003-07-06 13:59:49 ndwinton Exp $
 #
 
 while (<>)
 {
     # Insert style
 
-    if (/\<\/HEAD\>/)
+    if (/\<\/HEAD\>/i)
     {
 	print <<'EOF';
 <style>
