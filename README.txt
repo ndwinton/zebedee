@@ -11,7 +11,7 @@ low-bandwidth networks.
 The main goals for Zebedee are to:
 
  * Provide client and server functionality under both UNIX/Linux
-   and Windowss.
+   and Windows.
 
  * Be easy to install, use and maintain with little or no
    configuration required.

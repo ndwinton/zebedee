@@ -46,6 +46,9 @@ example, B<telnet>, B<ftp> and B<X> sessions to be protected from snooping.
 You can also use compression, either with or without data encryption, to gain
 performance over low-bandwidth networks.
 
+This document describes the features of B<Zebedee> as at release 2.4.0. For
+details of the new features in this release see L<CHANGES>.
+
 The main goals for B<Zebedee> are to:
 
 =over 4
@@ -79,8 +82,6 @@ Of course, B<Zebedee> is by no means the first, or only secure tunnel program
 available. It does not pretend to compete with the likes of B<ssh> or B<SSL>
 in terms of breadth of function but if you want something quick, simple and
 I<completely free> then it may be the tool for you.
-
-This document describes the features of B<Zebedee> as at release 2.4.0.
 
 =head2 What's in a name?
 
@@ -283,7 +284,7 @@ server was started on C<target3> as:
 
  zebedee -s target2:telnet target3 target1:daytime,telnet
 
-then the client following client invocation:
+then the following client invocation:
 
  zebedee 20000:target3:telnet
 
@@ -1941,12 +1942,72 @@ form:
 
  ftp://username@clienthost:2121/
 
+=head1 CHANGES
+
+This section outlines the main user-visible changes since the previous
+"stable" release, 2.2.2. Full details, including bug fixes and other
+non-visible enhancements, are in the C<CHANGES.txt> file in the
+B<Zebedee> distribution.
+
+The B<L<ipmode|/item_ipmode>> keyword and B<-U> option have been added in
+order to allow a single B<Zebedee> client/server pair to support both TCP and
+UDP traffic. Tunnel and target ports can now be suffixed with "C</tcp>" or
+"C</udp>" in order to restrict the protocol used when running in "mixed" mode.
+
+The B<L<listenip|/item_listenip>> keyword (or B<-b> command line option) now
+allows you to specify the local IP address at which B<Zebedee> will listen for
+incoming connections. This useful on machines with multiple network cards.
+
+Target specifications (see B<L<target|/item_target>>) can now include
+sub-nets, given in CIDR address format, such as C<10.1.1.0/24>. This allows
+you to select a range of allowable targets with a single specification.
+
+You can now permit or deny tunnel setup based on the IP address of the
+connected client or server by using the B<L<checkaddress|/item_checkaddress>>
+keyword.
+
+The B<L<redirect|/item_redirect>> keyword now has an option B<none> to turn
+off tunnelling to any default target ports.
+
+B<Zebedee> connections, both client and server initiated, can now be made via
+HTTP proxy servers that support the C<CONNECT> method by using the
+B<L<httpproxy|/item_httpproxy>> keyword.
+
+There is partial support, with the B<L<transparent|/item_transparent>>
+keyword, for a B<Zebedee> server to attempt to act as a transparent proxy and
+forward on the client IP address.
+
+The example configuration files shipped with the distribution have been
+"modernised", to give better examples of newer features. The have also been
+made more secure "out of the box." This may cause you an issue if you try
+to use the files without further modification.
+
+An example key generation command, C<passphrase.tcl> is included in the
+distribution.
+
+The new B<L<tcptimeout|/item_tcptimeout>> and
+B<L<idletimeout|/item_idletimeout>> settings allow inactive TCP tunnels to be
+closed.
+
+The B<L<readtimeout|/item_readtimeout>> keyword has been added to allow some
+defence against denial of service attacks.
+
+The B<-F> option can be used to specify a new (in addition to whitespace)
+configuration file field separator character.
+
+You can now specify an explicit shared secret key using the
+B<L<sharedkey|/item_sharedkey>> and
+B<L<sharedkeygencommand|/item_sharedkeygencommand>> rather than have
+B<Zebedee> negotiate one itself. This, and the B<-F> option, has been added
+primarily for use in Ed Suominen's PRIVARIA (see L<http://privaria.org>)
+secure communication suite.
+
 =head1 CREDITS AND LEGALITIES
 
 The following information can also be found in the file F<LICENCE.txt> in the
 B<Zebedee> distribution.
 
- Copyright (c) 1999, 2000, 2001 by Neil Winton. All Rights Reserved.
+ Copyright (c) 1999, 2000, 2001, 2002 by Neil Winton. All Rights Reserved.
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -2198,4 +2259,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.16 2002-05-07 08:28:10 ndwinton Exp $
+ $Id: zebedee.pod,v 1.17 2002-05-09 07:56:32 ndwinton Exp $

@@ -2,7 +2,7 @@ Summary: Zebedee: a simple, free, secure TCP and UDP tunnel program
 %define name zebedee
 Name: %{name}
 %define version 2.4.0
-%define myos linux # linux, freebsd, solaris, tru64, hpux, irix
+%define ostype linux # linux, freebsd, solaris, tru64, hpux, irix
 Version: %{version}
 Release: 1
 Group: Applications/Security
@@ -22,10 +22,10 @@ low-bandwidth networks from compression.
 The main goals for Zebedee are to:
 
 - Provide full client and server functionality under both UNIX and 
-  Windows 95/98/NT. Be easy to install, use and maintain with little 
-  or no configuration required. Have a small footprint, low wire 
-  protocol overhead and give significant traffic reduction by the 
-  use of compression. 
+  Windows. Be easy to install, use and maintain with little or no
+  configuration required. Have a small footprint, low wire protocol
+  overhead and give significant traffic reduction by the use of
+  compression. 
 
 - Use only algorithms that are either unpatented or for which the 
   patent has expired. 
@@ -37,10 +37,10 @@ The main goals for Zebedee are to:
 %setup
 
 %build
-make OS=%{myos} ZINC= ZLIB=-lz BZINC= BZLIB=-lbz BFINC=-I/usr/include/openssl BFLIB=-lcrypto
+make OS=%{ostype} ZINC= ZLIB=-lz BZINC= BZLIB=-lbz BFINC=-I/usr/include/openssl BFLIB=-lcrypto
 
 %install
-make install OS=%{myos} "ROOTDIR=$RPM_BUILD_DIR/usr"
+make install OS=%{ostype} "ROOTDIR=$RPM_BUILD_DIR/usr"
 
 %files
 /usr/bin/zebedee
