@@ -1,15 +1,21 @@
 * Release 2.5
 
-Added "httpproxyauth" (thanks to James CE Johnson)
+Dropped backwards compatibility with Zebedee 1.x versions of the protocol.
 
-Added "runasuser/-N" (thanks to Thomas Melzer)
+Added message integrity checking ("checksumlevel" and "minchecksumlevel"
+keywords), "dropunknownprotocol" and "lockprotocol" features and per-target
+address checking -- thanks to Henrick Larsen.
 
-Added per-target ID checking (originally by Alain Turbide).
+Added "httpproxyauth" -- thanks to James CE Johnson.
+
+Added "runasuser/-N" -- thanks to Thomas Melzer.
+
+Added per-target ID checking -- originally by Alain Turbide.
 
 Fixed a bug with "anonymous" tunnel specs (using a "*" to default to
 the server address).
 
-Fixed bug writing to syslog when detached (thanks to Kyle Dent).
+Fixed bug writing to syslog when detached -- thanks to Kyle Dent.
 
 * Release 2.4.1 (2002/05/29)
 
