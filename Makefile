@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.1.1.1 2001-04-12 18:05:34 ndwinton Exp $
+# $Id: Makefile,v 1.2 2001-04-13 17:41:21 ndwinton Exp $
 
 OS = 
 
@@ -142,11 +142,12 @@ OBJS = zebedee.o sha_func.o huge.o $(GETOPTOBJ) $(SERVICEOBJ)
 ZBDFILES = server.zbd vncviewer.zbd vncserver.zbd server.key server.id \
 	client1.key client2.key clients.id
 
-TXTFILES = README.txt LICENCE.txt GPL2.txt CHANGES.txt zebedee.html ftpgw.tcl.html
+TXTFILES = README.txt LICENCE.txt GPL2.txt CHANGES.txt \
+	zebedee.html ftpgw.tcl.html zebedee.ja_JP.html
 
 EXTRAFILES = $(ZBDFILES) $(TXTFILES)
 
-all : precheck zebedee$(EXE) zebedee.1 zebedee.html ftpgw.tcl.1 ftpgw.tcl.html
+all : precheck zebedee$(EXE) zebedee.1 zebedee.html ftpgw.tcl.1 ftpgw.tcl.html zebedee.ja_JP.html
 
 precheck :
 	@ if test -z "$(OS)"; then echo "Use '$(MAKE) OS=xxx' where xxx is win32, linux, solaris, freebsd or tru64"; exit 1; fi
@@ -166,6 +167,10 @@ zebedee.html : zebedee.pod
 	$(POD2HTML) --title="Zebedee: A simple, secure IP tunnel" --noindex zebedee.pod > zebedee.tmp
 	$(PERL) fixhtml.pl < zebedee.tmp > zebedee.html
 	rm -f zebedee.tmp
+
+zebedee.ja_JP.html :
+	( cd doc_jp; \
+	$(MAKE) PERL="$(PERL)" POD2HTML="$(POD2HTML)" POD2MAN="$(POD2MAN)" INSTALL="$(INSTALL)" ROOTDIR="$(ROOTDIR)" )
 
 ftpgw.tcl.1 : ftpgw.tcl.pod
 	$(POD2MAN) --release="1.0" --center=ftpgw.tcl ftpgw.tcl.pod > ftpgw.tcl.1
