@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.15 2002-04-12 12:06:26 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.16 2002-04-12 13:24:58 ndwinton Exp $";
 #define RELEASE_STR "2.3.2"
 
 #include <stdio.h>
@@ -1867,7 +1867,7 @@ sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sock
 
     /* Do the checksum for the UDP header */
 
-    if (libnet_do_checksum(packet, IPPROTO_UDP, LIBNET_UDP_H) == -1)
+    if (libnet_do_checksum(packet, IPPROTO_UDP, LIBNET_UDP_H + len) == -1)
     {
 	message(0, 0, "packet checksum failed");
 	goto cleanup;
@@ -1880,6 +1880,7 @@ sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sock
     {
 	message(1, 0, "Warning: short packet write (%d < %d)", num, packetSize);
     }
+    num -= (LIBNET_IP_H + LIBNET_UDP_H);
 
 cleanup:
     libnet_destroy_packet(&packet);
@@ -1989,6 +1990,7 @@ failure:
 
 void
 setNoLinger(int fd)
+{
     struct linger lingerVal;
 
     lingerVal.l_onoff = 0;
@@ -5206,7 +5208,7 @@ client(FnArgs_t *argP)
 
     message(3, 0, "entering filter loop");
 
-    switch (filterLoop(clientFd, serverFd, msg, &(argP->addr), argP->listenFd, udpMode))
+    switch (filterLoop(clientFd, serverFd, msg, &(argP->addr), &peerAddr, argP->listenFd, udpMode))
     {
     case 1:
 	message(0, errno, "failed communicating with remote server");

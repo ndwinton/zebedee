@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.9 2002-04-12 12:06:26 ndwinton Exp $
+# $Id: Makefile,v 1.10 2002-04-12 13:24:58 ndwinton Exp $
 
 ZBD_VERSION = 2.3.2
 
@@ -39,6 +39,9 @@ OPTIM = -O3
 # GMPLIB = ../gmp-2.0.2/libgmp.a
 
 # Location of Blowfish include and library
+# You can use the versions from OpenSSL if you have it installed, as follows:
+# BFINC = /usr/include/openssl
+# BFLIB = -lcrypto
 
 BFINC = -I../blowfish-0.9.5a
 BFLIB = ../blowfish-0.9.5a/libblowfish.a
@@ -114,8 +117,14 @@ ISCOMP = "c:/Program Files/Inno Setup 2/compil32.exe"
 # Lack of <sys/select.h> (HPUX):
 #   Use -DDONT_HAVE_SELECT_H
 #
-# To spoof UDP source addresses (in "transparent" mode):
-#   Use -DUSE_UDP_SPOOFING and add -lnet (or -pwrite) to the link libraries.
+# UDP source address spoofing:
+#   To spoof UDP source addresses (when using "transparent" mode) you will
+#   need "libnet" from http://www.packetfactory.net/Projects/Libnet. Then
+#   you should add -DUSE_UDP_SPOOFING (and -DLIBNET_LIL/BIG_ENDIAN as required
+#   by libnet). You must also add -lnet (or -pwrite) to the OSLIBS link
+#   libraries below. If you use this code please be aware of the security
+#   and practical implications of doing this kind of thing. Use it at your
+#   own risk!
 
 DEFINES_win32 =
 DEFINES_linux = -DHAVE_PTHREADS
