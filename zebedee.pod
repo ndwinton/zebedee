@@ -411,6 +411,12 @@ address of the server's connection matches that specified, whether on the
 command-line, via the B<L<serverhost|/item_serverhost>> keyword or as part of
 the first tunnel specification.
 
+When using B<listenmode> the server address can also contain a network mask.
+So the following client invocation:
+
+ zebedee -l 10000:10.10.10.0/24:telnet
+
+will accept connections from any address on the 10.10.10.0 class C subnet.
 As a special case, if the server name is "C<*>" then connections will be
 accepted from any server address. Use of the L<identity checking|Identity
 Checking> features is also recommended to ensure that the correct server
@@ -561,11 +567,23 @@ If the port list (and colon) are omitted then requests for redirection will be
 controlled by the ports given by the B<L<redirect|/item_redirect>> statements,
 if any.
 
+The target hostname may also be specified as a CIDR network address, that is
+an address with the number of bits to be used for the network mask, for
+example:
+
+ target 10.10.10.0/24:http
+
+This means that HTTP connections to any host address in the 255-host class C
+subnet will be accepted.
+
 This keyword is equivalent to the comnmand-line arguments of the same form
 (see L<Multiple Destinations>). It may be repeated multiple times. The final
 target host specified, either using the this keyword or on the command line,
 becomes the default destination for tunnels when a client specifies the
-server's host-name as the destination.
+server's host-name as the destination. Be careful when using CIDR addresses as
+targets that the last target specified will be valid default address. In the
+case of a CIDR address the IP portion alone will be taken as the target. This
+may not be what you want or expect.
 
 =back
 
@@ -714,6 +732,29 @@ The following keywords apply equally to clients and servers:
 
 =over 4
 
+=item B<checkaddress>
+
+This keyword, which may be repeated multiple times, specifies an IP address
+and, optionally, range of ports in the same form as that used by the
+B<L<target|/item_target>> keyword. The IP address can be in the form of a CIDR
+address.
+
+When a connection is established between a client and a server the IP address
+and, possibly, source port of the system at the other end of the connection is
+checked against the set of specified addresses and ports. If it does not match
+any of the entries the connection will be closed. So, for example, the entry:
+
+ checkaddress 192.168.1.0/24
+ checkaddress 192.168.2.0/24
+
+in a server's configuration file would only permit connections from systems on
+the two subnets named. This checking is done before any further validation of
+identity (see L<identity checking|Identity Checking>).
+
+Please note that source IP addresses can easily be "spoofed" and you should
+not place great reliance on this for validating the identity of a client or
+server. It is, however, a useful basic protection mechanism.
+
 =item B<checkidfile>
 
 This names a file that contains a set of identities that will be checked
@@ -779,7 +820,7 @@ protected file. There is a limit of 5 levels deep of include processing
 (counting the initial configuration file as level 1). This avoids
 unintentional recursion.
 
-=item B<ipmode>
+=item B<ipmode> (command-line B<-U> for "both" mode)
 
 As of version 2.3.0, a B<Zebedee> client or server can handle both TCP and UDP
 traffic simultaneously. This is controlled by the B<ipmode> keyword. It can
@@ -1119,7 +1160,7 @@ brief description.
  generator      string         CS  Hexadecimal Diffie-Hellman generator value
  idletimeout    seconds        CS  Inactivity timeout for all tunnels
  include        filename  -f   CS  Read in the named configuration file
- ipmode         type           CS  Run in TCP, UDP or mixed mode (tcp/udp/both)
+ ipmode         type      -U   CS  Run in TCP, UDP or mixed mode (-U = mixed)
  keygencommand  string         CS  Command to run to generate key
  keygenlevel    level          CS  Key generation strength level (0 to 2)
  keylength      bits           CS  Requested maximum keylength in bits
@@ -1836,4 +1877,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.2 2002-03-07 10:25:21 ndwinton Exp $
+ $Id: zebedee.pod,v 1.3 2002-03-11 16:24:16 ndwinton Exp $
