@@ -1,3 +1,14 @@
+* Release 2.3.1
+
+Changed any potentially unsafe sprintf/vsprintf instances to
+snprintf/vsnprintf. There should never have been a remote exploit possible,
+this just eliminates any theoretical local ones in case someone has a reason
+to run this as root ...
+
+Allowed CIDR address specifications for target (and server name in listenmode).
+
+Added IP address checking with the "checkaddress" keyword.
+
 * Release 2.3.0 (2002/03/07)
 
 New functionality (at last!).
