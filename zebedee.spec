@@ -1,20 +1,16 @@
 Summary: Zebedee: a simple, free, secure TCP and UDP tunnel program
 %define name zebedee
 Name: %{name}
-%define version 2.3.1
-%define os linux # linux, freebsd, solaris, tru64, hpux, irix
-%define zlib 1.1.4
-%define bzip 1.0.1
-%define blowfish 0.9.5a
+%define version 2.3.2
+%define myos linux # linux, freebsd, solaris, tru64, hpux, irix
 Version: %{version}
 Release: 1
 Group: Applications/Security
 Copyright: GPL
 URL: http://www.winton.org.uk/zebedee/
 Source: %{name}-%{version}.tar.gz
-Source1: blowfish-%{blowfish}.tar.gz
-Source2: zlib-%{zlib}.tar.gz
-Source3: bzip2-%{bzip}.tar.gz
+Prefix: /usr
+BuildRoot: /var/tmp/zebedee
 
 %description
 Zebedee is a simple program to establish an encrypted, compressed 
@@ -38,21 +34,13 @@ The main goals for Zebedee are to:
   distributed under the term of the GNU General Public Licence. 
 
 %prep
-%setup -b 1 -b 2 -b 3
+%setup
 
 %build
-cd ../blowfish-%{blowfish}
-make optimize
-cd ../zlib-%{zlib}
-./configure
-make
-cd ../bzip2-%{bzip}
-make
-cd ../%{name}-%{version}
-make OS=%{os}
+make OS=%{myos} ZINC= ZLIB=-lz BZINC= BZLIB=-lbz BFINC=-I/usr/include/openssl BFLIB=-lcrypto
 
 %install
-make install OS=%{os}
+make install OS=%{myos} "ROOTDIR=$RPM_BUILD_DIR/usr"
 
 %files
 /usr/bin/zebedee
@@ -63,6 +51,9 @@ make install OS=%{os}
 %doc *.txt *.html
 
 %changelog
+* Fri Mar 22 2002 Neil Winton <neil@winton.org.uk>
+- Zebedee version 2.3.2
+
 * Fri Mar 15 2002 Neil Winton <neil@winton.org.uk>
 - Zebedee version 2.3.1
 
