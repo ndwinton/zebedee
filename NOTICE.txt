@@ -1,0 +1,15 @@
+*** WARNING ***
+
+This is a development version of Zebedee.  Not all features
+have been thoroughly tested and may not work correctly. They
+could damage your system or leave it open to security
+compromise. Use at your own risk!
+
+Please note that the checksumming protocol in this version
+is *incompatible* with that in version 2.5.1. This has been
+caused by a fix for cross-platform interoperability. As a
+temporary measure, you can set the "bugcompatibility"
+keyword to "251" to revert to the previous version. This
+will not (and has never) worked between systems with
+different byte ordering. The "bugcompatibility" keyword will
+be removed from the next version.
