@@ -1,9 +1,9 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.7 2002-03-15 10:47:06 ndwinton Exp $
+# $Id: Makefile,v 1.8 2002-03-22 17:51:23 ndwinton Exp $
 
-ZBD_VERSION = 2.3.1
+ZBD_VERSION = 2.3.2
 
 OS = 
 
