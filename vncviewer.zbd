@@ -1,0 +1,22 @@
+#
+# Zebedee configuration file to start up a tunnelled VNC session
+#
+# Usage: zebedee -f vncviewer.zbd remote-host:vnc-port
+#
+
+verbosity 1	# Basic messages only
+
+server false	# It's a client
+detached true	# Detach from terminal
+
+message "Starting VNC viewer"
+
+# On Windows systems you might use the following:
+
+command '"c:\Program Files\ORL\VNC\vncviewer.exe" localhost:%d'
+
+# On UNIX systems you might use the following:
+
+# command 'vncviewer localhost:%d'
+
+compression zlib:6	# Request normal Zlib compression

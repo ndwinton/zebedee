@@ -1,0 +1,16 @@
+#
+# Zebedee server sample config file for tunnelling VNC traffic
+#
+
+verbosity 1
+
+server true		# Yes, it's a server!
+detached true		# Convert to daemon if possible
+
+# Set up allowed redirection ports
+
+redirect 5900-5950	# Redirect VNC server ports
+redirect telnet		# Allow telnet too for initial server start
+
+compression zlib:9	# Allow maximum Zlib compression
+keylength 256		# Allow key length up to 256 bits
