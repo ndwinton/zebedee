@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.44 2003-09-21 07:04:15 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.45 2003-09-22 16:30:29 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -8060,10 +8060,14 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:R:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "b:C:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
+	case 'C':
+	    setUShort(optarg, &ConnectAttempts);
+	    break;
+
 	case 'c':
 	    ClientHost = optarg;
 	    break;
@@ -8165,10 +8169,6 @@ main(int argc, char **argv)
 
 	case 'r':
 	    setEndPtList(optarg, &AllowedDefault, NULL, NULL, NULL, 0);
-	    break;
-
-	case 'R':
-	    setUShort(optarg, &ConnectAttempts);
 	    break;
 
 	case 's':
