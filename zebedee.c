@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.13 2002-04-10 14:31:21 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.14 2002-04-11 14:44:21 ndwinton Exp $";
 #define RELEASE_STR "2.3.2"
 
 #include <stdio.h>
@@ -499,6 +499,8 @@ int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr *
 int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP);
 int proxyConnection(const char *host, const unsigned short port, struct sockaddr_in *localAddrP);
 int makeListener(unsigned short *portP, char *listenIp, int udpMode);
+void setNoLinger(int fd);
+void setKeepAlive(int fd);
 int acceptConnection(int listenFd, const char *host, int loop, unsigned short timeout);
 
 void headerSetUShort(unsigned char *hdrBuf, unsigned short value, int offset);
@@ -1609,7 +1611,6 @@ makeConnection(const char *host, const unsigned short port,
 {
     int sfd = -1;
     struct sockaddr_in addr;
-    struct linger lingerVal;
 
 
     /* Sanity check */
@@ -1680,12 +1681,7 @@ makeConnection(const char *host, const unsigned short port,
     {
 	/* Set the "don't linger on close" option */
 
-	lingerVal.l_onoff = 0;
-	lingerVal.l_linger = 0;
-	if (setsockopt(sfd, SOL_SOCKET, SO_LINGER, (char *)&lingerVal, sizeof(lingerVal)) < 0)
-	{
-	    message(1, 0, "Warning: failed to set SO_LINGER option on socket");
-	}
+	setNoLinger(sfd);
 
 	/* Now connect! */
 
@@ -1900,6 +1896,43 @@ failure:
 }
 
 /*
+** setNoLinger
+**
+** Turn off "linger on close" behaviour for a socket.
+*/
+
+void
+setNoLinger(int fd)
+    struct linger lingerVal;
+
+    lingerVal.l_onoff = 0;
+    lingerVal.l_linger = 0;
+    if (setsockopt(fd, SOL_SOCKET, SO_LINGER,
+		   (char *)&lingerVal, sizeof(lingerVal)) < 0)
+    {
+	message(1, 0, "Warning: failed to set SO_LINGER option on socket");
+    }
+}
+
+/*
+** setKeepAlive
+**
+** Turn on "keep alives" for a socket.
+*/
+
+void
+setKeepAlive(int fd)
+{
+    int trueVal = 1;
+
+    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE,
+		   (char *)&trueVal, sizeof(trueVal)) < 0)
+    {
+	message(1, 0, "Warning: failed to set SO_KEEPALIVE option on socket");
+    }
+}
+
+/*
 ** acceptConnection
 **
 ** Accept a connection on the specified listenFd. If the host is "*" then
@@ -1921,8 +1954,6 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
     struct sockaddr_in fromAddr;
     struct sockaddr_in hostAddr;
     int addrLen;
-    struct linger lingerVal;
-    int trueVal = 1;
     int serverFd = -1;
     struct timeval delay;
     fd_set testSet;
@@ -2044,23 +2075,13 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 
     message(3, 0, "accepted connection from %s", inet_ntoa(fromAddr.sin_addr));
 
-    /* Set the "don't linger on close" option */
+    /*
+    ** Set the "don't linger on close" and "keep alive" options. The latter
+    ** will (eventually) reap defunct connections.
+    */
 
-    lingerVal.l_onoff = 0;
-    lingerVal.l_linger = 0;
-    if (setsockopt(serverFd, SOL_SOCKET, SO_LINGER,
-		   (char *)&lingerVal, sizeof(lingerVal)) < 0)
-    {
-	message(1, 0, "Warning: failed to set SO_LINGER option on socket");
-    }
-
-    /* Set keep-alive to (eventually) reap defunct connections */
-
-    if (setsockopt(serverFd, SOL_SOCKET, SO_KEEPALIVE,
-		   (char *)&trueVal, sizeof(trueVal)) < 0)
-    {
-	message(1, 0, "Warning: failed to set SO_KEEPALIVE option on socket");
-    }
+    setNoLinger(serverFd);
+    setKeepAlive(serverFd);
 
     return serverFd;
 
@@ -4207,7 +4228,6 @@ clientListener(PortList_t *ports)
     struct sockaddr_in fromAddr;
     struct sockaddr_in localAddr;
     int addrLen;
-    struct linger lingerVal;
     unsigned short localPort = 0;
     fd_set tcpSet;
     fd_set udpSet;
@@ -4424,14 +4444,11 @@ clientListener(PortList_t *ports)
 
 			/* Set the "don't linger on close" option */
 
-			lingerVal.l_onoff = 0;
-			lingerVal.l_linger = 0;
-			if (setsockopt(clientFd, SOL_SOCKET, SO_LINGER,
-				       (char *)&lingerVal, sizeof(lingerVal))
-			    < 0)
-			{
-			    message(1, 0, "Warning: failed to set SO_LINGER option on socket");
-			}
+			setNoLinger(clientFd);
+
+			/* Set "keep alive" to reap defunct connections */
+
+			setKeepAlive(clientFd);
 
 			/* Create the handler process/thread */
 
@@ -5179,6 +5196,17 @@ serverListener(unsigned short *portPtr)
 	else
 	{
 	    message(1, 0, "accepted connection from %s", inet_ntoa(addr.sin_addr));
+
+	    /* Set the "don't linger on close" option */
+
+	    setNoLinger(clientFd);
+
+	    /* Set "keep alive" to reap defunct connections */
+
+	    setKeepAlive(clientFd);
+
+	    /* Create the handler process/thread */
+
 	    spawnHandler(server, listenFd, clientFd, Debug, &addr, 0);
 	}
     }
