@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.23 2002-05-02 15:37:13 ndwinton Exp $";
-#define RELEASE_STR "2.4.0"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.24 2002-05-27 14:01:51 ndwinton Exp $";
+#define RELEASE_STR "2.5.0-PRE"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -455,6 +455,7 @@ int Transparent = 0;		/* Try to propagate the client IP address */
 char *FieldSeparator = NULL;	/* Input field separator character */
 char *SharedKey = NULL;		/* Static shared secret key */
 char *SharedKeyGenCmd = NULL;	/* Command to generate shared secret key */
+int DumpData = 0;		/* Dump out message contents only if true */
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -495,6 +496,7 @@ void waitForInactivity(void);
 void logToSystemLog(unsigned short level, char *msg);
 void timestamp(char *timeBuf, int local);
 void message(unsigned short level, int err, char *fmt, ...);
+void dumpData(const char *prefix, unsigned char *data, unsigned short size);
 
 int readData(int fd, unsigned char *buffer, unsigned short size);
 int readUShort(int fd, unsigned short *resultP);
@@ -1017,6 +1019,52 @@ message(unsigned short level, int err, char *fmt, ...)
 
     mutexUnlock(MUTEX_IO);
 
+}
+
+/*
+** dumpData
+**
+** Dump data buffer (at verbosity level 5) only if DumpData is true.
+*/
+
+void dumpData(const char *prefix, unsigned char *data, unsigned short size)
+{
+    unsigned short i;
+    unsigned char buf[128];
+    unsigned char *bptr = NULL;
+    static char *hex = "0123456789abcdef";
+
+    if (!DumpData) return;
+
+    bptr = buf;
+    for (i = 0; i < size; i++)
+    {
+	if (isprint(data[i]))
+	{
+	    *bptr++ = data[i];
+	    *bptr++ = ' ';
+	}
+	else
+	{
+	    *bptr++ = hex[(data[i] >> 4) & 0xf];
+	    *bptr++ = hex[data[i] & 0xf];
+	}
+	*bptr++ = ' ';
+	    
+	if ((i % 16) == 15)
+	{
+	    *(bptr - 1) = '\0';
+	    message(5, 0, "%s %04hx %s", prefix, (i - 15), buf);
+	    bptr = buf;
+	}
+    }
+
+    if (i % 16)
+    {
+	*bptr = '\0';
+	message(5, 0, "%s %04hx %s", prefix, (i - (i % 16)), buf);
+	bptr = buf;
+    }
 }
 
 /*******************************\
@@ -3529,6 +3577,8 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 		message(5, 0, "read %d bytes from local socket %d", num, localFd);
 
 		msgBuf->size = (unsigned short)num;
+		if (DumpData) dumpData("<", msgBuf->data, msgBuf->size);
+
 		if (writeMessage(remoteFd, msgBuf) != num)
 		{
 		    status = 1;
@@ -3578,6 +3628,7 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 		    break;
 		}
 		message(5, 0, "sent %d bytes to local socket %d", num, localFd);
+		if (DumpData) dumpData(">", msgBuf->data, msgBuf->size);
 	    }
 	    else
 	    {
@@ -4987,7 +5038,7 @@ client(FnArgs_t *argP)
 	    (!udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
 	{
 	    message(0, 0, "client requested %s mode and server is in %s mode",
-		    (udpMode ? "UDP" : "TCP"), (UdpMode ? "TCP" : "UDP"));
+		    (udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
 	    goto fatal;
 	}
 	else
@@ -7069,6 +7120,7 @@ parseConfigLine(const char *lineBuf, int level)
      }
     else if (!strcasecmp(key, "sharedkey")) setString(value, &SharedKey);
     else if (!strcasecmp(key, "sharedkeygencommand")) setString(value, &SharedKeyGenCmd);
+    else if (!strcasecmp(key, "dumpdata")) setBoolean(value, &DumpData);
     else
     {
 	return 0;

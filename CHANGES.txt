@@ -1,3 +1,10 @@
+* Release 2.5.0
+
+Added "dumpdata" keyword to enable a dump of local traffic when this is
+true (and the verbosity level is 5 or greater).
+
+Fixed message when client requests incompatible TCP/UDP mode.
+
 * Release 2.4.0 (2002/05/09)
 
 Added support for building on MacOS X (sorry, no support for "classic" MacOS
