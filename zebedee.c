@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.34 2003-09-03 06:17:15 ndwinton Exp $";
-#define RELEASE_STR "2.5.1"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.35 2003-09-16 16:47:01 ndwinton Exp $";
+#define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,6 +116,7 @@ typedef Huge *mpz_t;
 #define snprintf	_snprintf
 #define vsnprintf	_vsnprintf
 #define strcasecmp	_stricmp
+#define ETIMEDOUT	WSAETIMEDOUT
 
 /*
 ** Winsock state data
@@ -164,6 +165,7 @@ extern int svcRemove(char *name);
 #define FILE_SEP_CHAR	'/'
 
 #define closesocket(fd)	    close((fd))
+#define ioctlsocket(fd, cmd, arg)   ioctl(fd, cmd, arg)
 
 #ifdef HAVE_PTHREADS
 #include <pthread.h>
@@ -264,7 +266,7 @@ pthread_attr_t ThreadAttr;
 #define DFLT_KEY_LIFETIME   3600    /* Reuseable keys last an hour */
 #define DFLT_TCP_TIMEOUT    0	    /* Default never close idle TCP tunnels */
 #define DFLT_UDP_TIMEOUT    300	    /* Close UDP tunnels after 5 mins */
-#define DFLT_CONN_TIMEOUT   300	    /* Timeout for server-initiated connections */
+#define DFLT_ACCEPT_TIMEOUT	300 /* Timeout for client accepting server connection */
 
 #define PROTOCOL_V100	    0x0100  /* The original and base */
 #define PROTOCOL_V101	    0x0101  /* Extended buffer size */
@@ -494,7 +496,10 @@ char *ListenIp = NULL;		/* IP address on which to listen */
 int ListenMode = 0;		/* True if client waits for server connection */
 char *ClientHost = NULL;	/* Server initiates connection to client */
 int ListenSock = -1;		/* Socket on which to listen for server */
-unsigned short ConnectTimeout = DFLT_CONN_TIMEOUT;  /* Timeout for server connections */
+unsigned short ServerConnectTimeout = 0;  /* Timeout for server connections */
+unsigned short AcceptConnectTimeout = DFLT_ACCEPT_TIMEOUT;  /* Timeout for client to accept connections */
+unsigned short TargetConnectTimeout = 0;    /* Timout for connection to target */
+unsigned short ConnectAttempts = 1; /* Number of server-initiated connection attempts */
 unsigned short ReadTimeout = 0; /* Timeout for remote data reads */
 int ActiveCount = 0;		/* Count of active handlers */
 char *ProxyHost = NULL;		/* HTTP proxy host, if used */
@@ -569,13 +574,15 @@ int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 
 int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr **addrList, unsigned long *maskP);
 char *ipString(struct in_addr addr, char *buf);
-int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP);
-int proxyConnection(const char *host, const unsigned short port, struct sockaddr_in *localAddrP);
+int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP, unsigned short timeout);
+int proxyConnection(const char *host, const unsigned short port, struct sockaddr_in *localAddrP, unsigned short timeout);
 int sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP);
 int makeListener(unsigned short *portP, char *listenIp, int udpMode);
 void setNoLinger(int fd);
 void setKeepAlive(int fd);
+void setNonBlocking(int fd, unsigned long nonBlock);
 int acceptConnection(int listenFd, const char *host, int loop, unsigned short timeout);
+int socketIsUsable(int sock);
 
 void headerSetUShort(unsigned char *hdrBuf, unsigned short value, int offset);
 void headerSetULong(unsigned char *hdrBuf, unsigned long value, int offset);
@@ -621,7 +628,7 @@ void client(FnArgs_t *argP);
 void prepareToDetach(void);
 void makeDetached(void);
 void serverListener(unsigned short *portPtr);
-void serverInitiator(char *client, unsigned short port, unsigned short timeout);
+void serverInitiator(unsigned short *portPtr);
 int allowRedirect(unsigned short port, struct sockaddr_in *addrP, struct sockaddr_in *peerAddrP, int udpMode, char **hostP, char **idFileP);
 int checkPeerForSocket(int fd, struct sockaddr_in *addrP);
 int checkPeerAddress(struct sockaddr_in *addrP, EndPtList_t *peerList);
@@ -1893,15 +1900,23 @@ ipString(struct in_addr addr, char *buf)
 ** If fromAddrP is not NULL then we will try to set the source address for
 ** the connection (not fatal if we fail). If toAddrP is not NULL then the
 ** address of the destination endpoint is returned.
+**
+** If timeout is non-zero then the connection attempt will be timed out
+** after that many seconds. Note that if connecting via proxy this will
+** only affect the connection to the proxy, not the remote system.
 */
 
 int
 makeConnection(const char *host, const unsigned short port,
 	       int udpMode, int useProxy,
-	       struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP)
+	       struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP,
+	       unsigned short timeout)
 {
     int sfd = -1;
     struct sockaddr_in addr;
+    fd_set testSet;
+    struct timeval delay;
+    int ready = -1;
 
 
     /* Sanity check */
@@ -1919,7 +1934,7 @@ makeConnection(const char *host, const unsigned short port,
 
 	if (ProxyHost && ProxyPort)
 	{
-	    return proxyConnection(host, port, toAddrP);
+	    return proxyConnection(host, port, toAddrP, timeout);
 	}
     }
 
@@ -1980,16 +1995,55 @@ makeConnection(const char *host, const unsigned short port,
 
     if (!udpMode)
     {
+
 	/* Set the "don't linger on close" option */
 
 	setNoLinger(sfd);
 
-	/* Now connect! */
+	/*
+	** If there is a timeout on the connection then we need to use
+	** non-blocking mode, otherwise we can just do a straight connect
+	*/
 
-	if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+	if (timeout == 0)
 	{
-	    closesocket(sfd);
-	    return -1;
+	    if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+	    {
+		closesocket(sfd);
+		return -1;
+	    }
+	}
+	else
+	{
+	    /* Turn on non-blocking mode */
+
+	    setNonBlocking(sfd, 1);
+
+	    /* Issue the connect (which should return EWOULDBLOCK) */
+
+	    connect(sfd, (struct sockaddr *)&addr, sizeof(addr));
+
+	    /* Now wait for socket to be writable -- connect complete */
+
+	    delay.tv_sec = timeout;
+	    delay.tv_usec = 0;
+
+	    FD_ZERO(&testSet);
+	    FD_SET(sfd, &testSet);
+
+	    ready = select(sfd + 1, 0, &testSet, 0, &delay);
+
+	    /* Check for timeout or other failure */
+
+	    if (ready <= 0)
+	    {
+		closesocket(sfd);
+		return -1;
+	    }
+
+	    /* Set socket back to blocking mode */
+
+	    setNonBlocking(sfd, 0);
 	}
     }
 
@@ -2099,9 +2153,9 @@ base64Encode(char *str)
 ** proxyConnection
 **
 ** Make a connection to the specified host and port via an HTTP proxy
-** supporting the CONNECT method. The toAddrP argument is passed on to
-** the (recursive) makeConnection call. Note that ProxyHost must be non-NULL
-** before this function is called.
+** supporting the CONNECT method. The toAddrP and timeout arguments are
+** passed on to the (recursive) makeConnection call. Note that ProxyHost
+** must be non-NULL before this function is called.
 **
 ** A strictly configured proxy server may not allow connection to arbitrary
 ** ports but only to that used by HTTPS (port 443). Also, in order to give
@@ -2115,7 +2169,7 @@ base64Encode(char *str)
 
 int
 proxyConnection(const char *host, const unsigned short port,
-		struct sockaddr_in *toAddrP)
+		struct sockaddr_in *toAddrP, unsigned short timeout)
 {
     int fd = -1;
     char buf[MAX_LINE_SIZE + 1];
@@ -2130,7 +2184,7 @@ proxyConnection(const char *host, const unsigned short port,
 
     message(4, 0, "connecting to %s:%hu via proxy %s:%hu", host, port, ProxyHost, ProxyPort);
 
-    if ((fd = makeConnection(ProxyHost, ProxyPort, 0, 0, NULL, toAddrP)) == -1)
+    if ((fd = makeConnection(ProxyHost, ProxyPort, 0, 0, NULL, toAddrP, timeout)) == -1)
     {
 	message(0, errno, "can't connect to proxy server at %s:%hu", ProxyHost, ProxyPort);
 	return -1;
@@ -2411,6 +2465,18 @@ setKeepAlive(int fd)
 }
 
 /*
+** setNonBlocking
+**
+** Turn on/off non-blocking
+*/
+
+void
+setNonBlocking(int fd, unsigned long nonBlock)
+{
+    ioctlsocket(fd, FIONBIO, &nonBlock);
+}
+
+/*
 ** acceptConnection
 **
 ** Accept a connection on the specified listenFd. If the host is "*" then
@@ -2505,6 +2571,25 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 	}
 
 	/*
+	** Check if the connection is writable, in case it has
+	** already been closed at the far end.
+	*/
+
+	if (!socketIsUsable(serverFd))
+	{
+	    closesocket(serverFd);
+	    errno = 0;
+	    if (loop)
+	    {
+		continue;
+	    }
+	    else
+	    {
+		goto failure;
+	    }
+	}
+
+	/*
 	** Check the received connection address against the specified
 	** server host name (applying a network mask as ppropriate).
 	*/
@@ -2567,6 +2652,59 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 failure:
     if (addrList) free(addrList);
     return -1;
+}
+
+/*
+** socketIsUsable
+**
+** Check if socket is usable (hasn't been closed)
+*/
+
+int
+socketIsUsable(int sock)
+{
+    fd_set testSet;
+    struct timeval delay;
+    unsigned long num;
+    unsigned char buf[1];
+
+
+    /* Check writability */
+
+    FD_ZERO(&testSet);
+    FD_SET(sock, &testSet);
+    delay.tv_sec = 0;
+    delay.tv_usec = 0;
+
+    if (select(sock + 1, 0, &testSet, 0, &delay) <= 0)
+    {
+	message(4, 0, "socket %d is not writable", sock);
+	return 0;
+    }
+
+    /*
+    ** Now see if it is readable, and if it is, peek at the contents to
+    ** see if there is and EOF
+    */
+
+    FD_ZERO(&testSet);
+    FD_SET(sock, &testSet);
+    delay.tv_sec = 0;
+    delay.tv_usec = 0;
+
+    if (select(sock + 1, &testSet, 0, 0, &delay) > 0)
+    {
+	message(4, 0, "socket %d is readable, checking for EOF", sock);
+	if (recv(sock, buf, sizeof(buf), MSG_PEEK) == 0)
+	{
+	    message(4, 0, "socket %d has immediate EOF", sock);
+	    return 0;
+	}
+    }
+
+    message(4, 0, "socket %d is usable", sock);
+    /* Not yet readable, or no EOF so assume OK! */
+    return 1;
 }
 
 /*
@@ -5300,7 +5438,7 @@ client(FnArgs_t *argP)
 	message(3, 0, "waiting for connection from server");
 
 	if ((serverFd = acceptConnection(ListenSock, serverHost,
-					 1, ConnectTimeout)) == -1)
+					 1, ServerConnectTimeout)) == -1)
 	{
 	    message(0, errno, "failed to accept a connection from %s", serverHost);
 	    goto fatal;
@@ -5311,7 +5449,7 @@ client(FnArgs_t *argP)
     {
 	message(3, 0, "making connection to %s:%hu", serverHost, serverPort);
 
-	if ((serverFd = makeConnection(serverHost, serverPort, 0, 1, NULL, NULL)) == -1)
+	if ((serverFd = makeConnection(serverHost, serverPort, 0, 1, NULL, NULL, ServerConnectTimeout)) == -1)
 	{
 	    message(0, errno, "can't connect to %s port %hu", serverHost, serverPort);
 	    goto fatal;
@@ -5892,25 +6030,61 @@ serverListener(unsigned short *portPtr)
     }
 }
 
+/*
+** serverInitiator
+**
+** Make a connection back to clientHost
+*/
+
 void
-serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
+serverInitiator(unsigned short *portPtr)
 {
+    unsigned short port = *portPtr;
     int clientFd = -1;
     struct timeval delay;
     fd_set testSet;
     int ready;
     int firstTime = 1;
+    unsigned short tries = ConnectAttempts;
+    int forever = (ConnectAttempts == 0);
 
-
-    while (1)
+    while (forever || tries > 0)
     {
-	message(2, 0, "initiating connection back to client at %s:%hu", clientHost, port);
+	tries--;
 
-	if ((clientFd = makeConnection(clientHost, port, 0, 1, NULL, NULL)) == -1)
+	message(2, 0, "initiating connection back to client at %s:%hu", ClientHost, port);
+
+	if ((clientFd = makeConnection(ClientHost, port, 0, 1, NULL, NULL, ServerConnectTimeout)) == -1)
 	{
-	    message(0, errno, "failed to connect back to client at %s:%hu", clientHost, port);
-	    exit(EXIT_FAILURE);
+	    /*
+	    ** If the connection timed out then we will retry if necessary,
+	    ** otherwise it is a fatal error ...
+	    */
+
+	    if (errno == ETIMEDOUT)
+	    {
+		message(3, 0, "timed out connecting back to client, retrying");
+		continue;
+	    }
+	    else
+	    {
+		message(0, errno, "failed to connect back to client at %s:%hu", ClientHost, port);
+
+		/* We need to pause here to avoid continuous connection attempts */
+
+		message(4, 0, "sleeping for %hu seconds", AcceptConnectTimeout);
+#ifdef WIN32
+		/* Sleeps are shorter on Windows! */
+
+		Sleep((unsigned long)AcceptConnectTimeout * 1000);
+#else
+		sleep(AcceptConnectTimeout);
+#endif
+		continue;
+	    }
 	}
+
+	message(2, 0, "connected to client");
 
 	if (firstTime)
 	{
@@ -5936,7 +6110,7 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
 	** read from the client or we exceed the timeout value.
 	*/
 
-	delay.tv_sec = timeout;
+	delay.tv_sec = AcceptConnectTimeout;
 	delay.tv_usec = 0;
 
 	FD_ZERO(&testSet);
@@ -5946,8 +6120,9 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
 
 	if (ready == 0)
 	{
-	    message(0, 0, "timed out waiting for accepted connection from client");
-	    break;
+	    message(3, 0, "timed out waiting for accepted connection from client");
+	    closesocket(clientFd);
+	    continue;
 	}
 
 	/* Check for error but ignore interrupted system calls */
@@ -5962,8 +6137,19 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
 	}
 	else
 	{
+	    /*
+	    ** The connection was successful so spawn the handler and
+	    ** reset the attempt count.
+	    */
+
 	    spawnHandler(server, -1, clientFd, 0, NULL, 0);
+	    tries = ConnectAttempts;
 	}
+    }
+
+    if (ConnectAttempts > 0 && tries == 0)
+    {
+	message(0, errno, "maximum connection attempt tries (%hu) exhausted", ConnectAttempts);
     }
 
     closesocket(clientFd);
@@ -6211,7 +6397,7 @@ server(FnArgs_t *argP)
 	memset(&localAddr, 0, sizeof(localAddr));
 	if ((localFd = makeConnection(targetHost, request, udpMode, 0,
 				      (Transparent ? &peerAddr : NULL),
-				      &localAddr)) == -1)
+				      &localAddr, TargetConnectTimeout)) == -1)
 	{
 	    port = 0;
 	    message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
@@ -7485,7 +7671,11 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "listenip")) setString(value, &ListenIp);
     else if (!strcasecmp(key, "listenmode")) setBoolean(value, &ListenMode);
     else if (!strcasecmp(key, "clienthost")) setString(value, &ClientHost);
-    else if (!strcasecmp(key, "connecttimeout")) setUShort(value, &ConnectTimeout);
+    else if (!strcasecmp(key, "connecttimeout")) setUShort(value, &AcceptConnectTimeout);
+    else if (!strcasecmp(key, "serverconnecttimeout")) setUShort(value, &ServerConnectTimeout);
+    else if (!strcasecmp(key, "targetconnecttimeout")) setUShort(value, &TargetConnectTimeout);
+    else if (!strcasecmp(key, "acceptconnecttimeout")) setUShort(value, &AcceptConnectTimeout);
+    else if (!strcasecmp(key, "connectattempts")) setUShort(value, &ConnectAttempts);
     else if (!strcasecmp(key, "readtimeout")) setUShort(value, &ReadTimeout);
     else if (!strcasecmp(key, "target")) setTarget(value);
     else if (!strcasecmp(key, "tunnel")) setTunnel(value);
@@ -8175,13 +8365,16 @@ main(int argc, char **argv)
 #ifdef WIN32
 	if (serviceArgs)
 	{
-	    svcRun(Program, (VOID (*)(VOID *))serverListener, (VOID *)&ServerPort);
+	    svcRun(Program,
+		   (VOID (*)(VOID *))((ClientHost == NULL) ?
+				      serverListener : serverInitiator),
+		   (VOID *)&ServerPort);
 	}
 	else
 #endif
 	if (ClientHost != NULL)
 	{
-	    serverInitiator(ClientHost, ServerPort, ConnectTimeout);
+	    serverInitiator(&ServerPort);
 	}
 	else
 	{
