@@ -553,20 +553,23 @@ The following keywords apply only when running as a server:
 
 =item B<clienthost> (command-line B<-c>)
 
-If a B<clienthost> value is specified then the server will
-immediately attempt to connect to the specified host (on the port given by
-B<L<serverport|/item_serverport>>). There must already be a client running in
-"listen-mode" (see B<L<listenmode|/item_listenmode>>) at that address.
-Once a connection to the client has been established the protocol exchanges
-proceed as normal. 
+If a B<clienthost> value is specified then the server will immediately attempt
+to connect to the specified host (on the port given by
+B<L<serverport|/item_serverport>>). Once a connection to the client has been
+established the protocol exchanges proceed as normal. Each time a connection
+has been accepted by the client the server tentatively opens up another one so
+that the client could establish further tunnels if necessary.
 
-Each time a connection has been accepted by the client the server
-tentatively opens up another one so that the client could establish
-further tunnels if necessary. If the connection is not accepted within a
-certain period then it will be closed and the server will exit once all
-currently active tunnels have been closed. The timeout is controlled by
-the B<L<connecttimeout|/item_connecttimeout>> keyword. The default is
-300 seconds.
+Three other keywords affect this behaviour. The
+B<L<serverconnecttimeout|/item_serverconnecttimeout>> keyword determines how
+long the server will spend trying to make a connection. If it cannot
+immediately connect to the client it will wait this many seconds before trying
+again. Once a connection has been established the server will wait up to
+B<L<acceptconnecttimeout|/item_acceptconnecttimeout>> seconds for the client
+to accept the connection and start the protocol exchange. Finally, this whole
+process will be repeated up to B<L<connectattempts|/item_connectattempts>>
+times. If a connection is not opened and accepted within this number of
+attempts the server will exit once all currently active tunnels have been closed.
 
 Note that B<Zebedee> does not itself provide a mechanism for co-ordinating the
 starting of client and server to set up a "reverse" tunnel. That must be
@@ -2466,4 +2469,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.25 2003-09-17 06:13:36 ndwinton Exp $
+ $Id: zebedee.pod,v 1.26 2003-09-22 06:15:29 ndwinton Exp $
