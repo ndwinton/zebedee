@@ -4,7 +4,8 @@ Dropped backwards compatibility with Zebedee 1.x versions of the protocol.
 
 Added message integrity checking ("checksumlevel" and "minchecksumlevel"
 keywords), "dropunknownprotocol" and "lockprotocol" features and per-target
-address checking -- thanks to Henrick Larsen.
+address checking. These all come from, or are derived from patches
+submitted by, Henrick Lund. Great work Henrick!
 
 Added "httpproxyauth" -- thanks to James CE Johnson.
 
