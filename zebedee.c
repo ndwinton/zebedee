@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.7 2002-03-07 13:51:57 ndwinton Exp $";
-#define RELEASE_STR "2.3.0"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.8 2002-03-11 15:06:05 ndwinton Exp $";
+#define RELEASE_STR "2.3.1"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,6 +104,8 @@ typedef Huge *mpz_t;
 #define DFLT_SHELL	"c:\\winnt\\system32\\cmd.exe"
 #define getpid()	GetCurrentProcessId()
 #define FILE_SEP_CHAR	'\\'
+#define snprintf	_snprintf
+#define vsnprintf	_vsnprintf
 
 /*
 ** Winsock state data
@@ -280,7 +282,7 @@ BFState_t;
 ** A linked list of these structures holds information about a set of ranges.
 ** The host element holds the name of the host associated with the port
 ** range, addr the matching IP address and addrList, a list of alias
-** addresses.
+** addresses. The mask is used if an address mask was specified.
 */
  
 typedef struct PortList_s
@@ -291,6 +293,7 @@ typedef struct PortList_s
     struct sockaddr_in addr;
     struct in_addr *addrList;
     struct PortList_s *next;
+    unsigned long mask;
 }
 PortList_t;
 
@@ -414,6 +417,7 @@ char *TargetHost = "localhost";	/* Default host to which tunnels are targeted */
 char *IdentityFile = NULL;	/* Name of identity file to check, if any */
 PortList_t *AllowedTargets = NULL; /* List of allowed target hosts/ports */
 PortList_t *AllowedDefault = NULL; /* List of default allowed redirection ports */
+PortList_t *AllowedPeers = NULL; /* List of allowed peer addresses/ports */
 char *KeyGenCmd = NULL;		/* Key generator command string */
 unsigned short KeyGenLevel = MAX_KEYGEN_LEVEL;	/* Key generation strength level */
 int TimestampLog = 0;		/* Should messages have timestamps? */
@@ -487,7 +491,7 @@ int writeMessage(int fd, MsgBuf_t *msg);
 
 int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 
-int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr **addrList);
+int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr **addrList, unsigned long *maskP);
 int makeConnection(const char *host, const unsigned short port, int udpMode, struct sockaddr_in *localAddrP);
 int makeListener(unsigned short *portP, char *listenIp, int udpMode);
 int acceptConnection(int listenFd, const char *host, int loop, unsigned short timeout);
@@ -536,6 +540,7 @@ void makeDetached(void);
 void serverListener(unsigned short *portPtr);
 void serverInitiator(char *client, unsigned short port, unsigned short timeout);
 int allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP);
+int checkPeerAddress(int fd);
 int countPorts(PortList_t *list);
 unsigned short mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP);
 void server(FnArgs_t *argP);
@@ -546,10 +551,11 @@ void setBoolean(char *value, int *resultP);
 void setUShort(char *value, unsigned short *resultP);
 void setPort(char *value, unsigned short *resultP);
 PortList_t *newPortList(unsigned short lo, unsigned short hi, char *host);
-PortList_t *allocPortList(unsigned short lo, unsigned short hi, char *host, struct in_addr *addrP, struct in_addr *addrList);
+PortList_t *allocPortList(unsigned short lo, unsigned short hi, char *host, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask);
 void setPortList(char *value, PortList_t **listP, char *host, int zeroOk);
 void setTarget(char *value);
 void setTunnel(char *value);
+void setAllowedPeer(char *value);
 void setString(char *value, char **resultP);
 void setLogFile(char *newFile);
 void setCmpInfo(char *value, unsigned short *resultP);
@@ -947,18 +953,20 @@ message(unsigned short level, int err, char *fmt, ...)
     ** error number!
     */
 
-    sprintf(msgBuf, "%s(%lu/%lu): %s%s%.*s%s",
-	    Program, (threadPid() % 100000), (threadTid() % 100000),
-	    (timePtr ? timePtr : ""), (timePtr ? ": " : ""),
-	    level, "          ", (level ? "" : "ERROR: "));
+    snprintf(msgBuf, sizeof(msgBuf), "%s(%lu/%lu): %s%s%.*s%s",
+	     Program, (threadPid() % 100000), (threadTid() % 100000),
+	     (timePtr ? timePtr : ""), (timePtr ? ": " : ""),
+	     level, "          ", (level ? "" : "ERROR: "));
 
-    vsprintf(msgBuf + strlen(msgBuf), fmt, args);
+    vsnprintf(msgBuf + strlen(msgBuf), sizeof(msgBuf) - strlen(msgBuf),
+	      fmt, args);
 
     va_end(args);
 
     if (err)
     {
-	sprintf(msgBuf + strlen(msgBuf), ": (%s)", strerror(err));
+	snprintf(msgBuf + strlen(msgBuf), sizeof(msgBuf) - strlen(msgBuf),
+		 ": (%s)", strerror(err));
     }
 
     /* Ensure we don't get overlapping messages */
@@ -1448,7 +1456,9 @@ requestResponse(int fd, unsigned short request, unsigned short *responseP)
 ** Translate a hostname or numeric IP address and store the result in addrP.
 ** If addrList is not NULL then return the list of aliases addresses in it.
 ** The list is terminated with an address with all components set to 0xff
-** (i.e. 255.255.255.255).
+** (i.e. 255.255.255.255). If maskP is not NULL and the address is in the
+** form of a CIDR mask specification then it will be set to contain the
+** appropriate address mask.
 **
 ** Returns 1 on success, 0 on failure.
 */
@@ -1456,19 +1466,44 @@ requestResponse(int fd, unsigned short request, unsigned short *responseP)
 int
 getHostAddress(const char *host,
 	       struct sockaddr_in *addrP,
-	       struct in_addr **addrList)
+	       struct in_addr **addrList,
+	       unsigned long *maskP)
 {
     struct hostent *entry = NULL;
     int result = 1;
     int count = 0;
     int i = 0;
+    char *s = NULL;
+    char *hostCopy = NULL;
+    unsigned short bits = 32;
 
 
     mutexLock(MUTEX_IO);
 
     /*
+    ** If there is a mask spec then eliminate it from the host name
+    ** and create the mask, if required.
+    */
+
+    if ((s = strchr(host, '/')) != NULL)
+    {
+	hostCopy = (char *)malloc(strlen(host) + 1);
+	if (!hostCopy || (sscanf(host, "%[^/]%hu", hostCopy, &bits) != 2))
+	{
+	    errno = 0;
+	    result = 0;
+	}
+	host = hostCopy;
+	if (maskP)
+	{
+	    if (bits <= 0 || bits > 32) bits = 32;
+	    *maskP = 0xffffffff << (32 - bits);
+	}
+    }
+
+    /*
     ** Try a direct conversion from numeric form first in order to avoid
-    ** an unncessary name-service lookup.
+    ** an unnecessary name-service lookup.
     */
 
     if ((addrP->sin_addr.s_addr = inet_addr(host)) == 0xffffffff)
@@ -1515,6 +1550,12 @@ getHostAddress(const char *host,
 	    memset(&((*addrList)[1]), 0xff, sizeof(struct in_addr));
 	}
     }
+
+    if (hostCopy)
+    {
+	free(hostCopy);
+    }
+
     mutexUnlock(MUTEX_IO);
 
     return result;
@@ -1547,7 +1588,7 @@ makeConnection(const char *host, const unsigned short port,
     /* Translate hostname from DNS or IP-address form */
 
     memset(&addr, 0, sizeof(addr));
-    if (!getHostAddress(host, &addr, NULL))
+    if (!getHostAddress(host, &addr, NULL, NULL))
     {
 	message(0, 0, "can't resolve host or address '%s'", host);
 	return -1;
@@ -1636,7 +1677,7 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode)
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     if (listenIp != NULL)
     {
-	if (!getHostAddress(listenIp, &addr, NULL))
+	if (!getHostAddress(listenIp, &addr, NULL, NULL))
 	{
 	    message(0, 0, "can't resolve listen address '%s'", listenIp);
 	}
@@ -1709,28 +1750,29 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
     struct linger lingerVal;
     int trueVal = 1;
     int serverFd = -1;
-    int anyHost = 0;
     struct timeval delay;
     fd_set testSet;
     int ready;
     struct in_addr *addrList = NULL;
     struct in_addr *addrPtr = NULL;
+    unsigned long mask = 0xffffffff;
 
 
-    if (strcmp(host, "*") != 0)
+    memset(&hostAddr, 0, sizeof(hostAddr));
+    if (strcmp(host, "*") == 0)
     {
-	memset(&hostAddr, 0, sizeof(hostAddr));
-	if (!getHostAddress(host, &hostAddr, &addrList))
+	mask = 0;
+	hostAddr.sin_addr.s_addr = 0;
+    }
+    else
+    {
+	if (!getHostAddress(host, &hostAddr, &addrList, &mask))
 	{
 	    message(0, 0, "can't resolve host or address '%s'", host);
 	    close(serverFd);
 	    errno = 0;
 	    return -1;
 	}
-    }
-    else
-    {
-	anyHost++;
     }
 
     while (1)
@@ -1780,19 +1822,23 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 
 	/*
 	** Check the received connection address against the specified
-	** server host name (unless it is "*").
+	** server host name (applying a network mask as ppropriate).
 	*/
 
-	if (anyHost || fromAddr.sin_addr.s_addr == hostAddr.sin_addr.s_addr)
+	if ((fromAddr.sin_addr.s_addr & mask) ==
+	    (hostAddr.sin_addr.s_addr & mask))
 	{
-	    /* We'll take anything */
+	    /* We've got a straight match */
 	    break;
 	}
 	else
 	{
+	    /* Try the alias addresses */
+
 	    for (addrPtr = addrList; addrPtr->s_addr != 0xffffffff; addrPtr++)
 	    {
-		if (fromAddr.sin_addr.s_addr == addrPtr->s_addr)
+		if ((fromAddr.sin_addr.s_addr &mask) ==
+		    (addrPtr->s_addr & mask))
 		{
 		    break;
 		}
@@ -2197,7 +2243,7 @@ generateKey(void)
 	{
 	    while ((entryP = readdir(dir)) != NULL)
 	    {
-		sprintf(name, "/proc/%s", entryP->d_name);
+		snprintf(name, sizeof(name), "/proc/%s", entryP->d_name);
 		stat(name, &sbuf);
 		sha_update(&sha, (SHA_BYTE *)entryP, sizeof(struct dirent));
 		sha_update(&sha, (SHA_BYTE *)&sbuf, sizeof(sbuf));
@@ -2959,7 +3005,7 @@ spawnCommand(unsigned short port, char *cmdFormat)
     STARTUPINFO	suInfo;
     PROCESS_INFORMATION pInfo;
 
-    sprintf(cmdBuf, cmdFormat, (int)port);
+    snprintf(cmdBuf, sizeof(cmdBuf), cmdFormat, (int)port);
 
     memset(&suInfo, 0, sizeof(suInfo));
     suInfo.cb = sizeof(suInfo);
@@ -2983,7 +3029,7 @@ spawnCommand(unsigned short port, char *cmdFormat)
     char *shell = DFLT_SHELL;
     char cmdBuf[MAX_LINE_SIZE];
 
-    sprintf(cmdBuf, cmdFormat, (int)port);
+    snprintf(cmdBuf, cmdFormat, (int)port);
 
     if (((shell = getenv("SHELL")) == NULL) || *shell == '\0')
     {
@@ -3428,6 +3474,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
 {
     PortList_t *lp1, *lp2;
     struct in_addr *alp = NULL;
+    unsigned long mask = 0;
 
 
     assert(AllowedTargets != NULL);
@@ -3439,7 +3486,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
 
     if (addrP->sin_addr.s_addr == 0x00000000)
     {
-	if (!getHostAddress(TargetHost, addrP, NULL))
+	if (!getHostAddress(TargetHost, addrP, NULL, NULL))
 	{
 	    message(0, 0, "can't resolve host or address '%s'", TargetHost);
 	    return 0;
@@ -3453,13 +3500,15 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
 
     for (lp1 = AllowedTargets; lp1; lp1 = lp1->next)
     {
-	if (addrP->sin_addr.s_addr != lp1->addr.sin_addr.s_addr)
+	mask = lp1->mask;
+
+	if ((addrP->sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
 	{
 	    /* Did not match primary address, check aliases */
 
 	    for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
 	    {
-		if (addrP->sin_addr.s_addr == alp->s_addr)
+		if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
 		{
 		    /* Found a matching address in the aliases */
 
@@ -3504,6 +3553,81 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
 	else if (port >= lp1->lo && port <= lp1->hi)
 	{
 	    *hostP = lp1->host;
+	    return 1;
+	}
+    }
+
+    return 0;
+}
+
+/*
+** checkPeerAddress
+**
+** Check the address of the peer of the supplied socket against the
+** list of allowed addresses, if any.
+*/
+
+int
+checkPeerAddress(int fd)
+{
+    struct sockaddr_in addr;
+    int addrLen = sizeof(addr);
+    unsigned short port = 0;
+    PortList_t *lp1, *lp2;
+    struct in_addr *alp = NULL;
+    unsigned long mask = 0xffffffff;
+
+
+    if (!AllowedPeers) return 1;
+
+    if (getpeername(fd, (struct sockaddr *)&addr, &addrLen))
+    {
+	message(0, errno, "can't get peer address for socket");
+	return 0;
+    }
+    message(4, 0, "peer address from connection is %s", inet_ntoa(addr.sin_addr));
+
+    port = ntohs(addr.sin_port);
+
+    for (lp1 = AllowedTargets; lp1; lp1 = lp1->next)
+    {
+	mask = lp1->mask;
+
+	if ((addr.sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
+	{
+	    /* Did not match primary address, check aliases */
+
+	    for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
+	    {
+		if ((addr.sin_addr.s_addr & mask) == (alp->s_addr & mask))
+		{
+		    /* Found a matching address in the aliases */
+
+		    break;
+		}
+	    }
+
+	    if (alp->s_addr == 0xffffffff)
+	    {
+		/* Did not match at all, try next entry */
+
+		continue;
+	    }
+	}
+
+	message(4, 0, "checking port %hu against range %hu-%hu for host %s", port, lp1->lo, lp1->hi, lp1->host);
+
+	/* If the port range is 0 -- 0 then any port is OK */
+
+	if (lp1->lo == 0 && lp1->hi == 0)
+	{
+	    return 1;
+	}
+
+	/* Otherwise check against the entry for this specific host */
+
+	else if (port >= lp1->lo && port <= lp1->hi)
+	{
 	    return 1;
 	}
     }
@@ -4275,6 +4399,18 @@ client(FnArgs_t *argP)
     }
 
     /*
+    ** Validate the server IP address, if required.
+    */
+
+    message(3, 0, "validating server IP address");
+
+    if (!checkPeerAddress(serverFd))
+    {
+	message(0, 0, "server connection not from a permitted address");
+	goto fatal;
+    }
+
+    /*
     ** Request protocol version.
     */
 
@@ -4845,7 +4981,23 @@ serverListener(unsigned short *portPtr)
 	else
 	{
 	    message(1, 0, "accepted connection from %s", inet_ntoa(addr.sin_addr));
-	    spawnHandler(server, listenFd, clientFd, Debug, &addr, 0);
+
+	    /*
+	    ** Validate the client IP address, if required. We could do
+	    ** this in the handler routine but doing it here saves the
+	    ** creation of a thread unnecessarily.
+	    */
+
+	    message(3, 0, "validating client IP address");
+	    if (!checkPeerAddress(clientFd))
+	    {
+		message(0, 0, "client connection from %s disallowed", inet_ntoa(addr.sin_addr));
+		close(clientFd);
+	    }
+	    else
+	    {
+		spawnHandler(server, listenFd, clientFd, Debug, &addr, 0);
+	    }
 	}
     }
 }
@@ -5756,8 +5908,10 @@ newPortList(unsigned short lo, unsigned short hi, char *host)
     PortList_t *new = NULL;
     struct sockaddr_in addr;
     struct in_addr *addrList = NULL;
+    unsigned long mask = 0xffffffff;
 
-    if (host && !getHostAddress(host, &addr, &addrList))
+
+    if (host && !getHostAddress(host, &addr, &addrList, &mask))
     {
 	message(0, 0, "can't resolve host or address '%s'", host);
 	return NULL;
@@ -5765,11 +5919,11 @@ newPortList(unsigned short lo, unsigned short hi, char *host)
 
     if (addrList)
     {
-	new = allocPortList(lo, hi, host, &(addr.sin_addr), addrList);
+	new = allocPortList(lo, hi, host, &(addr.sin_addr), addrList, mask);
     }
     else
     {
-	new = allocPortList(lo, hi, NULL, NULL, NULL);
+	new = allocPortList(lo, hi, NULL, NULL, NULL, 0xffffffff);
     }
 
     return new;
@@ -5779,7 +5933,7 @@ newPortList(unsigned short lo, unsigned short hi, char *host)
 ** allocPortList
 **
 ** Allocate a new PortList_t structure and initialize the hi and lo elements.
-** If host is not NULL the we populate the addr element with the supplied
+** If host is not NULL then we populate the addr element with the supplied
 ** address and save the hostname.
 */
 
@@ -5787,7 +5941,8 @@ PortList_t *
 allocPortList(unsigned short lo,
 	      unsigned short hi, char *host,
 	      struct in_addr *addrP,
-	      struct in_addr *addrList)
+	      struct in_addr *addrList,
+	      unsigned long mask)
 {
     PortList_t *new = NULL;
 
@@ -5812,6 +5967,8 @@ allocPortList(unsigned short lo,
 	strcpy(new->host, host);
     }
     new->addrList = addrList;
+    new->mask = mask;
+
     new->next = NULL;
 
     return new;
@@ -5986,6 +6143,30 @@ setTunnel(char *value)
 	{
 	    message(0, 0, "invalid tunnel specification '%s'", value);
 	}
+    }
+}
+
+/*
+** setAllowedPeer
+**
+** The value is either of the form "address:portlist" or just a
+** plain address. Addresses can be include CIDR mask specifications.
+*/
+
+void
+setAllowedPeer(char *value)
+{
+    char addr[MAX_LINE_SIZE];
+    char portList[MAX_LINE_SIZE];
+
+
+    if (sscanf(value, "%[^:]:%s", addr, portList) == 2)
+    {
+	setPortList(portList, &AllowedPeers, addr, 0);
+    }
+    else
+    {
+	setPortList("0", &AllowedPeers, addr, 1);
     }
 }
 
@@ -6265,6 +6446,7 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "generator")) setString(value, &Generator);
     else if (!strcasecmp(key, "privatekey")) setString(value, &PrivateKey);
     else if (!strcasecmp(key, "checkidfile")) setString(value, &IdentityFile);
+    else if (!strcasecmp(key, "checkaddress")) setAllowedPeer(value);
     else if (!strcasecmp(key, "redirect")) setPortList(value, &AllowedDefault, NULL, 0);
     else if (!strcasecmp(key, "message")) message(1, 0, "%s", value);
     else if (!strcasecmp(key, "name")) setString(value, &Program);
