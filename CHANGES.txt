@@ -6,6 +6,9 @@ Added "runasuser/-N" (thanks to Thomas Melzer)
 
 Added per-target ID checking (originally by Alain Turbide).
 
+Fixed a bug with "anonymous" tunnel specs (using a "*" to default to
+the server address).
+
 * Release 2.4.1 (2002/05/29)
 
 Fixed incorrect selection of client TCP/UDP mode when handler function is
