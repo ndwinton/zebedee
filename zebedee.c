@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.26 2003-02-04 07:34:05 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.27 2003-02-05 19:20:25 ndwinton Exp $";
 #define RELEASE_STR "2.4.1"
 
 #include <stdio.h>
@@ -6888,7 +6888,7 @@ setTunnel(char *value)
     }
     else
     {
-	if (ServerHost == NULL)
+	if (ServerHost == NULL || strcmp(ServerHost, "*") == 0)
 	{
 	    setString(value, &ServerHost);
 	}
