@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.10 2002-04-12 13:24:58 ndwinton Exp $
+# $Id: Makefile,v 1.11 2002-04-23 14:49:43 ndwinton Exp $
 
 ZBD_VERSION = 2.3.2
 
@@ -23,6 +23,7 @@ CC_freebsd = gcc -pthread
 CC_tru64 = cc
 CC_irix = cc -n32 -woff 1110
 CC_hpux = cc -Ae +DAportable
+CC_macosx = cc
 CC = $(CC_$(OS))
 
 # Optimise/debug compilation
@@ -86,6 +87,7 @@ INSTALL_freebsd = install -c
 INSTALL_tru64 = installbsd -c
 INSTALL_irix = install -c
 INSTALL_hpux = install -c
+INSTALL_macosx = install
 INSTALL = $(INSTALL_$(OS))
 
 # InnoSetup compiler for Win32 (see http://www.jordanr.dhs.org/)
@@ -125,6 +127,10 @@ ISCOMP = "c:/Program Files/Inno Setup 2/compil32.exe"
 #   libraries below. If you use this code please be aware of the security
 #   and practical implications of doing this kind of thing. Use it at your
 #   own risk!
+#
+# Thread stack size:
+#   The default is 32k but this can be overridded with the THREAD_STACK_SIZE
+#   definition. Currently this has only been found to be necessary on MacOSX.
 
 DEFINES_win32 =
 DEFINES_linux = -DHAVE_PTHREADS
@@ -133,6 +139,7 @@ DEFINES_freebsd = -DHAVE_PTHREADS -DBUGGY_FORK_WITH_THREADS
 DEFINES_tru64 = -D_REENTRANT -DHAVE_PTHREADS
 DEFINES_irix = -D_REENTRANT -DHAVE_PTHREADS -Dinline=
 DEFINES_hpux = -D_REENTRANT -DHAVE_PTHREADS -DDONT_HAVE_SELECT_H -Dinline=
+DEFINES_macosx = -D_REENTRANT -DHAVE_PTHREADS -DTHREAD_STACK_SIZE=49152
 DEFINES = $(DEFINES_$(OS))
 
 # Suffix for executables
@@ -149,6 +156,7 @@ OSLIBS_freebsd =
 OSLIBS_tru64 = -lpthread
 OSLIBS_irix = -lpthread
 OSLIBS_hpux = -lpthread -lnsl
+OSLIBS_macosx = -lpthread
 OSLIBS = $(OSLIBS_$(OS))
 
 # Supplementary object files (Win32 ONLY)
@@ -180,7 +188,7 @@ EXTRAFILES = $(ZBDFILES) $(TXTFILES)
 all : precheck zebedee$(EXE) zebedee.1 zebedee.html ftpgw.tcl.1 ftpgw.tcl.html zebedee.ja_JP.html
 
 precheck :
-	@ if test -z "$(OS)"; then echo "Use '$(MAKE) OS=xxx' where xxx is win32, linux, solaris, freebsd, tru64, irix or hpux"; exit 1; fi
+	@ if test -z "$(OS)"; then echo "Use '$(MAKE) OS=xxx' where xxx is win32, linux, solaris, freebsd, tru64, irix, hpux or macosx"; exit 1; fi
 
 zebedee$(EXE) : $(OBJS)
 	$(CC) $(CFLAGS) -o zebedee$(EXE) $(OBJS) $(LIBS)

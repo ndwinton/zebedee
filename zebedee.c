@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.18 2002-04-18 11:59:45 ndwinton Exp $";
-#define RELEASE_STR "2.3.2"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.19 2002-04-23 14:49:43 ndwinton Exp $";
+#define RELEASE_STR "2.4.0"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -181,7 +181,9 @@ pthread_attr_t ThreadAttr;
 #define CHALLENGE_SIZE	4	/* Size of challenge data */
 #define NONCE_SIZE	8	/* Size of nonce data */
 
+#ifndef THREAD_STACK_SIZE
 #define THREAD_STACK_SIZE   32768   /* Minimum stack for threads */
+#endif
 
 #define	CMP_OVERHEAD	250	/* Maximum overhead on 16k message */
 #define	CMP_MINIMUM	32	/* Minimum message size to attempt compression */
@@ -552,6 +554,7 @@ void addHandler(struct sockaddr_in *fromAddrP, unsigned long id, int fd, struct 
 void removeHandler(struct sockaddr_in *addrP);
 
 void clientListener(PortList_t *localPorts);
+int makeClientListeners(PortList_t *ports, fd_set *listenSetP, int udpMode);
 void client(FnArgs_t *argP);
 void prepareToDetach(void);
 void makeDetached(void);
@@ -3884,7 +3887,7 @@ checkPeerAddress(int fd, struct sockaddr_in *addrP)
     struct sockaddr_in addr;
     int addrLen = sizeof(struct sockaddr_in);
     unsigned short port = 0;
-    PortList_t *lp1, *lp2;
+    PortList_t *lp1 = NULL;
     struct in_addr *alp = NULL;
     unsigned long mask = 0xffffffff;
 
