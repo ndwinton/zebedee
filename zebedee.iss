@@ -1,7 +1,7 @@
 [Setup]
 Bits=32
 AppName=Zebedee Secure Tunnel
-AppVerName=Zebedee Secure Tunnel Version 2.5.1
+AppVerName=Zebedee Secure Tunnel Version 2.5.2
 AppCopyright=Copyright 1999-2003 by Neil Winton.
 DefaultDirName={pf}\Zebedee
 DefaultGroupName=Zebedee
