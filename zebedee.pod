@@ -8,7 +8,7 @@ Zebedee --- a simple, free, secure TCP and UDP tunnel program
 
 =item Server:
 
-B<zebedee> B<-s> [I<common-options>] [B<-c> I<host>] [B<-r> I<ports>]
+B<zebedee> B<-s> [I<common-options>] [B<-c> I<host>] [B<-C> I<num>] [B<-r> I<ports>]
 [I<target> ...]
 
 =item Client:
@@ -1559,7 +1559,7 @@ brief description.
  command        string    -e   C   Specified command to run connected to tunnel
  compression    level     -z   CS  Requested maximum compression level
  connectattempts
-                number    -R   S   Number of attempts to connect to client
+                number    -C   S   Number of attempts to connect to client
  debug          boolean        CS  Run in single-threaded "debug" mode
  detached       boolean   -d   CS  Detach from the terminal/console
  dropunknownprotocol
@@ -2497,4 +2497,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.28 2003-09-22 16:32:29 ndwinton Exp $
+ $Id: zebedee.pod,v 1.29 2003-09-22 16:34:26 ndwinton Exp $
