@@ -12,6 +12,9 @@ Fix handling of HTTP/1.1 responses from proxies.
 Added acceptconnecttimeout (supersedes "connecttimeout") along with
 connectattempts, serverconnecttimeout and targetconnecttimeout.
 
+Fixed bug with "clienthost" not being honoured when Zebedee was used as
+a service.
+
 * Release 2.5.1 (2003/07/05)
 
 Critical fix to the checksumming code, which wouldn't work if messages
