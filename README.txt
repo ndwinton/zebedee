@@ -33,8 +33,8 @@ zebedee(1) under UNIX -- it is basically the same text). Example
 configuration files are also provided.
 
 Versions of Zebedee in the 2.4.x series are stable, "production"
-versions. The next development series, containing new features
-will be numbered 2.5.x.
+versions. The development series, containing new features, but
+less well testedm is numbered 2.5.x.
 
 Building Zebedee
 ----------------

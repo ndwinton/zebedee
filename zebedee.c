@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.30 2003-06-19 13:58:07 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.31 2003-06-20 08:16:14 ndwinton Exp $";
 #define RELEASE_STR "2.5.0"
 
 #include <stdio.h>
@@ -7008,12 +7008,6 @@ setTarget(char *value)
 void
 setChecksum(char *value, unsigned short *resultP)
 {
-    char minValue[MAX_LINE_SIZE];
-    char maxValue[MAX_LINE_SIZE];
-    unsigned short min = CHECKSUM_INVALID;
-    unsigned short max = CHECKSUM_INVALID;
-
-
     if (sscanf(value, "%hu", resultP) != 1)
     {
 	message(0, 0, "can't parse checksum value '%s'", value);
