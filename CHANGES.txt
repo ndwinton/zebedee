@@ -14,11 +14,14 @@ debug/test purposes.
 
 Fix handling of HTTP/1.1 responses from proxies.
 
-Added acceptconnecttimeout (supersedes "connecttimeout") along with
-connectattempts, serverconnecttimeout and targetconnecttimeout.
+Added "acceptconnecttimeout" (supersedes "connecttimeout") along with
+"connectattempts" (and -C command-line option), "serverconnecttimeout" and
+"targetconnecttimeout".
 
 Fixed bug with "clienthost" not being honoured when Zebedee was used as
 a service.
+
+Added display of NOTICE.txt to the Windows install process.
 
 * Release 2.5.1 (2003/07/05)
 
