@@ -1,5 +1,11 @@
 * Release 2.3.2
 
+Tunnel and target ports can now be suffixed with "/tcp" or "/udp" in order to
+restrict the protocol used. This is useful when "ipmode both" is in effect.
+So, for example a target of "localhost:5900-5910/tcp,daytime/udp" allows
+TCP-only tunnels to 5900-5910 and UDP-only tunnels to the "daytime" port. When
+the protocol is omitted either may be used.
+
 Added support for UDP source address spoofing when run in "transparent" mode.
 This makes source to target UDP traffic "transparent" but the target server
 will be unlikely to be able to reply to any such datagrams received. Note that
@@ -13,6 +19,11 @@ connection timeouts are handled through "idletimeout".
 
 Added "no linger" and "keep alive" options to sockets accepted by client
 or server in order to clean up better in the case of the peer hanging.
+
+Modified "redirect" to support "redirect none" to turn off any default target
+ports.
+
+Added further documentation about server security issues.
 
 Prohibit the default target from having an address mask. It's too confusing
 otherwise!

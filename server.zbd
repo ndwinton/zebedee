@@ -4,7 +4,7 @@
 # This shows the use of many, but not all, of the configuration file
 # options available for use by a server.
 #
-# $Id: server.zbd,v 1.2 2002-04-10 14:31:21 ndwinton Exp $
+# $Id: server.zbd,v 1.3 2002-04-16 13:03:58 ndwinton Exp $
 
 verbosity 2	# Slightly more than basic messages
 
@@ -47,16 +47,16 @@ keygenlevel 2	# Generate maximum strength private keys
 #
 #  checkidfile './clients.id'
 
+# The "redirect" expression can be use to set the default ports
+# allowed when a target specification consists of a hostname but
+# no other ports. The "redirect none" statement prohibits
+# tunnelling anywhere by default.
+
+redirect none
+
 # Set up allowed targets. Note that there are NO targets allowed
 # by this file by default. You must explicitly edit it to enable
 # them.
-
-# The "redirect" expression can be use to set the default ports
-# allowed when a target specification consists of a hostname but
-# no other ports. The "redirect 1" is a hack to prohibit tunnelling
-# anywhere useful by default.
-
-redirect 1
 
 # The following are good for testing purposes
 #

@@ -108,7 +108,8 @@ So now you know!
 
 To set up a secure connection between your local machine and a remote host you
 need first to run B<Zebedee> in server mode on the remote system. The easiest
-way to do this is to run B<Zebedee> with the B<-s> option. Like this:
+way to do this is to run B<Zebedee> with the B<-s> option (but please read the
+notes on L<security issues|/"item_Default_Server_Configuration"> later):
 
  zebedee -s
 
@@ -164,7 +165,7 @@ So, for example, the command:
  zebedee 8000:webhost:80
 
 will allow you to secure all HTTP connections to B<webhost> if accessed via
-port 8000 on the client system. See L<EXAMPLES> for more details.
+port 8000 on the client system. See L<EXAMPLES|/examples> for more details.
 
 You can also use a single B<Zebedee> client to handle multiple simultaneous
 tunnels to different target ports on the same remote host. In this case the
@@ -545,12 +546,17 @@ handled by some "out-of-band" mechanism.
 
 =item B<redirect> (command-line B<-r>)
 
-This is a list of the ports on the target system to which the server will
-accept requests to redirect data. For example "C<telnet, ftp, 5900-5910>".
-If no B<redirect> keyword is specified then requests to redirect traffic to
-any port will be accepted. While this is convenient for testing it may pose a
-security risk so you should specify an explict list of allowed ports if at all
-possible.
+This is the default list of the ports on the target system to which the server
+will accept requests to redirect data, when the B<L<target|/item_target>>
+specification does not otherwise specify a port range. An example port list
+might be "C<telnet, ftp, 5900-5910>". If no B<redirect> keyword is specified
+then requests to redirect traffic to B<any> port will be accepted. While this
+is convenient for testing it may pose a security risk so you should specify an
+explict list of allowed ports if at all possible.
+
+As a special case, if the port range is given as "C<none>" then any current
+default redirection list will be cleared and no target ports will be accepted
+by default.
 
 The keyword (or B<-r> option) may be specified multiple times in which case
 redirection will be allowed to any of the ports specified.
@@ -593,10 +599,22 @@ causes the B<Zebedee> server to attempt to propagate the client's IP address
 to the target server --- for the existence of the server to become
 "transparent".
 
-This will probably only work, if at all, on Linux and then only on systems
-with kernel versions 2.0 and 2.2. B<Zebedee> will also have to be run as
-C<root>. It will not work on Linux 2.4, although there is some hope that it
-may work in future versions.
+This functionality will not work on all platforms and B<Zebedee> will have to
+be run as a privileged user (e.g. C<root> on UNIX-like systems) in order for
+it to work at all. Full transparency support for TCP and UDP traffic is
+currently only expected work on Linux and then only on systems with kernel
+versions 2.0 and 2.2. It will not work on Linux 2.4, although there is some
+hope that it may work in future versions.
+
+Support for a limited form of transparency for UDP traffic is available for a
+wider range of UNIX-like platforms, although this must have been enabled at
+compile time. If it has been enabled then unidirectional UDP traffic from
+client to server will preserve the B<Zebedee> client's IP address on datagrams
+sent to the target server. This will be sufficient for applications such as
+C<syslog> where there is no requirement that the target server should reply to
+such traffic. Applications that attempt to reply to the address in these
+datagrams will not send replies via the B<Zebedee> tunnel and, in fact, are
+likely to send their data to non-existent or invalid endpoints.
 
 =back
 
@@ -946,6 +964,25 @@ messages will be written to the host system log. On Windows systems this is
 the system application event log. Elsewhere messages are written to the
 B<syslog> service.
 
+=item B<readtimeout>
+
+The B<readtimeout> keyword is primarily intended to help provide a B<Zebedee>
+server with some additional defence against "denial of service" attacks where
+a malicious user might make connections to a server but not send any data to
+them. Each connection consumes resources and it might be possible for an
+attacker to crash the server by exceeding its resource capacity.
+
+This value represents a time limit in seconds within which reads from a
+B<Zebedee> tunnel must be complete. If the value is zero then no timeout is
+applied. This is the default behaviour because applying a timeout will have
+some impact on performance and an unnecessarily small timeout may cause valid
+connections to fail.
+
+The timeout primarily affects the initial B<Zebedee> protocol exchanges. If
+you wish to cause valid but apparently idle connections to be timed out you
+should use B<L<tcptimeout|/item_tcptimeout>> or
+B<L<udptimeout|/item_udptimeout>>.
+
 =item B<serverport> (command-line <-T>)
 
 This is the port on which the B<Zebedee> server will listen for tunnel
@@ -1254,17 +1291,17 @@ there is no guarantee that the channel ends up where you think it does. It is
 open to "man-in-the-middle" attacks. If you are concerned primarily with using
 data compression or protecting against casual "network sniffing" then you may
 be happy with this situation. If, however, you want more assurance that your
-connection is not being redirected then B<Zebedee> provides some basic
+connection is not being "hijacked" then B<Zebedee> provides some basic
 facilities for doing so.
 
-If the same modulus, generator and private key are used they will always
-generate the same public value for use in the Diffie-Hellman key exchange
-protocol. If you use a fixed private key (specified using the
-B<L<privatekey|/item_privatekey>>)
-keyword in a configuration file) then B<Zebedee> can generate a key
-"fingerprint" by hashing together the modulus, generator and public key value.
-This is done using the B<-P> option, for example, if the file F<server.key>
-contains the following value:
+If the same B<L<modulus|/item_modulus>>, B<L<generator|/item_generator>> and
+private key are used they will always generate the same public value for use
+in the Diffie-Hellman key exchange protocol. If you use a fixed private key
+(specified using the B<L<privatekey|/item_privatekey>>) keyword in a
+configuration file) then B<Zebedee> can generate a key "fingerprint" by
+hashing together the modulus, generator and public key value.  This is done
+using the B<-P> option, for example, if the file F<server.key> contains the
+following value:
 
  privatekey "1e34d6769502bae1087c18d2e8c8776e4a17ddaf"
 
@@ -1343,6 +1380,23 @@ to an external key generation program using the
 B<L<keygencommand|/item_keygencommand>> option in a configuration file.
 Suggestions for improving the built-in capabilities will also be gratefully
 received!
+
+=item Default Server Configuration
+
+By default, if you do not specify any target ports either in a
+B<L<target|/item_target>> specification or with a
+B<L<redirect|/item_redirect>> keyword a B<Zebedee> server will accept requests
+to make connections to B<any> port. This is almost certainly not what you want
+in a production environment.
+
+=item Denial of Service Attacks
+
+A "denial of service" attack is one where a malicious user does not attempt to
+capture secret information but instead tries to render a service unavailable
+or unusable. In common with many network service, B<Zebedee> is somewhat
+vulnerable to such attacks. If this is a particular concern to you then you
+may wish to employ the B<L<readtimeout|/item_readtimeout>> keyword in order to
+reduce the susceptibility to this kind of attack.
 
 =back
 
@@ -1918,4 +1972,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.8 2002-04-10 14:31:21 ndwinton Exp $
+ $Id: zebedee.pod,v 1.9 2002-04-16 13:03:59 ndwinton Exp $

@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.16 2002-04-12 13:24:58 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.17 2002-04-16 13:03:58 ndwinton Exp $";
 #define RELEASE_STR "2.3.2"
 
 #include <stdio.h>
@@ -258,6 +258,10 @@ pthread_attr_t ThreadAttr;
 
 #define HDR_FLAG_UDPMODE    0x1	/* Operate in UDP mode */
 
+#define PORTLIST_TCP	    0x1	/* TCP-type port list */
+#define PORTLIST_UDP	    0x2	/* UDP-type port list */
+#define PORTLIST_ANY	    (PORTLIST_TCP | PORTLIST_UDP)
+
 /***************************\
 **			   **
 **  Data Type Definitions  **
@@ -285,7 +289,8 @@ BFState_t;
 ** A linked list of these structures holds information about a set of ranges.
 ** The host element holds the name of the host associated with the port
 ** range, addr the matching IP address and addrList, a list of alias
-** addresses. The mask is used if an address mask was specified.
+** addresses. The mask is used if an address mask was specified. The type
+** is a bitmask combination of PORTLIST_UDP and PORTLIST_UDP.
 */
  
 typedef struct PortList_s
@@ -297,6 +302,7 @@ typedef struct PortList_s
     struct in_addr *addrList;
     struct PortList_s *next;
     unsigned long mask;
+    unsigned short type;
 }
 PortList_t;
 
@@ -551,19 +557,19 @@ void prepareToDetach(void);
 void makeDetached(void);
 void serverListener(unsigned short *portPtr);
 void serverInitiator(char *client, unsigned short port, unsigned short timeout);
-int allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP);
+int allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char **hostP);
 int checkPeerAddress(int fd, struct sockaddr_in *addrP);
 int countPorts(PortList_t *list);
 unsigned short mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP);
 void server(FnArgs_t *argP);
 
 unsigned short scanPortRange(const char *str, unsigned short *loP,
-			     unsigned short *hiP);
+			     unsigned short *hiP, unsigned short *typeP);
 void setBoolean(char *value, int *resultP);
 void setUShort(char *value, unsigned short *resultP);
 void setPort(char *value, unsigned short *resultP);
-PortList_t *newPortList(unsigned short lo, unsigned short hi, char *host);
-PortList_t *allocPortList(unsigned short lo, unsigned short hi, char *host, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask);
+PortList_t *newPortList(unsigned short lo, unsigned short hi, char *host, unsigned short type);
+PortList_t *allocPortList(unsigned short lo, unsigned short hi, char *host, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask, unsigned short type);
 void setPortList(char *value, PortList_t **listP, char *host, int zeroOk);
 void setTarget(char *value);
 void setTunnel(char *value);
@@ -3757,7 +3763,8 @@ makeDetached(void)
 ** allowRedirect
 **
 ** Decide whether redirection to the specified port at the specified
-** address is allowed or not.
+** address is allowed or not. The udpMode indicates whether this is a
+** TCP or UDP mode connection.
 **
 ** Returns 1 if it is or 0 otherwise.
 **
@@ -3765,7 +3772,7 @@ makeDetached(void)
 */
 
 int
-allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
+allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char **hostP)
 {
     PortList_t *lp1, *lp2;
     struct in_addr *alp = NULL;
@@ -3806,7 +3813,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
 		if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
 		{
 		    /* Found a matching address in the aliases */
-
+		
 		    break;
 		}
 	    }
@@ -3837,8 +3844,11 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
 
 		if (port >= lp2->lo && port <= lp2->hi)
 		{
-		    *hostP = lp1->host;
-		    return 1;
+		    if (lp2->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP))
+		    {
+			*hostP = lp1->host;
+			return 1;
+		    }
 		}
 	    }
 	}
@@ -3847,8 +3857,11 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
 
 	else if (port >= lp1->lo && port <= lp1->hi)
 	{
-	    *hostP = lp1->host;
-	    return 1;
+	    if (lp1->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP))
+	    {
+		*hostP = lp1->host;
+		return 1;
+	    }
 	}
     }
 
@@ -4590,6 +4603,12 @@ makeClientListeners(PortList_t *ports, fd_set *listenSetP, int udpMode)
     {
 	for (localPort = ports->lo; localPort <= ports->hi; localPort++)
 	{
+	    if ((ports->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP)) == 0)
+	    {
+		/* Skip incompatible port types */
+		continue;
+	    }
+
 	    message(3, 0, "creating %s-mode local listener socket for port %hu",
 		    (udpMode ? "UDP" : "TCP"), localPort);
 
@@ -5561,7 +5580,7 @@ server(FnArgs_t *argP)
 
 	message(3, 0, "checking if redirection is allowed");
 
-	if (allowRedirect(request, &localAddr, &targetHost))
+	if (allowRedirect(request, &localAddr, udpMode, &targetHost))
 	{
 	    message(3, 0, "allowed redirection request to %s:%hu", targetHost, request);
 
@@ -5593,7 +5612,7 @@ server(FnArgs_t *argP)
 	}
 	else
 	{
-	    message(0, 0, "client requested redirection to a disallowed target (%s:%hu)", inet_ntoa(localAddr.sin_addr), request);
+	    message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", inet_ntoa(localAddr.sin_addr), request, (udpMode ? "udp" : "tcp"));
 	    headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
 	}
 
@@ -5730,9 +5749,9 @@ server(FnArgs_t *argP)
 
 	message(3, 0, "checking if redirection is allowed");
 
-	if (!allowRedirect(request, &localAddr, &targetHost))
+	if (!allowRedirect(request, &localAddr, udpMode, &targetHost))
 	{
-	    message(0, 0, "client requested redirection to a disallowed port (%hu)", request);
+	    message(0, 0, "client requested redirection to a disallowed port (%s:%hu/%s)", request);
 	    writeUShort(clientFd, 0);
 	    goto fatal;
 	}
@@ -6096,20 +6115,41 @@ fatal:
 ** Parse a port range specifier and place the high and low ends of the
 ** range in hiP and loP. A range can be two shorts integers separated by
 ** a "-" -- for example "5900-5910", a single number or a symbolic port name.
-** In the latter two cases both hiP and loP are set the same.
+** In the latter two cases both hiP and loP are set the same. If the range
+** is suffixed by /tcp or /udp then the typeP is set accordingly otherwise
+** it is set to both TCP and UDP.
 **
 ** If either loP or hiP are NULL the corresponding value is not set.
 ** The command always returns the vale of the low port.
 */
 
 unsigned short
-scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP)
+scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP, unsigned short *typeP)
 {
     struct servent *entry = NULL;
     unsigned short loVal = 0;
     unsigned short hiVal = 0;
     char portName[MAX_LINE_SIZE];
+    char *slash = NULL;
+    unsigned short type = PORTLIST_ANY;
 
+
+    if ((slash = strchr(str, '/')) != NULL)
+    {
+	if (!strcasecmp(slash, "/tcp"))
+	{
+	    type = PORTLIST_TCP;
+	}
+	else if (!strcasecmp(slash, "/udp"))
+	{
+	    type = PORTLIST_UDP;
+	}
+	else
+	{
+	    message(0, 0, "invalid port type (%s)", slash);
+	    return 0;
+	}
+    }
 
     switch (sscanf(str, "%hu-%hu", &loVal, &hiVal))
     {
@@ -6141,13 +6181,13 @@ scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP)
 	return loVal;
     }
 
-    if (sscanf(str, "%s", portName) != 1)
+    if (sscanf(str, "%[^/]", portName) != 1)
     {
 	message(0, 0, "missing port name");
 	return 0;
     }
 
-    if ((entry = getservbyname(portName, (TcpMode ? "tcp" : "udp"))) == NULL)
+    if ((entry = getservbyname(portName, (type == PORTLIST_UDP ? "udp" : "tcp"))) == NULL)
     {
 	message(0, errno, "can't find port name entry for '%s'", portName);
 	return 0;
@@ -6156,6 +6196,7 @@ scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP)
     loVal = ntohs(entry->s_port);
     if (loP) *loP = loVal;
     if (hiP) *hiP = loVal;
+    if (typeP) *typeP = type;
 
     return loVal;
 }
@@ -6211,7 +6252,7 @@ setPort(char *value, unsigned short *resultP)
     unsigned short port;
 
 
-    port = scanPortRange(value, NULL, NULL);
+    port = scanPortRange(value, NULL, NULL, NULL);
     if (port == 0)
     {
 	message(0, 0, "can't parse port value '%s' key", value);
@@ -6230,7 +6271,7 @@ setPort(char *value, unsigned short *resultP)
 */
 
 PortList_t *
-newPortList(unsigned short lo, unsigned short hi, char *host)
+newPortList(unsigned short lo, unsigned short hi, char *host, unsigned short type)
 {
     PortList_t *new = NULL;
     struct sockaddr_in addr;
@@ -6246,11 +6287,11 @@ newPortList(unsigned short lo, unsigned short hi, char *host)
 
     if (addrList)
     {
-	new = allocPortList(lo, hi, host, &(addr.sin_addr), addrList, mask);
+	new = allocPortList(lo, hi, host, &(addr.sin_addr), addrList, mask, type);
     }
     else
     {
-	new = allocPortList(lo, hi, NULL, NULL, NULL, 0xffffffff);
+	new = allocPortList(lo, hi, NULL, NULL, NULL, 0xffffffff, type);
     }
 
     return new;
@@ -6269,7 +6310,8 @@ allocPortList(unsigned short lo,
 	      unsigned short hi, char *host,
 	      struct in_addr *addrP,
 	      struct in_addr *addrList,
-	      unsigned long mask)
+	      unsigned long mask,
+	      unsigned short type)
 {
     PortList_t *new = NULL;
 
@@ -6295,6 +6337,7 @@ allocPortList(unsigned short lo,
     }
     new->addrList = addrList;
     new->mask = mask;
+    new->type = type;
 
     new->next = NULL;
 
@@ -6323,6 +6366,7 @@ setPortList(char *value, PortList_t **listP, char *host, int zeroOk)
     unsigned short lo = 0;
     unsigned short hi = 0;
     PortList_t *last = *listP;
+    unsigned short type = 0;
 
 
     /* Set "last" to point to the last element of the list */
@@ -6349,11 +6393,11 @@ setPortList(char *value, PortList_t **listP, char *host, int zeroOk)
 	}
 	*tmpPtr = '\0';
 
-	if (scanPortRange(tmpBuf, &lo, &hi) != 0 || zeroOk)
+	if (scanPortRange(tmpBuf, &lo, &hi, &type) != 0 || zeroOk)
 	{
 	    /* Allocate new list element */
 
-	    if ((new = newPortList(lo, hi, host)) == NULL)
+	    if ((new = newPortList(lo, hi, host, type)) == NULL)
 	    {
 		message(0, errno, "failed allocating memory for port list");
 		exit(EXIT_FAILURE);
@@ -6774,7 +6818,24 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "privatekey")) setString(value, &PrivateKey);
     else if (!strcasecmp(key, "checkidfile")) setString(value, &IdentityFile);
     else if (!strcasecmp(key, "checkaddress")) setAllowedPeer(value);
-    else if (!strcasecmp(key, "redirect")) setPortList(value, &AllowedDefault, NULL, 0);
+    else if (!strcasecmp(key, "redirect"))
+    {
+	if (!strcasecmp(value, "none"))
+	{
+	    /*
+	    ** Special case of "none" disables default target ports.
+	    ** Yes, I know there's a potential memory leak. No, it doesn't
+	    ** matter!
+	    */
+
+	    AllowedDefault = NULL;
+	    setPortList("0-0", &AllowedDefault, NULL, 1);
+	}
+	else
+	{
+	    setPortList(value, &AllowedDefault, NULL, 0);
+	}
+    }
     else if (!strcasecmp(key, "message")) message(1, 0, "%s", value);
     else if (!strcasecmp(key, "name")) setString(value, &Program);
     else if (!strcasecmp(key, "keygenlevel")) setUShort(value, &KeyGenLevel);
@@ -7400,7 +7461,7 @@ main(int argc, char **argv)
 
 	if (AllowedTargets == NULL)
 	{
-	    AllowedTargets = newPortList(0, 0, "localhost");
+	    AllowedTargets = newPortList(0, 0, "localhost", PORTLIST_ANY);
 	}
 
 #ifdef WIN32
@@ -7460,7 +7521,7 @@ main(int argc, char **argv)
 
 	if (ClientPorts == NULL)
 	{
-	    if ((ClientPorts = newPortList(0, 0, NULL)) == NULL)
+	    if ((ClientPorts = newPortList(0, 0, NULL, PORTLIST_ANY)) == NULL)
 	    {
 		message(0, errno, "can't allocate space for port list");
 		exit(EXIT_FAILURE);
