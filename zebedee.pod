@@ -51,7 +51,7 @@ The main goals for B<Zebedee> are to:
 
 =item *
 
-Provide client and server functionality under both UNIX and Windows 95/98/NT.
+Provide client and server functionality under both UNIX/Linux and Windows.
 
 =item *
 
@@ -177,7 +177,7 @@ remote target system, traffic on 9002 to the B<telnet> port and traffic on
 9003 to the B<ftp> port.
 
 This combination of client listening ports, target host and destination
-ports is called a "tunnel speciification". See the
+ports is called a "tunnel specification". See the
 B<L<tunnel|/item_tunnel>> keyword for more details.
 
 =head2 UDP Tunnelling
@@ -1904,4 +1904,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.4 2002-03-12 16:34:56 ndwinton Exp $
+ $Id: zebedee.pod,v 1.5 2002-03-14 17:16:59 ndwinton Exp $
