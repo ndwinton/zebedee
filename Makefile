@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.8 2002-03-22 17:51:23 ndwinton Exp $
+# $Id: Makefile,v 1.9 2002-04-12 12:06:26 ndwinton Exp $
 
 ZBD_VERSION = 2.3.2
 
@@ -113,6 +113,9 @@ ISCOMP = "c:/Program Files/Inno Setup 2/compil32.exe"
 #
 # Lack of <sys/select.h> (HPUX):
 #   Use -DDONT_HAVE_SELECT_H
+#
+# To spoof UDP source addresses (in "transparent" mode):
+#   Use -DUSE_UDP_SPOOFING and add -lnet (or -pwrite) to the link libraries.
 
 DEFINES_win32 =
 DEFINES_linux = -DHAVE_PTHREADS
