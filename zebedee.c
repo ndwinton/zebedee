@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.24 2002-05-27 14:01:51 ndwinton Exp $";
-#define RELEASE_STR "2.5.0-PRE"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.25 2002-05-28 06:31:15 ndwinton Exp $";
+#define RELEASE_STR "2.4.1"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -4266,6 +4266,8 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
 	argP->port = ntohs(localAddr.sin_port);
     }
 
+    argP->udpMode = udpMode;
+
     argP->inLine = inLine;
     if (inLine)
     {
@@ -4273,8 +4275,6 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
 	(*handler)(argP);
 	return 0;
     }
-
-    argP->udpMode = udpMode;
 
 #if defined(HAVE_PTHREADS)
     {
