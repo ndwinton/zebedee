@@ -1,3 +1,20 @@
+* Release 2.2.2 (2001/04/13)
+
+Include missing Japanese documentation.
+
+Handle files without a terminating newline.
+
+On FreeBSD, only create a parent process if the program is going to detach.
+This means there isn't an idle parent process if the program is not run in
+detached mode.
+
+Fix "PUT" handling in ftpgw.tcl.
+
+Added RPM spec file to the distribution.
+
+Note that all RCS id lines will have changed as the result of importing files
+into CVS at SourceForge.
+
 * Release 2.2.1 (2001/02/07)
 
 Fix bug handling client access using IP address rather than host name.
