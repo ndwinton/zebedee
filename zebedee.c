@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.28 2003-02-20 07:31:47 ndwinton Exp $";
-#define RELEASE_STR "2.4.1"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.29 2003-06-03 13:51:09 ndwinton Exp $";
+#define RELEASE_STR "2.5.0"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -170,6 +170,10 @@ pthread_attr_t ThreadAttr;
 #endif
 #endif
 
+#ifndef MIN
+#define MIN(a, b)   ((a) < (b) ? (a) : (b))
+#endif
+
 /**************************\
 **			  **
 **  Constants and Macros  **
@@ -227,6 +231,17 @@ pthread_attr_t ThreadAttr;
 #define FLAG_COMPRESSED	0x1
 #define FLAG_ENCRYPTED	0x2
 
+#define CHECKSUM_NONE		0
+#define CHECKSUM_ADLER		1
+#define CHECKSUM_CRC32		2
+#define CHECKSUM_SHA		3
+#define CHECKSUM_MAX		CHECKSUM_SHA
+#define CHECKSUM_ADLER_LEN	4	/* ADLER32 message digest */
+#define CHECKSUM_CRC_LEN	4	/* CRC32 message digest */
+#define CHECKSUM_SHA_LEN	20	/* SHA message digest */
+#define CHECKSUM_MAX_LEN	CHECKSUM_SHA_LEN /* Max message digest */
+#define CHECKSUM_INVALID	0xffff
+
 #define GET_FLAGS(x)	(((x) >> 14) & 0x3)
 #define SET_FLAGS(x, f)	((x) | ((f) << 14))
 
@@ -252,15 +267,17 @@ pthread_attr_t ThreadAttr;
 #define PROTOCOL_V102	    0x0102  /* Optionally omit key exchange */
 #define PROTOCOL_V200	    0x0200  /* Header, UDP and reusable key support */
 #define PROTOCOL_V201	    0x0201  /* Remote target selection */
-#define DFLT_PROTOCOL	    PROTOCOL_V201
+#define PROTOCOL_V202	    0x0202  /* Lock of protocol negotiation, checksum and source based targetting */
+#define DFLT_PROTOCOL	    PROTOCOL_V202
 
 #define TOKEN_NEW	    0xffffffff	/* Request new token allocation */
 #define TOKEN_EXPIRE_GRACE  10		/* CurrentToken valid until this close to expiry */
 
 #define HDR_SIZE_V200	    22	/* Size of V200 protocol header message */
 #define HDR_SIZE_V201	    26	/* Size of V201 protocol header message */
+#define HDR_SIZE_V202	    28	/* Size of V202 protocol header message */
 #define HDR_SIZE_MIN	    HDR_SIZE_V200
-#define HDR_SIZE_MAX	    HDR_SIZE_V201
+#define HDR_SIZE_MAX	    HDR_SIZE_V202
 
 #define HDR_OFFSET_FLAGS    0	/* Offset of flags (TCP vs UDP) */
 #define HDR_OFFSET_MAXSIZE  2	/* Offset of max message size */
@@ -270,6 +287,7 @@ pthread_attr_t ThreadAttr;
 #define HDR_OFFSET_TOKEN    10	/* Offset of key token */
 #define HDR_OFFSET_NONCE    14	/* Offset of nonce value */
 #define HDR_OFFSET_TARGET   22	/* Offset of target host address */
+#define HDR_OFFSET_CHECKSUM 26	/* Offset of checksum type */
 
 #define HDR_FLAG_UDPMODE    0x1	/* Operate in UDP mode */
 
@@ -299,7 +317,7 @@ typedef struct
 BFState_t;
 
 /*
-** The PortList_t structure holds the information about a single port
+** The EndPtList_t structure holds the information about a single port
 ** range (e.g. 10-20). A single port value has both hi and lo set the same.
 ** A linked list of these structures holds information about a set of ranges.
 ** The host element holds the name of the host associated with the port
@@ -307,10 +325,11 @@ BFState_t;
 ** addresses. The mask is used if an address mask was specified. The type
 ** is a bitmask combination of PORTLIST_UDP and PORTLIST_UDP. The idFile
 ** is the name of the identity file that should be checked for connections
-** to this endpoint.
+** to this endpoint. If peer is not NULL then it is a list of valid
+** peer connections for this endpoint.
 */
  
-typedef struct PortList_s
+typedef struct EndPtList_s
 {
     unsigned short lo;
     unsigned short hi;
@@ -318,11 +337,28 @@ typedef struct PortList_s
     char *idFile;
     struct sockaddr_in addr;
     struct in_addr *addrList;
-    struct PortList_s *next;
+    struct EndPtList_s *next;
     unsigned long mask;
     unsigned short type;
+    struct EndPtList_s *peer;
 }
-PortList_t;
+EndPtList_t;
+
+#ifdef HL_KEYLIST
+/*
+** Structure used to allow multiple private keys based on server
+*/
+typedef struct KeyList_s
+{
+    char *host;
+    char *PrivateKey;
+    struct sockaddr_in addr;
+    unsigned long mask;
+    struct in_addr *addrList;
+    struct KeyList_s *next;
+}
+KeyList_t;
+#endif
 
 /*
 ** The MsgBuf_t is the general buffer used by the low-level readMessage
@@ -335,7 +371,7 @@ typedef struct MsgBuf_s
     unsigned short maxSize;	/* Max size of data buffer read/writes */
     unsigned short size;	/* Size of current message */
     unsigned char data[MAX_BUF_SIZE];	/* Data buffer */
-    unsigned char tmp[MAX_BUF_SIZE + CMP_OVERHEAD]; /* Temporary work space */
+    unsigned char tmp[MAX_BUF_SIZE + CMP_OVERHEAD + CHECKSUM_MAX_LEN]; /* Temporary work space */
     unsigned short cmpInfo;	/* Compression level and type */
     BFState_t *bfRead;		/* Encryption context for reads */
     BFState_t *bfWrite;		/* Encryption context for writes */
@@ -345,6 +381,12 @@ typedef struct MsgBuf_s
     unsigned long writeCount;	/* Number of writes */
     unsigned long bytesOut;	/* Actual data bytes to network */
     unsigned long expBytesOut;	/* Expanded data bytes out */
+    unsigned short checksumLevel;    /* Current checksum mode, 0 if none */
+    unsigned short checksumLen;	    /* Current checksum length, 0 if none */
+    unsigned char checksumSeed[CHECKSUM_MAX_LEN];
+				    /* Seed for checksum (in fact first
+				       client/server header as hash)
+				       to avoid tampering) */
 }
 MsgBuf_t;
 
@@ -429,6 +471,9 @@ char *Program = "zebedee";	/* Program name (argv[0]) */
 char *Generator = "";		/* DH generator hex string ("" => default) */
 char *Modulus = "";		/* DH modulus hex string ("" => default) */ 
 char *PrivateKey = NULL;	/* Private key hex string */
+#ifdef HL_KEYLIST
+KeyList_t *PrivateKeyList = NULL;	/* Linked list of private keys for different servers */
+#endif
 unsigned short KeyLength = DFLT_KEY_BITS;	/* Key length in bits */
 unsigned short MinKeyLength = 0;		/* Minimum allowed key length */
 unsigned short CompressInfo = DFLT_CMP_LEVEL;	/* Compression type and level */
@@ -437,21 +482,25 @@ int IsServer = 0;		/* Flag true if program is a server */
 int Debug = 0;			/* Debug mode -- single threaded server */
 char *CommandString = NULL;	/* Command string to execute (client) */
 unsigned short ServerPort = 0;	/* Port on which server listens */
-PortList_t *ClientPorts = NULL;	/* Ports on which client listens */
-PortList_t *TargetPorts = NULL;	/* Target port to which to tunnel */
+EndPtList_t *ClientPorts = NULL;	/* Ports on which client listens */
+EndPtList_t *TargetPorts = NULL;	/* Target port to which to tunnel */
 char *ServerHost = NULL;	/* Name of host on which server runs */
 char *TargetHost = "localhost";	/* Default host to which tunnels are targeted */
 char *IdentityFile = NULL;	/* Name of identity file to check, if any */
-PortList_t *AllowedTargets = NULL; /* List of allowed target hosts/ports */
-PortList_t *AllowedDefault = NULL; /* List of default allowed redirection ports */
-PortList_t *AllowedPeers = NULL; /* List of allowed peer addresses/ports */
+EndPtList_t *AllowedTargets = NULL; /* List of allowed target hosts/ports */
+EndPtList_t *AllowedDefault = NULL; /* List of default allowed redirection ports */
+EndPtList_t *AllowedPeers = NULL; /* List of allowed peer addresses/ports */
 char *KeyGenCmd = NULL;		/* Key generator command string */
 unsigned short KeyGenLevel = MAX_KEYGEN_LEVEL;	/* Key generation strength level */
+int LockProtocol = 0;		/* Is procol negotiation locked? */
+int DropUnknownProtocol = 0;	/* Allow any request? */
 int TimestampLog = 0;		/* Should messages have timestamps? */
 int MultiUse = 1;		/* Client handles multiple connections? */
 unsigned short MaxBufSize = DFLT_BUF_SIZE;  /* Maximum buffer size */
 unsigned long CurrentToken = 0;	/* Client reuseable key token */
 unsigned short KeyLifetime = DFLT_KEY_LIFETIME;	/* Key lifetime in seconds */
+unsigned short ChecksumLevel = CHECKSUM_MAX;	/* Type of checksum embedded in the message. Default SHA */
+unsigned short MinChecksumLevel = CHECKSUM_NONE;
 int UdpMode = 0;		/* Run in UDP mode */
 int TcpMode = 1;		/* Run in TCP mode */
 unsigned short TcpTimeout = DFLT_TCP_TIMEOUT;	/* TCP inactivity timeout */
@@ -522,7 +571,7 @@ int readUShort(int fd, unsigned short *resultP);
 int writeData(int fd, unsigned char *buffer, unsigned short size);
 int writeUShort(int fd, unsigned short value);
 
-MsgBuf_t *makeMsgBuf(unsigned short maxSize, unsigned short cmpInfo);
+MsgBuf_t *makeMsgBuf(unsigned short maxSize, unsigned short cmpInfo, unsigned short checksumLevel);
 void freeMsgBuf(MsgBuf_t *msg);
 void getMsgBuf(MsgBuf_t *msg, void *buffer, unsigned short size);
 void setMsgBuf(MsgBuf_t *msg, void *buffer, unsigned short size);
@@ -548,7 +597,7 @@ unsigned short headerGetUShort(unsigned char *hdrBuf, int offset);
 unsigned long headerGetULong(unsigned char *hdrBuf, int offset);
 
 BFState_t *setupBlowfish(char *keyStr, unsigned short keyBits);
-char *generateKey(void);
+char *generateKey(struct sockaddr_in *addrP);
 char *runKeyGenCommand(char *keyGenCmd);
 void generateNonce(unsigned char *);
 char *generateSessionKey(char *secretKey, unsigned char *cNonce, unsigned char *sNonce, unsigned short bits);
@@ -580,16 +629,17 @@ int findHandler(struct sockaddr_in *fromAddrP, struct sockaddr_in *localAddrP);
 void addHandler(struct sockaddr_in *fromAddrP, unsigned long id, int fd, struct sockaddr_in *localAddrP);
 void removeHandler(struct sockaddr_in *addrP);
 
-void clientListener(PortList_t *localPorts);
-int makeClientListeners(PortList_t *ports, fd_set *listenSetP, int udpMode);
+void clientListener(EndPtList_t *localPorts);
+int makeClientListeners(EndPtList_t *ports, fd_set *listenSetP, int udpMode);
 void client(FnArgs_t *argP);
 void prepareToDetach(void);
 void makeDetached(void);
 void serverListener(unsigned short *portPtr);
 void serverInitiator(char *client, unsigned short port, unsigned short timeout);
-int allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char **hostP, char **idFileP);
-int checkPeerAddress(int fd, struct sockaddr_in *addrP);
-int countPorts(PortList_t *list);
+int allowRedirect(unsigned short port, struct sockaddr_in *addrP, struct sockaddr_in *peerAddrP, int udpMode, char **hostP, char **idFileP);
+int checkPeerForSocket(int fd, struct sockaddr_in *addrP);
+int checkPeerAddress(struct sockaddr_in *addrP, EndPtList_t *peerList);
+int countPorts(EndPtList_t *list);
 unsigned short mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP);
 void server(FnArgs_t *argP);
 
@@ -598,12 +648,19 @@ unsigned short scanPortRange(const char *str, unsigned short *loP,
 void setBoolean(char *value, int *resultP);
 void setUShort(char *value, unsigned short *resultP);
 void setPort(char *value, unsigned short *resultP);
-PortList_t *newPortList(unsigned short lo, unsigned short hi, char *host, char *idFile, unsigned short type);
-PortList_t *allocPortList(unsigned short lo, unsigned short hi, char *host, char *idFile, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask, unsigned short type);
-void setPortList(char *value, PortList_t **listP, char *host, char *idFile, int zeroOk);
+EndPtList_t *newEndPtList(unsigned short lo, unsigned short hi, char *host, char *idFile, char *peer, unsigned short type);
+EndPtList_t *allocEndPtList(unsigned short lo, unsigned short hi, char *host, char *idFile, char *peer, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask, unsigned short type);
+void setEndPtList(char *value, EndPtList_t **listP, char *host, char *idFile, char *peer, int zeroOk);
 void setTarget(char *value);
+#ifdef HL_KEYLIST
+KeyList_t *newPrivateKeyList(char *host); /* HLNEW */
+KeyList_t *allocPrivateKeyList(char *host, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask); /* HLNEW */
+void setPrivateKeyList(char *value, KeyList_t **listP, char *key); /* HLNEW */
+void setPrivateKey(char *value); /* HLNEW */
+#endif
+void setChecksum(char *value, unsigned short *resultP);
 void setTunnel(char *value);
-void setAllowedPeer(char *value);
+void setAllowedPeer(char *value, EndPtList_t *peerList);
 void setString(char *value, char **resultP);
 void setLogFile(char *newFile);
 void setCmpInfo(char *value, unsigned short *resultP);
@@ -1233,7 +1290,9 @@ writeUShort(int fd, unsigned short value)
 */
 
 MsgBuf_t *
-makeMsgBuf(unsigned short maxSize, unsigned short cmpInfo)
+makeMsgBuf(unsigned short maxSize,
+	   unsigned short cmpInfo,
+	   unsigned short checksumLevel)
 {
     MsgBuf_t *msg;
 
@@ -1255,6 +1314,37 @@ makeMsgBuf(unsigned short maxSize, unsigned short cmpInfo)
     msg->writeCount = 0;
     msg->bytesOut = 0;
     msg->expBytesOut = 0;
+    msg->checksumLevel = checksumLevel;
+
+    /*
+    ** Set the checksumLen based on current checksum mode.
+    ** In case the mode has been changed (or "somebody" sends a wrong mode
+    ** to this function) SHA will always be selected -- it is better to
+    ** choose a good checksum than none.
+    */
+    switch (checksumLevel)
+    {
+    case CHECKSUM_NONE:
+	msg->checksumLen = 0;
+	break;
+
+    case CHECKSUM_ADLER:
+	msg->checksumLen = CHECKSUM_ADLER_LEN;
+	break;
+
+    case CHECKSUM_CRC32:
+	msg->checksumLen = CHECKSUM_CRC_LEN;
+	break;
+
+    case CHECKSUM_SHA:
+	msg->checksumLen = CHECKSUM_SHA_LEN;
+	break;
+
+    default:
+	msg->checksumLevel = CHECKSUM_SHA;
+	msg->checksumLen = CHECKSUM_SHA_LEN;
+	break;
+    }
 
     return msg;
 }
@@ -1329,6 +1419,11 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
     unsigned short flags;
     int num = 0;
     unsigned long uncmpSize = MAX_BUF_SIZE;
+    SHA_INFO shaExp;
+    SHA_INFO shaIn;
+    unsigned long crc32in = 0;
+    unsigned long crc32exp = 0;
+    int checksumOk = 0;
 
 
     /* Read the header */
@@ -1342,9 +1437,10 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 
     /* Reject invalid messages */
 
-    if (thisSize ? size > thisSize : size > msg->maxSize)
+    if (thisSize ? (size - msg->checksumLen) > thisSize : (size - msg->checksumLen) > msg->maxSize)
     {
-	message(0, 0, "incoming message size too big (%hu > %hu)", size, msg->maxSize);
+	message(0, 0, "incoming message size too big (%hu > %hu)",
+		size - msg->checksumLen, (thisSize ? thisSize : msg->maxSize));
 	return -1;
     }
 
@@ -1374,6 +1470,65 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 			 &(msg->bfRead->key), msg->bfRead->iVec,
 			 &(msg->bfRead->pos), BF_DECRYPT);
 	memcpy(msg->tmp, msg->bfRead->cryptBuf, size);
+    }
+    msg->size = size -= msg->checksumLen;
+
+
+    switch (msg->checksumLevel)
+    {
+    case CHECKSUM_NONE:
+	checksumOk = 1;
+	break;
+
+    case CHECKSUM_ADLER:
+	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
+	crc32in = (unsigned long)adler32(0L, (unsigned char *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	crc32in = (unsigned long)adler32(crc32in, (unsigned char *)&msg->tmp, size);
+	checksumOk = (crc32exp == crc32in);
+	memcpy(&(msg->checksumSeed), &crc32in, sizeof(crc32in));
+	message(6, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
+	break;
+
+    case CHECKSUM_CRC32:
+	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
+	crc32in = (unsigned long)crc32(0L, (unsigned char *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	crc32in = (unsigned long)crc32(crc32in, (unsigned char *)&msg->tmp, size);
+	checksumOk = (crc32exp == crc32in);
+	memcpy(&(msg->checksumSeed), &crc32in, sizeof(crc32in));
+	message(6, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
+	break;
+
+    case CHECKSUM_SHA:
+	sha_init(&shaExp);
+	sha_init(&shaIn);
+	memcpy(shaExp.digest, msg->tmp + size, sizeof(shaExp.digest));
+	sha_update(&shaIn, (SHA_BYTE *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	sha_update(&shaIn, (SHA_BYTE *)&msg->tmp, size);
+	sha_final(&shaIn);
+	checksumOk = (memcmp(&shaIn.digest, &shaExp.digest, sizeof(shaIn.digest)) == 0);
+	memcpy(&(msg->checksumSeed), &shaIn.digest, sizeof(shaIn.digest));
+	message(6, 0, "expected checksum %08lx%08lx%08lx%08lx%08lx, calculated checksum %08lx%08lx%08lx%08lx%08lx",
+		(unsigned long)shaExp.digest[0],
+		(unsigned long)shaExp.digest[1],
+		(unsigned long)shaExp.digest[2],
+		(unsigned long)shaExp.digest[3],
+		(unsigned long)shaExp.digest[4],
+		(unsigned long)shaIn.digest[0],
+		(unsigned long)shaIn.digest[1],
+		(unsigned long)shaIn.digest[2],
+		(unsigned long)shaIn.digest[3],
+		(unsigned long)shaIn.digest[4]);
+	break;
+
+    default:
+	message(0, 0, "unknown internal checksum mode");
+	return -1;
+    }
+
+    if (!checksumOk)
+    {
+	message(0, 0, "message failed checksum validation");
+	return -1;
     }
 
     /* Decompress if necessary */
@@ -1453,6 +1608,9 @@ writeMessage(int fd, MsgBuf_t *msg)
     unsigned long cmpSize = MAX_BUF_SIZE + CMP_OVERHEAD;
     unsigned short flags = 0;
     unsigned char *data = msg->data;
+    SHA_INFO sha;
+    unsigned long crc;
+
 
 
     /* Attempt compression if the message size warrants it */
@@ -1505,6 +1663,48 @@ writeMessage(int fd, MsgBuf_t *msg)
 	}
     }
 
+    switch (msg->checksumLevel)
+    {
+    case CHECKSUM_NONE:
+	break;
+
+    case CHECKSUM_ADLER:
+	crc = (unsigned long)adler32(0L, (unsigned char *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	crc = (unsigned long)adler32(crc, data, size);
+	memcpy(data + size, &crc, sizeof(crc));
+	memcpy(&msg->checksumSeed, &crc, sizeof(crc));
+	message(6, 0, "calculated checksum %#08lx", crc);
+	break;
+
+    case CHECKSUM_CRC32:
+	crc = (unsigned long)crc32(0L, (unsigned char *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	crc = (unsigned long)crc32(crc, data, size);
+	memcpy(data + size, &crc, sizeof(crc));
+	memcpy(&msg->checksumSeed, &crc, sizeof(crc));
+	message(6, 0, "calculated checksum %#08lx", crc);
+	break;
+
+    case CHECKSUM_SHA:
+	sha_init(&sha);
+	sha_update(&sha, (SHA_BYTE *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	sha_update(&sha, (SHA_BYTE *)data, size);
+	sha_final(&sha);
+	memcpy(data + size, &sha.digest, sizeof(sha.digest));
+	memcpy(&msg->checksumSeed, &sha.digest, sizeof(sha.digest));
+	message(6, 0, "calculated checksum %08lx%08lx%08lx%08lx%08lx",
+		(unsigned long)sha.digest[0],
+		(unsigned long)sha.digest[1],
+		(unsigned long)sha.digest[2],
+		(unsigned long)sha.digest[3],
+		(unsigned long)sha.digest[4]);
+	break;
+
+    default:
+	    message(0, 0, "unknown internal checksum mode");
+	    return -1;
+    }
+    size += msg->checksumLen;
+    
     /* Encrypt if required */
 
     if (msg->bfWrite)
@@ -2533,7 +2733,7 @@ setupBlowfish(char *keyStr, unsigned short keyBits)
 */
 
 char *
-generateKey(void)
+generateKey(struct sockaddr_in *addrP)
 {
     SHA_INFO sha;
     time_t now = time(NULL);
@@ -2541,7 +2741,59 @@ generateKey(void)
     unsigned long tid = threadTid();
     char *result = NULL;
 
+#ifdef HL_KEYLIST
+    /* First look into the 'per-server' list then the default privatekey */
 
+    KeyList_t *lp;
+    struct in_addr *alp = NULL;
+    unsigned long mask = 0;
+
+
+    for (lp = PrivateKeyList; lp; lp = lp->next)
+    {
+	mask = lp->mask;
+
+	if ((addrP->sin_addr.s_addr & mask) != (lp->addr.sin_addr.s_addr & mask))
+	{
+	    /* Did not match primary address, check aliases */
+
+	    for (alp = lp->addrList; alp->s_addr != 0xffffffff; alp++)
+	    {
+		if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
+		{
+		    /* Found a matching address in the aliases */
+		    break;
+		}
+	    }
+
+	    if (alp->s_addr == 0xffffffff)
+	    {
+		/* Did not match at all, try next entry */
+
+		continue;
+	    }
+	    else
+	    {
+		break;
+	    }
+	}
+	else
+	{
+	    break;
+	}
+    }
+	
+    if (lp != NULL)
+    {
+	if ((result = (char *)malloc(strlen(lp->PrivateKey) + 1)) == NULL)
+	{
+	    return NULL;
+	}
+	strcpy(result, lp->PrivateKey);
+	return result;
+    }
+    else
+#endif
     /* If a private key has been supplied copy it and return it */
 
     if (PrivateKey)
@@ -2798,7 +3050,8 @@ generateKey(void)
 	sha.digest[2] == 0 && sha.digest[3] == 0 &&
 	(sha.digest[4] == 0 || sha.digest[4] == 1))
     {
-	return generateKey();
+	/* We shouldn't be here if addrP was known */
+	return generateKey(NULL);
     }
 	
     if ((result = (char *)malloc(HASH_STR_SIZE)) == NULL)
@@ -3697,7 +3950,7 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 
 	if (FD_ISSET(localFd, &testSet))
 	{
-	    if ((num = recv(localFd, (char *)msgBuf->data, msgBuf->maxSize, 0)) > 0)
+		if ((num = recv(localFd, (char *)msgBuf->data, msgBuf->maxSize, 0)) > 0)
 	    {
 		message(5, 0, "read %d bytes from local socket %d", num, localFd);
 
@@ -4051,16 +4304,17 @@ makeDetached(void)
 */
 
 int
-allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode,
+allowRedirect(unsigned short port, struct sockaddr_in *addrP,
+	      struct sockaddr_in *peerAddrP, int udpMode,
 	      char **hostP, char **idFileP)
 {
-    PortList_t *lp1, *lp2;
+    EndPtList_t *lp1, *lp2;
     struct in_addr *alp = NULL;
     unsigned long mask = 0;
     char *ipName = NULL;
 
 
-    assert(AllowedTargets != NULL);
+    assert(AllowedTargets != NULL && addrP != NULL && peerAddrP != NULL);
 
     *hostP = NULL;
     *idFileP = NULL;
@@ -4077,6 +4331,17 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode,
 	    message(0, 0, "can't resolve host or address '%s'", TargetHost);
 	    return 0;
 	}
+    }
+
+    /*
+    ** The peer address should be looked up by the calling function.
+    ** It must be available before this check can be made!
+    */
+
+    if (peerAddrP->sin_addr.s_addr == 0x00000000)
+    {
+	message(0, 0, "client peer address not available");
+	return 0;
     }
 
     /* Allocate and fill buffer for returned host IP address string */
@@ -4117,6 +4382,20 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode,
 
 		continue;
 	    }
+	}
+
+	if (lp1->peer != NULL)
+	{
+	    message(4, 0, "checking peer address restrictions for target %s:%hu-%hu", lp1->host, lp1->lo, lp1->hi);
+	    if (!checkPeerAddress(peerAddrP, lp1->peer))
+	    {
+		message(4, 0, "peer address disallowed");
+		continue;
+	    }
+	}
+	else
+	{
+	    message(4, 0, "no peer address restrictions for target %s:%hu-%hu", lp1->host, lp1->lo, lp1->hi);
 	}
 
 	message(4, 0, "checking port %hu against range %hu-%hu for host %s", port, lp1->lo, lp1->hi, lp1->host);
@@ -4165,7 +4444,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode,
 }
 
 /*
-** checkPeerAddress
+** checkPeerForSocket
 **
 ** Check the address of the peer of the supplied socket against the
 ** list of allowed addresses, if any. Returns a true/false result.
@@ -4175,14 +4454,10 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode,
 */
 
 int
-checkPeerAddress(int fd, struct sockaddr_in *addrP)
+checkPeerForSocket(int fd, struct sockaddr_in *addrP)
 {
     struct sockaddr_in addr;
     int addrLen = sizeof(struct sockaddr_in);
-    unsigned short port = 0;
-    PortList_t *lp1 = NULL;
-    struct in_addr *alp = NULL;
-    unsigned long mask = 0xffffffff;
     char ipBuf[IP_BUF_SIZE];
 
 
@@ -4202,15 +4477,33 @@ checkPeerAddress(int fd, struct sockaddr_in *addrP)
     }
     message(4, 0, "peer address from connection is %s", ipString(addrP->sin_addr, ipBuf));
 
-    /* Now return if there is nothing more to do */
+    /* Now check against the global peer list */
 
-    if (AllowedPeers == NULL) return 1;
+    return checkPeerAddress(addrP, AllowedPeers);
+}
+
+/*
+** checkPeerAddress
+**
+*/
+
+int
+checkPeerAddress(struct sockaddr_in *addrP, EndPtList_t *peerList)
+{
+    unsigned short port = 0;
+    EndPtList_t *lp1 = NULL;
+    struct in_addr *alp = NULL;
+    unsigned long mask = 0xffffffff;
+
+    /* A NULL peerList means allow any address */
+
+    if (peerList == NULL) return 1;
 
     /* Otherwise, search for a match ... */
 
     port = ntohs(addrP->sin_port);
 
-    for (lp1 = AllowedPeers; lp1; lp1 = lp1->next)
+    for (lp1 = peerList; lp1; lp1 = lp1->next)
     {
 	mask = lp1->mask;
 
@@ -4254,16 +4547,17 @@ checkPeerAddress(int fd, struct sockaddr_in *addrP)
     }
 
     return 0;
+
 }
 
 /*
 ** countPorts
 **
-** Count the number of ports named in a PortList_t linked list
+** Count the number of ports named in a EndPtList_t linked list
 */
 
 int
-countPorts(PortList_t *list)
+countPorts(EndPtList_t *list)
 {
     int count = 0;
 
@@ -4290,8 +4584,8 @@ countPorts(PortList_t *list)
 unsigned short
 mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP)
 {
-    PortList_t *localPtr = ClientPorts;
-    PortList_t *remotePtr = TargetPorts;
+    EndPtList_t *localPtr = ClientPorts;
+    EndPtList_t *remotePtr = TargetPorts;
     unsigned short count = 0;
 
 
@@ -4632,7 +4926,7 @@ removeHandler(struct sockaddr_in *addrP)
 */
 
 void
-clientListener(PortList_t *ports)
+clientListener(EndPtList_t *ports)
 {
     int listenFd = -1;
     int clientFd;
@@ -4910,7 +5204,7 @@ clientListener(PortList_t *ports)
 */
 
 int
-makeClientListeners(PortList_t *ports, fd_set *listenSetP, int udpMode)
+makeClientListeners(EndPtList_t *ports, fd_set *listenSetP, int udpMode)
 {
     int listenFd = -1;
     unsigned short localPort = 0;
@@ -4981,6 +5275,7 @@ client(FnArgs_t *argP)
     const unsigned short serverPort = ServerPort;
     unsigned short redirectPort = 0;
     unsigned short maxSize = MaxBufSize;
+    struct sockaddr_in addr;
     int serverFd = -1;
     unsigned short response = 0;
     char generator[MAX_LINE_SIZE];
@@ -5006,6 +5301,9 @@ client(FnArgs_t *argP)
     int inLine = argP->inLine;
     int udpMode = argP->udpMode;
     char ipBuf[IP_BUF_SIZE];
+    unsigned short cksumLevel = CHECKSUM_NONE;
+    unsigned char cksumSeed[CHECKSUM_SHA_LEN];
+    SHA_INFO sha;
 
 
     incrActiveCount(1);
@@ -5057,7 +5355,7 @@ client(FnArgs_t *argP)
 
     message(3, 0, "validating server IP address");
 
-    if (!checkPeerAddress(serverFd, &peerAddr))
+    if (!checkPeerForSocket(serverFd, &peerAddr))
     {
 	message(0, 0, "connection with server %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
 	goto fatal;
@@ -5075,246 +5373,216 @@ client(FnArgs_t *argP)
 	goto fatal;
     }
 
-    switch (response)
+    if (LockProtocol)
     {
-    case PROTOCOL_V201:
-	protocol = PROTOCOL_V201;
-	break;
-
-    case PROTOCOL_V200:
-	protocol = PROTOCOL_V200;
-	break;
-
-    case PROTOCOL_V102:
-	protocol = PROTOCOL_V102;
-	break;
-
-    case PROTOCOL_V101:
-	protocol = PROTOCOL_V101;
-	break;
-
-    case PROTOCOL_V100:
-    case 0:
-	/*
-	** The zero return is a special case. In versions prior to 1.2.0
-	** the server would return 0 if it could not handle the requested
-	** protocol version. It SHOULD have returned the highest version
-	** it supports less than or equal to the requested version.
-	** So, we treat 0 as synonymous with 0x0100.
+	/* We have locked all other protocol versions out of the protocol
+	** negotiation. A server responding with a higher protocol
+	** would indicate that the server is "locked" as well. A lower
+	** protocol would violate "our" lock. In any case we have an error.
 	*/
-	protocol = PROTOCOL_V100;
-	break;
+	if (response != DFLT_PROTOCOL)
+	{
+	    message(0, 0, "server responded with incompatible protocol version (%#hx)", response);
+	    goto fatal;
+	}
+    }
+    else
+    {
+	switch (response)
+	{
+	case PROTOCOL_V202:
+	    protocol = PROTOCOL_V202;
+	    break;
 
-    default:
-	message(0, 0, "server responded with incompatible protocol version (%#hx)", response);
-	goto fatal;
+	case PROTOCOL_V201:
+	    protocol = PROTOCOL_V201;
+	    break;
+
+	case PROTOCOL_V200:
+	    protocol = PROTOCOL_V200;
+	    break;
+
+	default:
+	    message(0, 0, "server responded with incompatible protocol version (%#hx)", response);
+	    goto fatal;
+	}
     }
 
     message(3, 0, "accepted protocol version %#hx", response);
 
-    /*
-    ** For protocol versions 200 and higher we will send as many parameters
-    ** as we can in a single block to improve efficiency.
-    */
+    message(3, 0, "requesting %s mode", (udpMode ? "UDP" : "TCP"));
+    headerSetUShort(hdrData, (udpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
 
-    if (protocol >= PROTOCOL_V200)
+    message(3, 0, "requesting buffer size %hu", maxSize);
+    headerSetUShort(hdrData, maxSize, HDR_OFFSET_MAXSIZE);
+
+    message(3, 0, "requesting compression level %#hx", CompressInfo);
+    headerSetUShort(hdrData, CompressInfo, HDR_OFFSET_CMPINFO);
+
+    message(3, 0, "requesting redirection to port %hu", redirectPort);
+    headerSetUShort(hdrData, redirectPort, HDR_OFFSET_PORT);
+
+    message(3, 0, "requesting key length %hu", KeyLength);
+    headerSetUShort(hdrData, KeyLength, HDR_OFFSET_KEYLEN);
+
+    token = getCurrentToken();
+    message(3, 0, "requesting key reuse token %#lx", token);
+    headerSetULong(hdrData, token, HDR_OFFSET_TOKEN);
+
+    generateNonce(clientNonce);
+    message(3, 0, "sending client nonce %02x%02x...", clientNonce[0], clientNonce[1]);
+    memcpy(hdrData + HDR_OFFSET_NONCE, clientNonce, NONCE_SIZE);
+
+    if (protocol >= PROTOCOL_V201)
     {
-	message(3, 0, "requesting %s mode", (udpMode ? "UDP" : "TCP"));
-	headerSetUShort(hdrData, (udpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
+	hdrSize = HDR_SIZE_V201;
+	/*
+	** If the target is the same as the ServerHost then we send
+	** all zeroes to indicate the default server target. Otherwise
+	** we use the targetAddr.
+	*/
 
-	message(3, 0, "requesting buffer size %hu", maxSize);
-	headerSetUShort(hdrData, maxSize, HDR_OFFSET_MAXSIZE);
-
-	message(3, 0, "requesting compression level %#hx", CompressInfo);
-	headerSetUShort(hdrData, CompressInfo, HDR_OFFSET_CMPINFO);
-
-	message(3, 0, "requesting redirection to port %hu", redirectPort);
-	headerSetUShort(hdrData, redirectPort, HDR_OFFSET_PORT);
-
-	message(3, 0, "requesting key length %hu", KeyLength);
-	headerSetUShort(hdrData, KeyLength, HDR_OFFSET_KEYLEN);
-
-	token = getCurrentToken();
-	message(3, 0, "requesting key reuse token %#lx", token);
-	headerSetULong(hdrData, token, HDR_OFFSET_TOKEN);
-
-	generateNonce(clientNonce);
-	message(3, 0, "sending client nonce %02x%02x...", clientNonce[0], clientNonce[1]);
-	memcpy(hdrData + HDR_OFFSET_NONCE, clientNonce, NONCE_SIZE);
-
-	if (protocol > PROTOCOL_V200)
+	if (strcmp(targetHost, ServerHost) == 0)
 	{
-	    hdrSize = HDR_SIZE_V201;
-	    /*
-	    ** If the target is the same as the ServerHost then we send
-	    ** all zeroes to indicate the default server target. Otherwise
-	    ** we use the targetAddr.
-	    */
+	    message(4, 0, "target is the same as the server");
+	    targetAddr.sin_addr.s_addr = 0x00000000;
+	}
+	message(3, 0, "requesting target address %08x", ntohl(targetAddr.sin_addr.s_addr));
+	headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.sin_addr.s_addr), HDR_OFFSET_TARGET);
+    }
 
-	    if (strcmp(targetHost, ServerHost) == 0)
-	    {
-		message(4, 0, "target is the same as the server");
-		targetAddr.sin_addr.s_addr = 0x00000000;
-	    }
-	    message(3, 0, "requesting target address %08x", ntohl(targetAddr.sin_addr.s_addr));
-	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.sin_addr.s_addr), HDR_OFFSET_TARGET);
-	}
+    if (protocol >= PROTOCOL_V202)
+    {
+	hdrSize = HDR_SIZE_V202;
+	/*
+	** This adds a message checksum to allows us to detect if
+	** somebody has tampered with the data "in flight".
+	*/
+	headerSetUShort(hdrData, ChecksumLevel, HDR_OFFSET_CHECKSUM);
 
-	if (writeData(serverFd, hdrData, hdrSize) != hdrSize)
-	{
-	    message(0, errno, "failed writing protocol header to server");
-	    goto fatal;
-	}
+	/*
+	** The header data sent and received is hashed in order to
+	** obtain the initial checksum seed.
+	*/
+	sha_init(&sha);
+	sha_update(&sha, hdrData, hdrSize);
+    }
 
-	if (readData(serverFd, hdrData, hdrSize) != hdrSize)
-	{
-	    message(0, errno, "failed reading protocol header response from server");
-	    goto fatal;
-	}
+    if (writeData(serverFd, hdrData, hdrSize) != hdrSize)
+    {
+	message(0, errno, "failed writing protocol header to server");
+	goto fatal;
+    }
 
-	if ((udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) != HDR_FLAG_UDPMODE) ||
-	    (!udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
-	{
-	    message(0, 0, "client requested %s mode and server is in %s mode",
-		    (udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
-	    goto fatal;
-	}
-	else
-	{
-	    message(3, 0, "accepted %s mode", (udpMode ? "UDP" : "TCP"));
-	}
+    if (readData(serverFd, hdrData, hdrSize) != hdrSize)
+    {
+	message(0, errno, "failed reading protocol header response from server");
+	goto fatal;
+    }
 
-	maxSize = headerGetUShort(hdrData, HDR_OFFSET_MAXSIZE);
-	if (maxSize > 0)
-	{
-	    message(3, 0, "accepted buffer size %hu", maxSize);
-	}
-	else
-	{
-	    message(0, 0, "server responded with zero buffer size");
-	    goto fatal;
-	}
-
-	cmpInfo = headerGetUShort(hdrData, HDR_OFFSET_CMPINFO);
-	if (cmpInfo <= CompressInfo)
-	{
-	    message(3, 0, "accepted compression level %#hx", cmpInfo);
-	}
-	else
-	{
-	    message(0, 0, "server responded with invalid compression level (%#hx > %#hx)", cmpInfo, CompressInfo);
-	    goto fatal;
-	}
-
-	response = headerGetUShort(hdrData, HDR_OFFSET_PORT);
-	if (response == redirectPort)
-	{
-	    message(3, 0, "redirection request accepted");
-	}
-	else
-	{
-	    message(0, 0, "server refused request for redirection to %s:%hu", targetHost, redirectPort);
-	    goto fatal;
-	}
-
-	keyBits = headerGetUShort(hdrData, HDR_OFFSET_KEYLEN);
-	if (keyBits >= MinKeyLength)
-	{
-	    message(3, 0, "accepted key length %hu", keyBits);
-	}
-	else
-	{
-	    message(0, 0, "server key length too small (%hu < %hu)", keyBits, MinKeyLength);
-	    goto fatal;
-	}
-
-	token = headerGetULong(hdrData, HDR_OFFSET_TOKEN);
-	message(3, 0, "accepted key reuse token %#lx", token);
-
-	memcpy(serverNonce, hdrData + HDR_OFFSET_NONCE, NONCE_SIZE);
-	message(3, 0, "received server nonce %02x%02x...", serverNonce[0], serverNonce[1]);
+    if ((udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) != HDR_FLAG_UDPMODE) ||
+	(!udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
+    {
+	message(0, 0, "client requested %s mode and server is in %s mode",
+		(udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
+	goto fatal;
     }
     else
     {
-	/*
-	** In older protocol versions the fields in the "header" block
-	** were sent and acknowledged individually. The basic meanings
-	** are the same so the comments have not been duplicated.
-	*/
-
-	if (protocol >= PROTOCOL_V101)
-	{
-	    message(3, 0, "requesting buffer size %hu", maxSize);
-
-	    if (!requestResponse(serverFd, maxSize, &response))
-	    {
-		message(0, errno, "failed requesting buffer size");
-		goto fatal;
-	    }
-
-	    maxSize = response;
-	    message(3, 0, "accepted buffer size %hu", maxSize);
-	}
-
-	message(3, 0, "requesting compression level %#hx", CompressInfo);
-
-	if (!requestResponse(serverFd, CompressInfo, &response))
-	{
-	    message(0, errno, "failed requesting compression level");
-	    goto fatal;
-	}
-
-	if (response > CompressInfo)
-	{
-	    message(0, 0, "server responded with invalid compression level (%#hx > %#hx)", response, CompressInfo);
-	    goto fatal;
-	}
-	cmpInfo = response;
-	message(3, 0, "accepted compression level %#hx", response);
-
-	message(3, 0, "requesting redirection to port %hu", redirectPort);
-
-	if (!requestResponse(serverFd, redirectPort, &response))
-	{
-	    message(0, errno, "failed requesting redirection port");
-	    goto fatal;
-	}
-
-	if (response != redirectPort)
-	{
-	    message(0, errno, "server refused request for redirection to port %hu", redirectPort);
-	    goto fatal;
-	}
-	message(3, 0, "redirection request accepted");
-
-	message(3, 0, "requesting key length %hu", KeyLength);
-
-	if (!requestResponse(serverFd, KeyLength, &response))
-	{
-	    message(0, errno, "failed requesting key length");
-	    goto fatal;
-	}
-	keyBits = response;
-
-	if (keyBits < MinKeyLength)
-	{
-	    message(0, 0, "server key length too small (%hu < %hu)", keyBits, MinKeyLength);
-	    goto fatal;
-	}
-	message(3, 0, "accepted key length %hu", response);
+	message(3, 0, "accepted %s mode", (udpMode ? "UDP" : "TCP"));
     }
 
+    maxSize = headerGetUShort(hdrData, HDR_OFFSET_MAXSIZE);
+    if (maxSize > 0)
+    {
+	message(3, 0, "accepted buffer size %hu", maxSize);
+    }
+    else
+    {
+	message(0, 0, "server responded with zero buffer size");
+	goto fatal;
+    }
 
-    /* Allocate message buffer -- common to all protocol versions */
+    cmpInfo = headerGetUShort(hdrData, HDR_OFFSET_CMPINFO);
+    if (cmpInfo <= CompressInfo)
+    {
+	message(3, 0, "accepted compression level %#hx", cmpInfo);
+    }
+    else
+    {
+	message(0, 0, "server responded with invalid compression level (%#hx > %#hx)", cmpInfo, CompressInfo);
+	goto fatal;
+    }
 
-    if ((msg = makeMsgBuf(maxSize, cmpInfo)) == NULL)
+    response = headerGetUShort(hdrData, HDR_OFFSET_PORT);
+    if (response == redirectPort)
+    {
+	message(3, 0, "redirection request accepted");
+    }
+    else
+    {
+	message(0, 0, "server refused request for redirection to %s:%hu", targetHost, redirectPort);
+	goto fatal;
+    }
+
+    keyBits = headerGetUShort(hdrData, HDR_OFFSET_KEYLEN);
+    if (keyBits >= MinKeyLength)
+    {
+	message(3, 0, "accepted key length %hu", keyBits);
+    }
+    else
+    {
+	message(0, 0, "server key length too small (%hu < %hu)", keyBits, MinKeyLength);
+	goto fatal;
+    }
+
+    token = headerGetULong(hdrData, HDR_OFFSET_TOKEN);
+    message(3, 0, "accepted key reuse token %#lx", token);
+
+    memcpy(serverNonce, hdrData + HDR_OFFSET_NONCE, NONCE_SIZE);
+    message(3, 0, "received server nonce %02x%02x...", serverNonce[0], serverNonce[1]);
+
+    if (protocol >= PROTOCOL_V202)
+    {
+	cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
+	if (cksumLevel >= MinChecksumLevel)
+	{
+	    message(3, 0, "accepted checksum level %hu", cksumLevel);
+	}
+	else
+	{
+	    message(0, 0, "server refused request for checksum level %hu", ChecksumLevel);
+	    goto fatal;
+	}
+
+	/* Compute the initial checksum seed */
+
+	sha_update(&sha, hdrData, hdrSize);
+	sha_final(&sha);
+    }
+
+    /* Allocate message buffer */
+
+    if ((msg = makeMsgBuf(maxSize, cmpInfo, cksumLevel)) == NULL)
     {
 	message(0, errno, "client failed to allocate message buffer");
 	goto fatal;
     }
 
     /*
-    ** For version 200 of the protocol, if the session token returned
+    ** Store the initial checksum seed, if necessary
+    */
+    if (protocol >= PROTOCOL_V202)
+    {
+	memcpy(msg->checksumSeed, &sha.digest, sizeof(sha.digest));
+    }
+    else
+    {
+	memset(msg->checksumSeed, 0, sizeof(msg->checksumSeed));
+    }
+
+    /*
+    ** For all new versions the protocol, if the session token returned
     ** by the server matches that sent by the client (and is not zero)
     ** then we will perform a challenge-response to verify that there
     ** really is a shared key. There is a small possibility that a
@@ -5324,8 +5592,7 @@ client(FnArgs_t *argP)
     ** the result will be that the client connection is rejected.
     */
 
-    if (protocol >= PROTOCOL_V200 &&
-	(secretKeyStr = findKeyByToken(&ClientKeyList, token)) != NULL)
+    if ((secretKeyStr = findKeyByToken(&ClientKeyList, token)) != NULL)
     {
 	sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
 					   serverNonce, keyBits);
@@ -5354,12 +5621,11 @@ client(FnArgs_t *argP)
 
     /*
     ** ELSE ...
-    ** If the key length is zero and the protocol version is 102 or
-    ** higher then we can omit the key exchange protocol because only
-    ** compression is being used.
+    ** If the key length is zero then we can omit the key exchange
+    ** protocol because only compression is being used.
     */
 
-    else if (keyBits > 0 || protocol < PROTOCOL_V102)
+    else if (keyBits > 0)
     {
 
 	/* Read the DH generator */
@@ -5426,8 +5692,17 @@ client(FnArgs_t *argP)
 	*/
 
 	message(3, 0, "generating private key");
+    
+#ifdef HL_KEYLIST
+	memset(&addr, 0, sizeof(addr));
+	if (!getHostAddress(serverHost, &addr, NULL, NULL))
+	{
+	    message(0, 0, "can't resolve host or address '%s'", serverHost);
+	    goto fatal;
+	}
+#endif
 
-	if ((exponent = generateKey()) == NULL)
+	if ((exponent = generateKey(&addr)) == NULL)
 	{
 	    message(0, 0, "can't generate private key");
 	    goto fatal;
@@ -5776,6 +6051,9 @@ server(FnArgs_t *argP)
     int inLine = argP->inLine;
     int udpMode = argP->udpMode;    /* Overridden by client request */
     char ipBuf[IP_BUF_SIZE];
+    unsigned short cksumLevel = CHECKSUM_NONE;
+    unsigned char cksumSeed[CHECKSUM_SHA_LEN];
+    SHA_INFO sha;
 
 
     incrActiveCount(1);
@@ -5787,7 +6065,7 @@ server(FnArgs_t *argP)
     */
 
     message(3, 0, "validating client IP address");
-    if (!checkPeerAddress(clientFd, &peerAddr))
+    if (!checkPeerForSocket(clientFd, &peerAddr))
     {
 	message(0, 0, "client connection from %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
 	goto fatal;
@@ -5808,18 +6086,39 @@ server(FnArgs_t *argP)
     /*
     ** If the client protocol version matches one that we can support
     ** then we just echo it back otherwise we send back the highest
-    ** that we can support.
+    ** that we can support. If the protocol is "locked" then we will
+    ** only ever send back our default protocol.
     */
 
-    if (request == PROTOCOL_V200 ||
-	(request <= PROTOCOL_V102 && request >= PROTOCOL_V100))
+    if (LockProtocol)
     {
+	if (request != DFLT_PROTOCOL)
+	{
+	    message(0, errno, "failed due to client requesting incompatible protocol version (%#hx), server locked to version %#hx ", request, DFLT_PROTOCOL);
+	    goto fatal;
+	}
+	else
+	{
+	    /* Set to our default */
+	    protocol = DFLT_PROTOCOL;
+	}
+    }
+    else if (request <= PROTOCOL_V202 && request >= PROTOCOL_V200)
+    {
+	/* These we can support directly, as requested */
 	protocol = request;
+    }
+    else if (DropUnknownProtocol)
+    {
+	/* Don't even try to handle unknown protocol versions */
+
+	message(0, 0, "client requested unknown protocol version (%#hx), dropped by server", request);
+	goto fatal;
     }
     else
     {
 	/* Set to highest we can support */
-	protocol = PROTOCOL_V201;
+	protocol = DFLT_PROTOCOL;
     }
 
     message(3, 0, "replying with protocol version %#hx", protocol);
@@ -5830,334 +6129,217 @@ server(FnArgs_t *argP)
 	goto fatal;
     }
 
-    /*
-    ** For protocol versions 200 and higher we will send as many parameters
-    ** as we can in a single block to improve efficiency.
-    */
+    /* Set the size of the protocol header block */
 
-    if (protocol >= PROTOCOL_V200)
+    switch (protocol)
     {
-	if (protocol >= PROTOCOL_V201)
-	{
-	    hdrSize = HDR_SIZE_V201;
-	}
-	else
-	{
+    case PROTOCOL_V200:
 	    hdrSize = HDR_SIZE_V200;
-	}
+	    break;
+    case PROTOCOL_V201:
+	    hdrSize = HDR_SIZE_V201;
+	    break;
+    default:
+	    hdrSize = HDR_SIZE_V202;
+	    break;
+    }
 
-	if (readData(clientFd, hdrData, hdrSize) != hdrSize)
-	{
-	    message(0, errno, "failed reading protocol header from client");
-	    goto fatal;
-	}
+    if (readData(clientFd, hdrData, hdrSize) != hdrSize)
+    {
+	message(0, errno, "failed reading protocol header from client");
+	goto fatal;
+    }
 
-	udpMode = (headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE);
-	if ((udpMode && !UdpMode) || (!udpMode && !TcpMode))
-	{
-	    message(0, 0, "client requested %s mode tunnel to %s mode server",
-		    (udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
-	    headerSetUShort(hdrData, (udpMode ? 0 : HDR_FLAG_UDPMODE), HDR_OFFSET_FLAGS);
-	}
-	else
-	{
-	    message(3, 0, "replying with %s mode", (udpMode ? "UDP" : "TCP"));
-	    headerSetUShort(hdrData, (udpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
-	}
-
-	maxSize = headerGetUShort(hdrData, HDR_OFFSET_MAXSIZE);
-	message(3, 0, "read buffer size request of %hu", maxSize);
-
-	/* Take the smallest of the client and server values */
-
-	if (maxSize > MaxBufSize)
-	{
-	    maxSize = MaxBufSize;
-	}
-
-	message(3, 0, "replying with buffer size %hu", maxSize);
-	headerSetUShort(hdrData, maxSize, HDR_OFFSET_MAXSIZE);
-
-	request = headerGetUShort(hdrData, HDR_OFFSET_CMPINFO);
-	message(3, 0, "read compression level %#hx", request);
-
+    if (protocol >= PROTOCOL_V202)
+    {
 	/*
-	** Use the minimum of the client's and server's compression levels.
-	**
-	** Note that all values for zlib compression are less than those for
-	** bzip2 compression so if a client requests bzip2 compression but
-	** the server doesn't support it then the protocol degrades naturally
-	** to zlib.
+	** This adds a message checksum to allows us to detect if
+	** somebody has tampered with the data "in flight".
+	** The header data sent and received is hashed in order to
+	** obtain the initial checksum seed.
 	*/
+	sha_init(&sha);
+	sha_update(&sha, hdrData, hdrSize);
+    }
 
-	if (request < cmpInfo)
-	{
-	    cmpInfo = request;
-	    response = request;
-	}
-	else
-	{
-	    response = cmpInfo;
-	}
-
-	message(3, 0, "replying with compression level %#hx", response);
-	headerSetUShort(hdrData, response, HDR_OFFSET_CMPINFO);
-
-	request = headerGetUShort(hdrData, HDR_OFFSET_PORT);
-	message(3, 0, "read port %hu", request);
-
-	memset(&localAddr, 0, sizeof(localAddr));
-	if (protocol >= PROTOCOL_V201)
-	{
-	    localAddr.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
-	    message(3, 0, "read target address %s", ipString(localAddr.sin_addr, ipBuf));
-	}
-
-	/*
-	** The server should not, in general, redirect arbitrary ports because
-	** the remote client will appear to the target service to have
-	** connected from the server machine -- and may assume that greater
-	** access should be allowed as a result. So we check the requested
-	** port and host against the list of allowed port/host combinations.
-	** If the request is not granted then we send zero back to the client
-	** otherwise we carry on and attempt to open a connection to that
-        ** port on the target host. If that succeeds we will send back the
-        ** requested port number or zero if it fails.
-	*/
-
-	message(3, 0, "checking if redirection is allowed");
-
-	if (allowRedirect(request, &localAddr, udpMode, &targetHost, &idFile))
-	{
-	    message(3, 0, "allowed redirection request to %s:%hu", targetHost, request);
-
-	    /*
-	    ** Attempt to open connection -- if this fails then we write back
-	    ** zero to the client otherwise we send back the requested port
-	    ** number.
-	    */
-
-	    message(3, 0, "opening connection to port %hu on %s", request, targetHost);
-	    
-	    memset(&localAddr, 0, sizeof(localAddr));
-	    if ((localFd = makeConnection(targetHost, request, udpMode, 0,
-					  (Transparent ? &peerAddr : NULL),
-					  &localAddr)) == -1)
-	    {
-		port = 0;
-		message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
-		headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
-	    }
-	    else
-	    {
-		/* All OK -- echo back port number */
-
-		port = request;
-		message(3, 0, "made connection to target -- writing back %hu to client", port);
-		headerSetUShort(hdrData, port, HDR_OFFSET_PORT);
-	    }
-	}
-	else
-	{
-	    message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", ipString(localAddr.sin_addr, ipBuf), request, (udpMode ? "udp" : "tcp"));
-	    headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
-	}
-
-	request = headerGetUShort(hdrData, HDR_OFFSET_KEYLEN);
-	message(3, 0, "client requested key length %hu", request);
-
-	/*
-	** Use the minimum of the client and server values or MinKeyLength,
-	** whichever is the greater.
-	*/
-
-	if (request > keyBits)
-	{
-	    response = keyBits;
-	}
-	else if (request >= MinKeyLength)
-	{
-	    keyBits = request;
-	    response = request;
-	}
-	else
-	{
-	    keyBits = MinKeyLength;
-	    response = MinKeyLength;
-	}
-
-	message(3, 0, "replying with key length %hu", response);
-	headerSetUShort(hdrData, response, HDR_OFFSET_KEYLEN);
-
-	token = headerGetULong(hdrData, HDR_OFFSET_TOKEN);
-	message(3, 0, "client requested key reuse token %#lx", token);
-
-	if (token != 0)
-	{
-	    /*
-	    ** Search for matching token. If not found then allocate
-	    ** a new one.
-	    */
-
-	    if ((secretKeyStr = findKeyByToken(&ServerKeyList, token)) == NULL)
-	    {
-		token = generateToken(&ServerKeyList, token);
-	    }
-	}
-	headerSetULong(hdrData, token, HDR_OFFSET_TOKEN);
-	message(3, 0, "returned key reuse token %#lx", token);
-
-	memcpy(clientNonce, hdrData + HDR_OFFSET_NONCE, NONCE_SIZE);
-	message(3, 0, "received client nonce %02x%02x...", clientNonce[0], clientNonce[1]);
-
-	generateNonce(serverNonce);
-	message(3, 0, "sending server nonce %02x%02x...", serverNonce[0], serverNonce[1]);
-	memcpy(hdrData + HDR_OFFSET_NONCE, serverNonce, NONCE_SIZE);
-
-	if (writeData(clientFd, hdrData, hdrSize) != hdrSize)
-	{
-	    message(0, errno, "failed writing protocol header back to client");
-	    goto fatal;
-	}
+    udpMode = (headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE);
+    if ((udpMode && !UdpMode) || (!udpMode && !TcpMode))
+    {
+	message(0, 0, "client requested %s mode tunnel to %s mode server",
+		(udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
+	headerSetUShort(hdrData, (udpMode ? 0 : HDR_FLAG_UDPMODE), HDR_OFFSET_FLAGS);
     }
     else
     {
+	message(3, 0, "replying with %s mode", (udpMode ? "UDP" : "TCP"));
+	headerSetUShort(hdrData, (udpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
+    }
+
+    maxSize = headerGetUShort(hdrData, HDR_OFFSET_MAXSIZE);
+    message(3, 0, "read buffer size request of %hu", maxSize);
+
+    /* Take the smallest of the client and server values */
+
+    maxSize = MIN(maxSize, MaxBufSize);
+
+    message(3, 0, "replying with buffer size %hu", maxSize);
+    headerSetUShort(hdrData, maxSize, HDR_OFFSET_MAXSIZE);
+
+    request = headerGetUShort(hdrData, HDR_OFFSET_CMPINFO);
+    message(3, 0, "read compression level %#hx", request);
+
+    /*
+    ** Use the minimum of the client's and server's compression levels.
+    **
+    ** Note that all values for zlib compression are less than those for
+    ** bzip2 compression so if a client requests bzip2 compression but
+    ** the server doesn't support it then the protocol degrades naturally
+    ** to zlib.
+    */
+
+    if (request < cmpInfo)
+    {
+	cmpInfo = request;
+	response = request;
+    }
+    else
+    {
+	response = cmpInfo;
+    }
+
+    message(3, 0, "replying with compression level %#hx", response);
+    headerSetUShort(hdrData, response, HDR_OFFSET_CMPINFO);
+
+    request = headerGetUShort(hdrData, HDR_OFFSET_PORT);
+    message(3, 0, "read port %hu", request);
+
+    memset(&localAddr, 0, sizeof(localAddr));
+    if (protocol >= PROTOCOL_V201)
+    {
+	localAddr.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
+	message(3, 0, "read target address %s", ipString(localAddr.sin_addr, ipBuf));
+    }
+
+    /*
+    ** The server should not, in general, redirect arbitrary ports because
+    ** the remote client will appear to the target service to have
+    ** connected from the server machine -- and may assume that greater
+    ** access should be allowed as a result. So we check the requested
+    ** port and host against the list of allowed port/host combinations.
+    ** If the request is not granted then we send zero back to the client
+    ** otherwise we carry on and attempt to open a connection to that
+    ** port on the target host. If that succeeds we will send back the
+    ** requested port number or zero if it fails.
+    */
+
+    message(3, 0, "checking if redirection is allowed");
+
+    if (allowRedirect(request, &localAddr, &peerAddr, udpMode, &targetHost, &idFile))
+    {
+	message(3, 0, "allowed redirection request to %s:%hu", targetHost, request);
+
 	/*
-	** In older protocol versions the fields in the "header" block
-	** were sent and acknowledged individually. The basic meanings
-	** are the same so the comments have not been duplicated.
+	** Attempt to open connection -- if this fails then we write back
+	** zero to the client otherwise we send back the requested port
+	** number.
 	*/
 
-	if (protocol >= PROTOCOL_V101)
-	{
-	    message(3, 0, "reading message buffer size");
-
-	    if (readUShort(clientFd, &maxSize) != 2)
-	    {
-		message(0, errno, "failed reading message buffer size");
-	    }
-
-	    message(3, 0, "read buffer size request of %hu", maxSize);
-
-	    if (maxSize > MaxBufSize)
-	    {
-		maxSize = MaxBufSize;
-	    }
-
-	    message(3, 0, "replying with buffer size %hu", maxSize);
-
-	    if (writeUShort(clientFd, maxSize) != 2)
-	    {
-		message(0, 0, "failed to write buffer size back to the client");
-		goto fatal;
-	    }
-	}
-	else
-	{
-	    message(3, 0, "using default buffer size (%hu)", maxSize);
-	    maxSize = DFLT_BUF_SIZE;
-	}
-
-	message(3, 0, "reading compression level");
-
-	if (readUShort(clientFd, &request) != 2)
-	{
-	    message(0, errno, "failed reading compression level");
-	    goto fatal;
-	}
-	message(3, 0, "read compression level %#hx", request);
-
-	if (request < cmpInfo)
-	{
-	    cmpInfo = request;
-	    response = request;
-	}
-	else
-	{
-	    response = cmpInfo;
-	}
-
-	message(3, 0, "replying with compression level %#hx", response);
-
-	if (writeUShort(clientFd, response) != 2)
-	{
-	    message(0, errno, "failed writing compression level back to client");
-	    goto fatal;
-	}
-
-	message(3, 0, "reading redirection port");
-
-	if (readUShort(clientFd, &request) != 2)
-	{
-	    message(0, errno, "failed reading redirection port");
-	    goto fatal;
-	}
-	message(3, 0, "read port %hu", request);
-
-	message(3, 0, "checking if redirection is allowed");
-
-	if (!allowRedirect(request, &localAddr, udpMode, &targetHost, &idFile))
-	{
-	    message(0, 0, "client requested redirection to a disallowed port (%s:%hu/%s)", request);
-	    writeUShort(clientFd, 0);
-	    goto fatal;
-	}
-
-	message(3, 0, "allowed redirection request to %hu", request);
-
 	message(3, 0, "opening connection to port %hu on %s", request, targetHost);
-
+	
 	memset(&localAddr, 0, sizeof(localAddr));
 	if ((localFd = makeConnection(targetHost, request, udpMode, 0,
 				      (Transparent ? &peerAddr : NULL),
 				      &localAddr)) == -1)
 	{
+	    port = 0;
 	    message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
-	    writeUShort(clientFd, 0);
-	    goto fatal;
-	}
-	port = request;
-
-	message(3, 0, "made local connection -- writing back %hu to client", request);
-
-	if (writeUShort(clientFd, request) != 2)
-	{
-	    message(0, errno, "failed writing redirection port back to client");
-	    goto fatal;
-	}
-
-	message(3, 0, "reading key length");
-
-	if (readUShort(clientFd, &request) != 2)
-	{
-	    message(0, errno, "failed reading key length");
-	    goto fatal;
-	}
-
-	message(3, 0, "read key length %hu", request);
-
-	if (request > keyBits)
-	{
-	    response = keyBits;
-	}
-	else if (request >= MinKeyLength)
-	{
-	    keyBits = request;
-	    response = request;
+	    headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
 	}
 	else
 	{
-	    keyBits = MinKeyLength;
-	    response = MinKeyLength;
+	    /* All OK -- echo back port number */
+
+	    port = request;
+	    message(3, 0, "made connection to target -- writing back %hu to client", port);
+	    headerSetUShort(hdrData, port, HDR_OFFSET_PORT);
 	}
+    }
+    else
+    {
+	message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", ipString(localAddr.sin_addr, ipBuf), request, (udpMode ? "udp" : "tcp"));
+	headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
+    }
 
-	message(3, 0, "replying with key length %hu", response);
+    request = headerGetUShort(hdrData, HDR_OFFSET_KEYLEN);
+    message(3, 0, "client requested key length %hu", request);
 
-	if (writeUShort(clientFd, response) != 2)
+    /*
+    ** Use the minimum of the client and server values or MinKeyLength,
+    ** whichever is the greater.
+    */
+
+    if (request > keyBits)
+    {
+	response = keyBits;
+    }
+    else if (request >= MinKeyLength)
+    {
+	keyBits = request;
+	response = request;
+    }
+    else
+    {
+	keyBits = MinKeyLength;
+	response = MinKeyLength;
+    }
+
+    message(3, 0, "replying with key length %hu", response);
+    headerSetUShort(hdrData, response, HDR_OFFSET_KEYLEN);
+
+    token = headerGetULong(hdrData, HDR_OFFSET_TOKEN);
+    message(3, 0, "client requested key reuse token %#lx", token);
+
+    if (token != 0)
+    {
+	/*
+	** Search for matching token. If not found then allocate
+	** a new one.
+	*/
+
+	if ((secretKeyStr = findKeyByToken(&ServerKeyList, token)) == NULL)
 	{
-	    message(0, errno, "failed writing key length back to client");
-	    goto fatal;
+	    token = generateToken(&ServerKeyList, token);
 	}
+    }
+    headerSetULong(hdrData, token, HDR_OFFSET_TOKEN);
+    message(3, 0, "returned key reuse token %#lx", token);
+
+    memcpy(clientNonce, hdrData + HDR_OFFSET_NONCE, NONCE_SIZE);
+    message(3, 0, "received client nonce %02x%02x...", clientNonce[0], clientNonce[1]);
+
+    generateNonce(serverNonce);
+    message(3, 0, "sending server nonce %02x%02x...", serverNonce[0], serverNonce[1]);
+    memcpy(hdrData + HDR_OFFSET_NONCE, serverNonce, NONCE_SIZE);
+
+    if (protocol >= PROTOCOL_V202)
+    {
+	cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
+	if (cksumLevel > ChecksumLevel)
+	{
+	    cksumLevel = ChecksumLevel;
+	}
+	else if (cksumLevel < MinChecksumLevel)
+	{
+	    cksumLevel = MinChecksumLevel;
+	}
+	message(3, 0, "replying with checksum level %hu", cksumLevel);
+	headerSetUShort(hdrData, cksumLevel, HDR_OFFSET_CHECKSUM);
+    }
+
+    if (writeData(clientFd, hdrData, hdrSize) != hdrSize)
+    {
+	message(0, errno, "failed writing protocol header back to client");
+	goto fatal;
     }
 
     /* Quit now if we have no local connection */
@@ -6170,20 +6352,28 @@ server(FnArgs_t *argP)
 
     /* Allocate message buffer */
 
-    if ((msg = makeMsgBuf(maxSize, cmpInfo)) == NULL)
+    if ((msg = makeMsgBuf(maxSize, cmpInfo, cksumLevel)) == NULL)
     {
-	message(0, errno, "client failed to allocate message buffer");
+	message(0, errno, "server failed to allocate message buffer");
 	goto fatal;
     }
 
+    /* Set the checksum seed, if necessary */
+
+    if (protocol >= PROTOCOL_V202)
+    {
+	sha_update(&sha, hdrData, hdrSize);
+	sha_final(&sha);
+	memcpy(msg->checksumSeed, &sha.digest, sizeof(sha.digest));
+    }
+
     /*
-    ** For version 200 of the protocol, if the session token requested
-    ** by the client resulted in us finding a key string then we will
-    ** perform a challenge-response to verify that there really is a
-    ** shared key ...
+    ** If the session token requested by the client resulted in us
+    ** finding a key string then we will perform a challenge-response
+    ** to verify that there really is a shared key ...
     */
 
-    if (protocol >= PROTOCOL_V200 && secretKeyStr != NULL)
+    if (secretKeyStr != NULL)
     {
 	sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
 					   serverNonce, keyBits);
@@ -6209,13 +6399,12 @@ server(FnArgs_t *argP)
 
     /*
     ** ELSE ...
-    ** If the key length is zero and the protocol version is 102 or
-    ** higher then we can omit all of the key-exchange traffic.
+    ** If the key length is zero then we can omit all of the
+    ** key-exchange traffic.
     */
 
-    else if (keyBits > 0 || protocol < PROTOCOL_V102)
+    else if (keyBits > 0)
     {
-
 	/*
 	** Send the Diffie-Hellman generator
 	**
@@ -6264,7 +6453,7 @@ server(FnArgs_t *argP)
 
 	message(3, 0, "generating private key");
 
-	if ((exponent = generateKey()) == NULL)
+	if ((exponent = generateKey(NULL)) == NULL)
 	{
 	    message(0, errno, "can't generate private key");
 	    goto fatal;
@@ -6342,17 +6531,10 @@ server(FnArgs_t *argP)
 
 	message(3, 0, "shared key ends '...%s'", secretKeyStr + strlen(secretKeyStr) - 4);
 
-	if (protocol >= PROTOCOL_V200)
-	{
-	    sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
-					       serverNonce, keyBits);
+	sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
+					   serverNonce, keyBits);
 
-	    message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
-	}
-	else
-	{
-	    sessionKeyStr = secretKeyStr;
-	}
+	message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
 
 	message(3, 0, "initialising encryption state");
 
@@ -6379,11 +6561,11 @@ server(FnArgs_t *argP)
 	}
 
 	/*
-	** If we are at protocol version 200 or higher and a new session
-	** token was allocated then update the secret key list.
+	** If a new session token was allocated then update the secret
+	** key list.
 	*/
 
-	if (protocol >= PROTOCOL_V200 && token != 0)
+	if (token != 0)
 	{
 	    message(3, 0, "new reusable key token established (%#lx)", token);
 	    addKeyInfoToList(&ServerKeyList, token, secretKeyStr);
@@ -6618,20 +6800,21 @@ setPort(char *value, unsigned short *resultP)
 }
 
 /*
-** newPortList
+** newEndPtList
 **
-** Allocate a new PortList_t structure (or list of structures if there are
+** Allocate a new EndPtList_t structure (or list of structures if there are
 ** multiple addresses for the supplied host name).
 */
 
-PortList_t *
-newPortList(unsigned short lo,
-	    unsigned short hi,
-	    char *host,
-	    char *idFile,
-	    unsigned short type)
+EndPtList_t *
+newEndPtList(unsigned short lo,
+	     unsigned short hi,
+	     char *host,
+	     char *idFile,
+	     char *peer,
+	     unsigned short type)
 {
-    PortList_t *new = NULL;
+    EndPtList_t *new = NULL;
     struct sockaddr_in addr;
     struct in_addr *addrList = NULL;
     unsigned long mask = 0xffffffff;
@@ -6645,38 +6828,39 @@ newPortList(unsigned short lo,
 
     if (addrList)
     {
-	new = allocPortList(lo, hi, host, idFile, &(addr.sin_addr), addrList, mask, type);
+	new = allocEndPtList(lo, hi, host, idFile, peer, &(addr.sin_addr), addrList, mask, type);
     }
     else
     {
-	new = allocPortList(lo, hi, NULL, idFile, NULL, NULL, 0xffffffff, type);
+	new = allocEndPtList(lo, hi, NULL, idFile, peer, NULL, NULL, 0xffffffff, type);
     }
 
     return new;
 }
 
 /*
-** allocPortList
+** allocEndPtList
 **
-** Allocate a new PortList_t structure and initialize the hi and lo elements.
+** Allocate a new EndPtList_t structure and initialize the hi and lo elements.
 ** If host is not NULL then we populate the addr element with the supplied
 ** address and save the hostname.
 */
 
-PortList_t *
-allocPortList(unsigned short lo,
-	      unsigned short hi,
-	      char *host,
-	      char *idFile,
-	      struct in_addr *addrP,
-	      struct in_addr *addrList,
-	      unsigned long mask,
-	      unsigned short type)
+EndPtList_t *
+allocEndPtList(unsigned short lo,
+	       unsigned short hi,
+	       char *host,
+	       char *idFile,
+	       char *peer,
+	       struct in_addr *addrP,
+	       struct in_addr *addrList,
+	       unsigned long mask,
+	       unsigned short type)
 {
-    PortList_t *new = NULL;
+    EndPtList_t *new = NULL;
 
 
-    if ((new = (PortList_t *)malloc(sizeof(PortList_t))) == NULL)
+    if ((new = (EndPtList_t *)malloc(sizeof(EndPtList_t))) == NULL)
     {
 	return NULL;
     }
@@ -6685,7 +6869,8 @@ allocPortList(unsigned short lo,
     new->hi = hi;
     memset(&(new->addr), 0, sizeof(struct in_addr));
     new->host = NULL;
-    new->idFile = idFile;
+    new->idFile = NULL;
+    new->peer = NULL;
     if (host && addrP)
     {
 	memcpy(&(new->addr.sin_addr), addrP, sizeof(struct in_addr));
@@ -6705,6 +6890,10 @@ allocPortList(unsigned short lo,
 	}
 	strcpy(new->idFile, idFile);
     }
+    if (peer)
+    {
+	setAllowedPeer(peer, new->peer);
+    }
 
     new->addrList = addrList;
     new->mask = mask;
@@ -6716,7 +6905,7 @@ allocPortList(unsigned short lo,
 }
 
 /*
-** setPortList
+** setEndPtList
 **
 ** Parse a list of white-space or comma separated ports or port ranges
 ** and add them to listP. Each element of this list is a low-high pair
@@ -6724,23 +6913,24 @@ allocPortList(unsigned short lo,
 ** are the same. If zeroOk is false then a list containing port 0 is
 ** not allowed.
 **
-** The host parameter is passed on to newPortList.
+** The host, idFile and peer parameters are passed on to newEndPtList.
 */
 
 void
-setPortList(char *value,
-	    PortList_t **listP,
-	    char *host,
-	    char *idFile,
-	    int zeroOk)
+setEndPtList(char *value,
+	     EndPtList_t **listP,
+	     char *host,
+	     char *idFile,
+	     char *peer,
+	     int zeroOk)
 {
-    PortList_t *new = NULL;
+    EndPtList_t *new = NULL;
     char *token = NULL;
     char tmpBuf[MAX_LINE_SIZE];
     char *tmpPtr = NULL;
     unsigned short lo = 0;
     unsigned short hi = 0;
-    PortList_t *last = *listP;
+    EndPtList_t *last = *listP;
     unsigned short type = PORTLIST_ANY;
 
 
@@ -6772,7 +6962,7 @@ setPortList(char *value,
 	{
 	    /* Allocate new list element */
 
-	    if ((new = newPortList(lo, hi, host, idFile, type)) == NULL)
+	    if ((new = newEndPtList(lo, hi, host, idFile, peer, type)) == NULL)
 	    {
 		message(0, errno, "failed allocating memory for port list");
 		exit(EXIT_FAILURE);
@@ -6813,25 +7003,249 @@ setTarget(char *value)
     char target[MAX_LINE_SIZE];
     char portList[MAX_LINE_SIZE];
     char idFile[MAX_LINE_SIZE];
-    
+    char peerList[MAX_LINE_SIZE];
+
     if (sscanf(value, "%[^:]:%[^?]?%s", target, portList, idFile) == 3)
     {
-    	setPortList(portList, &AllowedTargets, target, idFile, 0);	
+    	setEndPtList(portList, &AllowedTargets, target, idFile, NULL, 0);
     }
-
-    else if (sscanf(value, "%[^:]:%s", target, portList) == 2)
-
+    else if (sscanf(value, "%[^:]:%[^@]@%s", target, portList, peerList) == 3)
     {
-	setPortList(portList, &AllowedTargets, target, NULL, 0);
+    	setEndPtList(portList, &AllowedTargets, target, NULL, peerList, 0);
+    }
+    else if (sscanf(value, "%[^?]?%s", target, idFile) == 2)
+    {
+	setEndPtList("0", &AllowedTargets, target, idFile, NULL, 1);
+    }
+    else if (sscanf(value, "%[^@]@%s", target, peerList) == 2)
+    {
+	setEndPtList("0", &AllowedTargets, target, NULL, peerList, 1);
+    }
+    else if (sscanf(value, "%[^:]:%s", target, portList) == 2)
+    {
+	setEndPtList(portList, &AllowedTargets, target, NULL, NULL, 0);
     }
     else
     {
-	setPortList("0", &AllowedTargets, target, NULL, 1);
+	setEndPtList("0", &AllowedTargets, target, NULL, NULL, 1);
     }
 
     /* Set the default target host */
 
     setString(target, &TargetHost);
+}
+
+#ifdef HL_KEYLIST
+/*
+** newPrivateKeyList
+**
+** Allocate a new KeyList_t structure.
+*/
+
+KeyList_t *
+newPrivateKeyList(char *host)
+{
+    KeyList_t *new = NULL;
+    struct sockaddr_in addr;
+    struct in_addr *addrList = NULL;
+    unsigned long mask = 0xffffffff;
+
+	
+    if (host && !getHostAddress(host, &addr, &addrList, &mask))
+    {
+	message(0, 0, "can't resolve host or address '%s'", host);
+	return NULL;
+    }
+
+    if (addrList)
+    {
+	new = allocPrivateKeyList(host, &(addr.sin_addr), addrList, mask);
+    }
+    else
+    {
+	new = allocPrivateKeyList(NULL, NULL, NULL, 0xffffffff);
+    }
+
+    return new;
+}
+
+/*
+** allocPrivateKeyList
+**
+** Allocate a new KeyList_t structure.
+** If host is not NULL then we populate the addr element with the supplied
+** address and save the hostname.
+*/
+
+KeyList_t *
+allocPrivateKeyList(char *host,
+		    struct in_addr *addrP,
+		    struct in_addr *addrList,
+		    unsigned long mask)
+{
+    KeyList_t *new = NULL; 
+
+
+    if ((new = (KeyList_t *)malloc(sizeof(KeyList_t))) == NULL)
+    {
+	return NULL;
+    }
+
+    new->PrivateKey = NULL;
+    memset(&(new->addr), 0, sizeof(struct in_addr));
+    new->host = NULL;
+    if (host && addrP)
+    {
+	memcpy(&(new->addr.sin_addr), addrP, sizeof(struct in_addr));
+	if ((new->host = (char *)malloc(strlen(host) + 1)) == NULL)
+	{
+	    message(0, errno, "out of memory");
+	    return NULL;
+	}
+	strcpy(new->host, host);
+    }
+    new->addrList = addrList;
+    new->mask = mask;
+
+    new->next = NULL;
+
+    return new;
+}
+
+/*
+** setPrivateKeyList
+**
+** Create a new entry to PrivateKeyList based on provided client/MASK.
+*/
+
+void setPrivateKeyList(char *host, KeyList_t **listP, char *key)
+{
+    KeyList_t *lp1;
+    struct in_addr *alp = NULL;
+    KeyList_t *last = *listP;
+    KeyList_t *new = NULL;
+    struct sockaddr_in addr;
+    struct in_addr *addrList = NULL;
+    unsigned long mask = 0xffffffff;
+
+    
+    if (host && !getHostAddress(host, &addr, &addrList, &mask))
+    {
+	message(0, 0, "can't resolve server or address '%s'", host);
+    }
+    else 
+    {
+	for (lp1 = PrivateKeyList; lp1; lp1 = lp1->next) {
+
+	    mask = lp1->mask;
+
+	    if ((addr.sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
+	    {
+		/* Did not match primary address, check aliases */
+
+		for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
+		{
+		    if ((addr.sin_addr.s_addr & mask) == (alp->s_addr & mask))
+		    {
+			new = lp1;
+			break;
+		    }
+		}
+
+		if (alp->s_addr == 0xffffffff)
+		{
+		    /* Did not match at all, try next entry */
+		    continue;
+		}
+	    }
+	    else
+	    {
+		new = lp1;
+		break;
+	    }
+	    if (new != NULL)
+	    {
+		break;
+	    }
+	}
+
+	if (new == NULL)
+	{
+	    if ((new = newPrivateKeyList(host)) == NULL)
+	    {
+		message(0, errno, "failed allocating memory for private key list");
+		exit(EXIT_FAILURE);
+	    }
+
+	    while (last && last->next)
+	    {
+		last = last->next;
+	    }
+
+	    if (*listP != NULL)
+	    {
+		last->next = new;
+	    }
+	    else 
+	    {
+		*listP = new;
+	    }
+	}
+	setString(key, &new->PrivateKey);
+    }
+}
+
+/*
+** setPrivateKey
+**
+** Set the private key. Allow specific keys for each server in the form of
+**   server:privatekey
+*/
+void
+setPrivateKey(char *value)
+{
+    char target[MAX_LINE_SIZE];
+    char key[MAX_LINE_SIZE];
+
+    if ((sscanf(value, "%[^:]:\"%[^\"]\"", target, key) == 2) ||
+	(sscanf(value, "%[^:]:\'%[^\']\'", target, key) == 2) ||
+	(sscanf(value, "%[^:]:%s", target, key) == 2))
+    {
+	setPrivateKeyList(target, &PrivateKeyList, key);
+    }
+    else
+    {
+	setString(value, &PrivateKey);
+    }
+}
+#endif
+
+/*
+** setChecksum
+**
+** The checksum value is in the range 0 to CHECKSUM_MAX.
+*/
+
+void
+setChecksum(char *value, unsigned short *resultP)
+{
+    char minValue[MAX_LINE_SIZE];
+    char maxValue[MAX_LINE_SIZE];
+    unsigned short min = CHECKSUM_INVALID;
+    unsigned short max = CHECKSUM_INVALID;
+
+
+    if (sscanf(value, "%hu", resultP) != 1)
+    {
+	message(0, 0, "can't parse checksum value '%s'", value);
+	return;
+    }
+
+    if (*resultP > CHECKSUM_MAX)
+    {
+	message(1, 0, "WARNING: checksum value out of range, using maximum (%hu)", CHECKSUM_MAX);
+	*resultP = CHECKSUM_MAX;
+    }
 }
 
 /*
@@ -6852,18 +7266,18 @@ setTunnel(char *value)
 
     if (sscanf(value, "%[^:]:%[^:]:%[^:]", clientList, hostName, targetList) == 3)
     {
-	setPortList(clientList, &ClientPorts, NULL, NULL, 0);
+	setEndPtList(clientList, &ClientPorts, NULL, NULL, NULL, 0);
 	if (ServerHost == NULL)
 	{
 	    setString(hostName, &ServerHost);
 	}
 	if (strcmp(hostName, "*") == 0)
 	{
-	    setPortList(targetList, &TargetPorts, NULL, NULL, 0);
+	    setEndPtList(targetList, &TargetPorts, NULL, NULL, NULL, 0);
 	}
 	else
 	{
-	    setPortList(targetList, &TargetPorts, hostName, NULL, 0);
+	    setEndPtList(targetList, &TargetPorts, hostName, NULL, NULL, 0);
 	}
     }
     else if (sscanf(value, "%[^:]:%[^:]", hostName, targetList) == 2)
@@ -6874,11 +7288,11 @@ setTunnel(char *value)
 	}
 	if (strcmp(hostName, "*") == 0)
 	{
-	    setPortList(targetList, &TargetPorts, NULL, NULL, 0);
+	    setEndPtList(targetList, &TargetPorts, NULL, NULL, NULL, 0);
 	}
 	else
 	{
-	    setPortList(targetList, &TargetPorts, hostName, NULL, 0);
+	    setEndPtList(targetList, &TargetPorts, hostName, NULL, NULL, 0);
 	}
 	if (countPorts(TargetPorts) != 1)
 	{
@@ -6907,7 +7321,7 @@ setTunnel(char *value)
 */
 
 void
-setAllowedPeer(char *value)
+setAllowedPeer(char *value, EndPtList_t *peerList)
 {
     char addr[MAX_LINE_SIZE];
     char portList[MAX_LINE_SIZE];
@@ -6915,11 +7329,11 @@ setAllowedPeer(char *value)
 
     if (sscanf(value, "%[^:]:%s", addr, portList) == 2)
     {
-	setPortList(portList, &AllowedPeers, addr, NULL, 0);
+	setEndPtList(portList, &peerList, addr, NULL, NULL, 0);
     }
     else
     {
-	setPortList("0", &AllowedPeers, addr, NULL, 1);
+	setEndPtList("0", &peerList, addr, NULL, NULL, 1);
     }
 }
 
@@ -7201,10 +7615,10 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "maxbufsize")) setUShort(value, &MaxBufSize);
     else if (!strcasecmp(key, "verbosity")) setUShort(value, &LogLevel);
     else if (!strcasecmp(key, "serverport")) setPort(value, &ServerPort);
-    else if (!strcasecmp(key, "localport")) setPortList(value, &ClientPorts, NULL, NULL, 0);
-    else if (!strcasecmp(key, "clientport")) setPortList(value, &ClientPorts, NULL, NULL, 0);
-    else if (!strcasecmp(key, "remoteport")) setPortList(value, &TargetPorts, NULL, NULL, 0);
-    else if (!strcasecmp(key, "targetport")) setPortList(value, &TargetPorts, NULL, NULL, 0);
+    else if (!strcasecmp(key, "localport")) setEndPtList(value, &ClientPorts, NULL, NULL, NULL, 0);
+    else if (!strcasecmp(key, "clientport")) setEndPtList(value, &ClientPorts, NULL, NULL, NULL, 0);
+    else if (!strcasecmp(key, "remoteport")) setEndPtList(value, &TargetPorts, NULL, NULL, NULL, 0);
+    else if (!strcasecmp(key, "targetport")) setEndPtList(value, &TargetPorts, NULL, NULL, NULL, 0);
     else if (!strcasecmp(key, "remotehost")) setString(value, &ServerHost);
     else if (!strcasecmp(key, "serverhost")) setString(value, &ServerHost);
     else if (!strcasecmp(key, "command"))
@@ -7212,6 +7626,8 @@ parseConfigLine(const char *lineBuf, int level)
 	setString(value, &CommandString);
 	MultiUse = 0;
     }
+    else if (!strcasecmp(key, "dropunknownprotocol")) setBoolean(value, &DropUnknownProtocol);
+    else if (!strcasecmp(key, "lockprotocol")) setBoolean(value, &LockProtocol);
     else if (!strcasecmp(key, "keygencommand")) setString(value, &KeyGenCmd);
     else if (!strcasecmp(key, "logfile")) setLogFile(value);
     else if (!strcasecmp(key, "timestamplog")) setBoolean(value, &TimestampLog);
@@ -7219,9 +7635,13 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "include")) readConfigFile(value, level+1);
     else if (!strcasecmp(key, "modulus")) setString(value, &Modulus);
     else if (!strcasecmp(key, "generator")) setString(value, &Generator);
+#ifdef HL_KEYLIST
+    else if (!strcasecmp(key, "privatekey")) setPrivateKey(value);
+#else
     else if (!strcasecmp(key, "privatekey")) setString(value, &PrivateKey);
+#endif
     else if (!strcasecmp(key, "checkidfile")) setString(value, &IdentityFile);
-    else if (!strcasecmp(key, "checkaddress")) setAllowedPeer(value);
+    else if (!strcasecmp(key, "checkaddress")) setAllowedPeer(value, AllowedPeers);
     else if (!strcasecmp(key, "redirect"))
     {
 	if (!strcasecmp(value, "none"))
@@ -7233,11 +7653,11 @@ parseConfigLine(const char *lineBuf, int level)
 	    */
 
 	    AllowedDefault = NULL;
-	    setPortList("0-0", &AllowedDefault, NULL, NULL, 1);
+	    setEndPtList("0-0", &AllowedDefault, NULL, NULL, NULL, 1);
 	}
 	else
 	{
-	    setPortList(value, &AllowedDefault, NULL, NULL, 0);
+	    setEndPtList(value, &AllowedDefault, NULL, NULL, NULL, 0);
 	}
     }
     else if (!strcasecmp(key, "message")) message(1, 0, "%s", value);
@@ -7274,6 +7694,8 @@ parseConfigLine(const char *lineBuf, int level)
 	    return 0;
 	}
     }
+    else if (!strcasecmp(key, "checksumlevel")) setChecksum(value, &ChecksumLevel);
+    else if (!strcasecmp(key, "minchecksumlevel")) setChecksum(value, &MinChecksumLevel);
     else if (!strcasecmp(key, "udptimeout")) setUShort(value, &UdpTimeout);
     else if (!strcasecmp(key, "tcptimeout")) setUShort(value, &TcpTimeout);
     else if (!strcasecmp(key, "idletimeout"))
@@ -7392,6 +7814,7 @@ usage(void)
 	    "    -H          Generate hash of string values\n"
 	    "    -h          Generate hash of file contents\n"
 	    "    -k keybits  Specify key length in bits\n"
+ 	    "    -L          Lock protocol negotiation\n"
 	    "    -l          Client listens for server connection\n"
 	    "    -m          Client accepts multiple connections (default)\n"
 	    "    -n name     Specify program name\n"
@@ -7578,7 +8001,7 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:lmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
@@ -7637,6 +8060,10 @@ main(int argc, char **argv)
 	    ListenMode++;
 	    break;
 
+	case 'L':
+	    LockProtocol = 1;
+	    break;
+
 	case 'm':
 	    MultiUse++;
 	    break;
@@ -7674,7 +8101,7 @@ main(int argc, char **argv)
 	    break;
 
 	case 'r':
-	    setPortList(optarg, &AllowedDefault, NULL, NULL, 0);
+	    setEndPtList(optarg, &AllowedDefault, NULL, NULL, NULL, 0);
 	    break;
 
 	case 's':
@@ -7858,7 +8285,7 @@ main(int argc, char **argv)
 
     /*
     ** What we do next and how we handle additional arguments depends on
-    ** what mode we are operating in. With -h or -H we calculate has values
+    ** what mode we are operating in. With -h or -H we calculate hash values
     ** and the arguments are either files or strings. With -p or -P then
     ** we will calculate private/public keys and any extra arguments will
     ** be ignored as they will if this is a server. Finally, for a client
@@ -7909,7 +8336,7 @@ main(int argc, char **argv)
 
 	if (doPrivKey)
 	{
-	    PrivateKey = generateKey();
+	    PrivateKey = generateKey(NULL);
 	    if (PrivateKey != NULL)
 	    {
 		printf("privatekey \"%s\"\n", PrivateKey);
@@ -7958,7 +8385,7 @@ main(int argc, char **argv)
 
 	if (AllowedTargets == NULL)
 	{
-	    AllowedTargets = newPortList(0, 0, "localhost", NULL, PORTLIST_ANY);
+	    AllowedTargets = newEndPtList(0, 0, "localhost", NULL, NULL, PORTLIST_ANY);
 	}
 
 #ifdef WIN32
@@ -8006,7 +8433,7 @@ main(int argc, char **argv)
 
 	if (TargetPorts == NULL)
 	{
-	    setPortList("telnet", &TargetPorts, ServerHost, NULL, 0);
+	    setEndPtList("telnet", &TargetPorts, ServerHost, NULL, NULL, 0);
 	}
 
 	/*
@@ -8018,7 +8445,7 @@ main(int argc, char **argv)
 
 	if (ClientPorts == NULL)
 	{
-	    if ((ClientPorts = newPortList(0, 0, NULL, NULL, PORTLIST_ANY)) == NULL)
+	    if ((ClientPorts = newEndPtList(0, 0, NULL, NULL, NULL, PORTLIST_ANY)) == NULL)
 	    {
 		message(0, errno, "can't allocate space for port list");
 		exit(EXIT_FAILURE);
