@@ -1394,50 +1394,6 @@ of the client can be tied to the owner of that private key. The modulus,
 generator and key strings are hashed together to produce the fingerprint
 merely for convenience and to keep the size of the identity file small.
 
-=head3 Step-by-step
-
-If you didn't quite understand the above, the following step-by-step
-description of how to set up identity checking is derived from one written by
-Yves Smolders on the B<Zebedee> mailing list.
-
-After you have tested B<Zebedee> without identify checking to make sure it is
-working correctly, on each "client" machine do the following:
-
- zebedee -p
-
-Each time you do this, you'll see another key gets created. Try this:
-
- zebedee -p > cli.txt
-
-That's a small "C<p>", by the way. Now you have a private key in C<cli.txt>.
-You can make B<Zebedee> use this key all the time using the following line in
-your client configuration file. client.zbd file:
-
-include 'path/cli.txt' (change path to where cli.txt is)
-
-Now the client always uses the same key.  To restrict the server only to
-accept a certain set of keys do the following
-
-zebedee -P >pub.txt    (-P is caps)
-
-This makes a "hash" value that reads something like this:
-
-3498ea.....   machine
-
-Now on the server import these lines, one for each client into one big file
-containing
-
-3498ea....    machine
-1a9d3f.....    machine2
-
-on the server.zbd config file, add a line
-
-checkidfile 'path/bigfile'
-
-Now Zebedee server will only accept clients with a matching static key.  If
-you remove a line, that client doesn't have access to zebedee server
-anymore!
-
 =head2 Notes on Other Security Issues
 
 =over 4
@@ -2128,4 +2084,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.10 2002-04-16 16:49:42 ndwinton Exp $
+ $Id: zebedee.pod,v 1.11 2002-04-16 16:57:32 ndwinton Exp $
