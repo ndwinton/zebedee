@@ -19,7 +19,7 @@ B<zebedee> [B<-m>] [B<-e> I<command>]
 
 =item Common Options:
 
-B<zebedee> [B<-dDLtuU] [B<-b> I<address>] [B<-F> I<char>] [B<-f> I<file>]
+B<zebedee> [B<-dDLtuU>] [B<-b> I<address>] [B<-F> I<char>] [B<-f> I<file>]
 [B<-K> I<checksumlevel>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<log>]
 [B<-T> I<port>] [B<-v> I<level>] [B<-x> I<config>] [B<-z> I<level>] ...
 
@@ -2432,4 +2432,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.20 2003-06-19 13:58:07 ndwinton Exp $
+ $Id: zebedee.pod,v 1.21 2003-07-02 13:38:29 ndwinton Exp $
