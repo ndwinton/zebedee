@@ -1304,6 +1304,17 @@ greater than 65535. Setting it to zero results in an indefinite timeout.
 See also B<L<idletimeout|/item_idletimeout>> and
 B<L<udptimeout|/item_udptimeout>>.
 
+=item B<threadstacksize>
+
+This specifies the size of the stack allocated to each thread in B<Zebedee>,
+in units of 1 kilobyte. By default it is set to 64, and B<Zebedee> creates
+threads with a 64k stack. This should be more than sufficient for its
+needs, and that of the C run time library. If you suffer from inexplicable
+crashes you may wish to try raising this. Conversely, on some platforms you
+may be able to lower it without causing problems. Previous versions of
+B<Zebedee> have run successfully with a value of 32k. Under no circumstances
+can it be lowered below 16 (kilobytes).
+
 =item B<timestamplog> (command-line B<-t>)
 
 This is a boolean value indicating whether log messages should contain a
@@ -2497,4 +2508,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.29 2003-09-22 16:34:26 ndwinton Exp $
+ $Id: zebedee.pod,v 1.30 2003-09-23 12:35:13 ndwinton Exp $
