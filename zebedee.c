@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.11 2002-03-14 17:16:28 ndwinton Exp $";
-#define RELEASE_STR "2.3.1"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.12 2002-03-22 15:47:18 ndwinton Exp $";
+#define RELEASE_STR "2.3.2"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1575,7 +1575,7 @@ getHostAddress(const char *host,
 ** via a HTTP proxy.
 **
 ** If fromAddrP is not NULL then we will try to set the source address for
-** the connection (not fatal if we faile). If toAddrP is not NULL then the
+** the connection (not fatal if we fail). If toAddrP is not NULL then the
 ** address of the destination endpoint is returned.
 */
 
@@ -1686,6 +1686,16 @@ makeConnection(const char *host, const unsigned short port,
 /*
 ** proxyConnection
 **
+** Make a connection to the specified host and port via an HTTP proxy
+** supporting the CONNECT method. The toAddrP argument is passed on to
+** the (recursive) makeConnection call. Note that ProxyHost must be non-NULL
+** before this function is called.
+**
+** A strictly configured proxy server may not allow connection to arbitrary
+** ports but only to that used by HTTPS (port 443). Also, in order to give
+** proxy server owners some chance of blocking Zebedee if they wish to,
+** the connect method header contains a "User-Agent: Zebedee" line. Unless
+** someone has modified this code, that is :-)
 */
 
 int
@@ -1699,6 +1709,10 @@ proxyConnection(const char *host, const unsigned short port,
     char *bufP = NULL;
 
 
+    assert(ProxyHost != NULL);
+
+    /* Connect to the proxy server */
+
     message(4, 0, "connecting to %s:%hu via proxy %s:%hu", host, port, ProxyHost, ProxyPort);
 
     if ((fd = makeConnection(ProxyHost, ProxyPort, 0, 0, NULL, toAddrP)) == -1)
@@ -1709,6 +1723,15 @@ proxyConnection(const char *host, const unsigned short port,
 
     message(5, 0, "connected to proxy");
 
+    /*
+    ** Write the connect string. This includes a "User-Agent: Zebedee" line
+    ** in order to help identify this connection as coming from Zebedee.
+    ** This should be OK -- and conforms to the spec of the connect method
+    ** as far as I can tell -- but may be rejected by some proxies. It may
+    ** also be that no proxies currently look at or use this information
+    ** but it is there if necessary.
+    */
+
     buf[MAX_LINE_SIZE] = '\0';
     snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nUser-Agent: Zebedee\r\n\r\n", host, port);
     if (send(fd, buf, strlen(buf), 0) <= 0)
@@ -1717,6 +1740,15 @@ proxyConnection(const char *host, const unsigned short port,
     }
 
     message(5, 0, "written connect string");
+
+    /*
+    ** We will now read the response from the proxy (up to MAX_LINE_SIZE
+    ** bytes) and search for the header termination. This is two CR-LF
+    ** pairs in succession. All proxies I have tried respond with less
+    ** than this amount of data, although it is conceivable they might
+    ** reply with more. If so, this will probably cause the Zebedee
+    ** protocol exchange to fail.
+    */
 
     bufP = buf;
     do
@@ -1733,6 +1765,8 @@ proxyConnection(const char *host, const unsigned short port,
 	message(5, 0, "read %d bytes from proxy: %s", num, bufP - num);
     }
     while(total < MAX_LINE_SIZE && strncmp(bufP - 4, "\r\n\r\n", 4));
+
+    /* Check for an OK response */
 
     if (strncmp(buf, "HTTP/1.0 200", 12))
     {
@@ -1848,7 +1882,7 @@ failure:
 ** Accept a connection on the specified listenFd. If the host is "*" then
 ** a connection from any source will be accepted otherwise the source
 ** address must match that obtained from the forward lookup of the host
-** name.
+** name (which may be a range of addresses if it contains an address mask).
 **
 ** If the loop parameter is true then the routine will wait until a "good"
 ** connection has been accepted otherwise it will stop on the first error.
@@ -4228,7 +4262,7 @@ clientListener(PortList_t *ports)
     ** will be a "one shot" connection.
     */
 
-    if (UdpMode) message(1, 0, "listening for client data");
+    if (UdpMode) message(1, 0, "listening for client UDP data");
 
     /* Create union fd sets from the TCP and UDP sets */
 
@@ -4249,7 +4283,14 @@ clientListener(PortList_t *ports)
     {
 	memcpy(&testSet, &unionSet, sizeof(fd_set));
 
-	message((UdpMode ? 5 : 1), 0, "waiting for client connection", localPort);
+	if (UdpMode)
+	{
+	    message(5, 0, "waiting for client data", localPort);
+	}
+	else
+	{
+	    message(1, 0, "waiting for client connection", localPort);
+	}
 
 	/* Do a blocking select waiting for any i/o */
 
@@ -4600,8 +4641,8 @@ client(FnArgs_t *argP)
 
     if (protocol >= PROTOCOL_V200)
     {
-	message(3, 0, "requesting %s mode", (UdpMode ? "UDP" : "TCP"));
-	headerSetUShort(hdrData, (UdpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
+	message(3, 0, "requesting %s mode", (udpMode ? "UDP" : "TCP"));
+	headerSetUShort(hdrData, (udpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
 
 	message(3, 0, "requesting buffer size %hu", maxSize);
 	headerSetUShort(hdrData, maxSize, HDR_OFFSET_MAXSIZE);
@@ -4653,16 +4694,16 @@ client(FnArgs_t *argP)
 	    goto fatal;
 	}
 
-	if ((UdpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) != HDR_FLAG_UDPMODE) ||
-	    (!UdpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
+	if ((udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) != HDR_FLAG_UDPMODE) ||
+	    (!udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
 	{
 	    message(0, 0, "client requested %s mode and server is in %s mode",
-		    (UdpMode ? "UDP" : "TCP"), (UdpMode ? "TCP" : "UDP"));
+		    (udpMode ? "UDP" : "TCP"), (UdpMode ? "TCP" : "UDP"));
 	    goto fatal;
 	}
 	else
 	{
-	    message(3, 0, "accepted %s mode", (UdpMode ? "UDP" : "TCP"));
+	    message(3, 0, "accepted %s mode", (udpMode ? "UDP" : "TCP"));
 	}
 
 	maxSize = headerGetUShort(hdrData, HDR_OFFSET_MAXSIZE);
@@ -6997,7 +7038,7 @@ main(int argc, char **argv)
 
     /*
     ** If the user has explicitly set multi-use mode and a command
-    ** string (and you've got to try hard to do it) them we will
+    ** string (and you've got to try hard to do it) then we will
     ** complain.
     */
 
@@ -7187,6 +7228,17 @@ main(int argc, char **argv)
 	{
 	    setTarget(argv[optind]);
 	    optind++;
+	}
+
+	/*
+	** Sanity check the default target. This must be a "pure" hostname
+	** without an address mask.
+	*/
+
+	if (strchr(TargetHost, '/') != NULL)
+	{
+	    message(0, 0, "default target host (%s) must not have an address mask", TargetHost);
+	    exit(EXIT_FAILURE);
 	}
 
 	/*
