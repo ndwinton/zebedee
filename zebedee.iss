@@ -1,8 +1,8 @@
 [Setup]
 Bits=32
 AppName=Zebedee Secure Tunnel
-AppVerName=Zebedee Secure Tunnel Version 2.4.1
-AppCopyright=Copyright 1999, 2000, 2001, 2002 by Neil Winton.
+AppVerName=Zebedee Secure Tunnel Version 2.5.0
+AppCopyright=Copyright 1999-2003 by Neil Winton.
 DefaultDirName={pf}\Zebedee
 DefaultGroupName=Zebedee
 
@@ -27,7 +27,7 @@ Source: "CHANGES.txt"; DestDir: "{app}"
 [Icons]
 Name: "{group}\Run Zebedee Server"; Filename: "{app}\zebedee.exe"; Parameters: "-f server.zbd"; WorkingDir: "{app}"; IconFilename: "{app}\zebedee.ico"
 Name: "{group}\Read Me"; Filename: "{app}\README.txt"
-Name: "{group}\Documentation (English - 2.4)"; Filename: "{app}\zebedee.html"
+Name: "{group}\Documentation (English - 2.5)"; Filename: "{app}\zebedee.html"
 Name: "{group}\Documentation (Japanese - 2.2)"; Filename: "{app}\zebedee.ja_JP.html"
 Name: "{group}\Licence"; Filename: "{app}\LICENCE.txt"
 Name: "{group}\Shortcut to Zebedee Directory"; Filename: "{app}"
