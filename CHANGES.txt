@@ -10,7 +10,11 @@ closed.
 Added "ipmode" and -U option to support mixed traffic mode for a single
 client or server.
 
-Makefile changes for Irix and HPUX from Kyle Dent.
+Makefile changes for Irix and HPUX from Kyle Dent. Others to use latest
+version of mingw gcc and force use of "native" perl.
+
+Note that Zebedee will now be linked with MSVCRT.DLL. That should only
+be a problem on an old Win95 machine.
 
 Japanese documentation NOT YET updated.
 
