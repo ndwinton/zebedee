@@ -8,7 +8,7 @@ Fixed message when client requests incompatible TCP/UDP mode.
 Added "dumpdata" keyword to enable a dump of local traffic when this is
 true (and the verbosity level is 5 or greater).
 
-Added support for BSD/OS
+Added support for BSD/OS (OS=bsdi) in the Makefile -- thanks to Brett Wynkoop.
 
 * Release 2.4.0 (2002/05/09)
 

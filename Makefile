@@ -1,9 +1,9 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.12 2002-04-29 15:45:34 ndwinton Exp $
+# $Id: Makefile,v 1.13 2002-05-29 17:42:08 ndwinton Exp $
 
-ZBD_VERSION = 2.4.0
+ZBD_VERSION = 2.4.1
 
 OS = 
 
@@ -12,7 +12,7 @@ OS =
 ### You may well need to change these.
 ###
 
-# Chose your C compiler
+# Choose your C compiler
 
 CC_$(OS) = gcc
 
@@ -24,6 +24,7 @@ CC_tru64 = cc
 CC_irix = cc -n32 -woff 1110
 CC_hpux = cc -Ae +DAportable
 CC_macosx = cc
+CC_bsdi = gcc -DINADDR_LOOPBACK=127
 CC = $(CC_$(OS))
 
 # Optimise/debug compilation
@@ -88,6 +89,7 @@ INSTALL_tru64 = installbsd -c
 INSTALL_irix = install -c
 INSTALL_hpux = install -c
 INSTALL_macosx = install
+INSTALL_bsdi = install -c
 INSTALL = $(INSTALL_$(OS))
 
 # InnoSetup compiler for Win32 (see http://www.jordanr.dhs.org/)
@@ -140,6 +142,7 @@ DEFINES_tru64 = -D_REENTRANT -DHAVE_PTHREADS
 DEFINES_irix = -D_REENTRANT -DHAVE_PTHREADS -Dinline=
 DEFINES_hpux = -D_REENTRANT -DHAVE_PTHREADS -DDONT_HAVE_SELECT_H -Dinline=
 DEFINES_macosx = -D_REENTRANT -DHAVE_PTHREADS -DTHREAD_STACK_SIZE=49152
+DEFINES_bsdi =
 DEFINES = $(DEFINES_$(OS))
 
 # Suffix for executables
@@ -157,6 +160,7 @@ OSLIBS_tru64 = -lpthread
 OSLIBS_irix = -lpthread
 OSLIBS_hpux = -lpthread -lnsl
 OSLIBS_macosx = -lpthread
+OSLIBS_bsdi =
 OSLIBS = $(OSLIBS_$(OS))
 
 # Supplementary object files (Win32 ONLY)
@@ -188,7 +192,7 @@ EXTRAFILES = $(ZBDFILES) $(TXTFILES)
 all : precheck zebedee$(EXE) zebedee.1 zebedee.html ftpgw.tcl.1 ftpgw.tcl.html zebedee.ja_JP.html
 
 precheck :
-	@ if test -z "$(OS)"; then echo "Use '$(MAKE) OS=xxx' where xxx is win32, linux, solaris, freebsd, tru64, irix, hpux or macosx"; exit 1; fi
+	@ if test -z "$(OS)"; then echo "Use '$(MAKE) OS=xxx' where xxx is win32, linux, solaris, freebsd, tru64, irix, hpux, macosx or bsdi"; exit 1; fi
 
 zebedee$(EXE) : $(OBJS)
 	$(CC) $(CFLAGS) -o zebedee$(EXE) $(OBJS) $(LIBS)
@@ -228,8 +232,8 @@ install : precheck zebedee$(EXE) zebedee.1 ftpgw.tcl.1 $(ZBDFILES) $(TXTFILES)
 	$(INSTALL) $(ZBDFILES) $(ZBDDIR)
 	$(INSTALL) $(TXTFILES) $(ZBDDIR)
 
-clean : precheck
-	rm -f zebedee$(EXE) *.o core *.1 *.html *.tmp *.bak
+clean :
+	rm -f zebedee zebedee.exe *.o core *.1 *.html *.tmp *.bak
 
 # This makes the Win32 setup.exe using InnoSetup. The perl command in
 # this sequence "dosifies" the text files ... sigh ...
