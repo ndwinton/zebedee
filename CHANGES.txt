@@ -1,4 +1,4 @@
-* Release 2.5.0
+* Release 2.5.0 (2003/06/20)
 
 Dropped backwards compatibility with Zebedee 1.x versions of the protocol.
 

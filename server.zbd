@@ -4,7 +4,7 @@
 # This shows the use of many, but not all, of the configuration file
 # options available for use by a server.
 #
-# $Id: server.zbd,v 1.4 2002-04-16 16:49:42 ndwinton Exp $
+# $Id: server.zbd,v 1.5 2003-06-20 08:16:14 ndwinton Exp $
 
 verbosity 2	# Slightly more than basic messages
 
@@ -34,6 +34,9 @@ maxbufsize 16383	# Allow maximum possible buffer size
 #  logfile SYSLOG
 
 keygenlevel 2	# Generate maximum strength private keys
+
+checksumlevel 3	    # Allow maximum strength checksums
+minchecksumlevel 0  # Allow no checksums if client requests
 
 # Uncomment the following line if you want to use a fixed private
 # key stored in a static file. The file should contain a line of
