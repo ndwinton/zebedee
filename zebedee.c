@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.1.1.1 2001-04-12 18:06:43 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.2 2001-04-13 17:45:09 ndwinton Exp $";
 #define RELEASE_STR "2.2.1"
 
 #include <stdio.h>
@@ -6080,7 +6080,7 @@ readConfigFile(const char *fileName, int level)
 	{
 	    curPtr[len--] = '\0';
 	}
-	else
+	else if (!feof(fp))
 	{
 	    message(0, 0, "line too long in config file '%s' at line %d", fileName, lineNo);
 	    break;
@@ -6396,8 +6396,6 @@ main(int argc, char **argv)
 
     /* Initialise critical stuff */
 
-    prepareToDetach();
-
     threadInit();
 #ifdef WIN32
     if (WSAStartup(0x0101, &WsaState) != 0)
@@ -6534,6 +6532,16 @@ main(int argc, char **argv)
 	}
     }
 
+    /*
+    ** If we are going to detach now is the time to invoke the workaround
+    ** for those people with BUGGY_FORK_WITH_PTHREADS defined.
+    */
+
+    if (IsDetached)
+    {
+	prepareToDetach();
+    }
+	
     /*
     ** If using reusable session keys then initialize the CurrentToken
     ** to request a new one to be generated on first connection.
