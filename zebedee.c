@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.12 2002-03-22 15:47:18 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.13 2002-04-10 14:31:21 ndwinton Exp $";
 #define RELEASE_STR "2.3.2"
 
 #include <stdio.h>
@@ -434,6 +434,7 @@ int ListenMode = 0;		/* True if client waits for server connection */
 char *ClientHost = NULL;	/* Server initiates connection to client */
 int ListenSock = -1;		/* Socket on which to listen for server */
 unsigned short ConnectTimeout = DFLT_CONN_TIMEOUT;  /* Timeout for server connections */
+unsigned short ReadTimeout = 0; /* Timeout for remote data reads */
 int ActiveCount = 0;		/* Count of active handlers */
 char *ProxyHost = NULL;		/* HTTP proxy host, if used */
 unsigned short ProxyPort = 0;	/* HTTP proxy port, if used */
@@ -1006,6 +1007,8 @@ message(unsigned short level, int err, char *fmt, ...)
 ** readData
 **
 ** Read and reassemble a potentially fragmented message from the network.
+** If the global ReadTimeout is non-zero then we will only wait for that
+** many seconds for data to arrive.
 */
 
 int
@@ -1014,10 +1017,30 @@ readData(int fd, unsigned char *buffer, unsigned short size)
     int num = 0;
     char *bufP = NULL;
     unsigned short total = 0;
+    struct timeval delay;
+    fd_set testSet;
+    int ready;
 
     bufP = (char *)buffer;
     do
     {
+	if (ReadTimeout != 0)
+	{
+	    delay.tv_sec = ReadTimeout;
+	    delay.tv_usec = 0;
+
+	    FD_ZERO(&testSet);
+	    FD_SET(fd, &testSet);
+
+	    ready = select(fd + 1, &testSet, 0, 0, &delay);
+
+	    if (ready == 0)
+	    {
+		message(0, errno, "timed out reading data");
+		return -1;
+	    }
+	}
+
 	message(5, 0, "readData: receiving %d of %d", (size - total), size);
 	if ((num = recv(fd, (bufP + total), (size - total), 0)) <= 0)
 	{
@@ -3318,8 +3341,8 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 		}
 		else
 		{
-		    num = send(localFd, (char *)(msgBuf->data),
-			       msgBuf->size, 0);
+		    num = writeData(localFd, (unsigned char *)(msgBuf->data),
+				    msgBuf->size);
 		}
 		if (num != msgBuf->size)
 		{
@@ -4581,7 +4604,7 @@ client(FnArgs_t *argP)
 
     if (!checkPeerAddress(serverFd, &peerAddr))
     {
-	message(0, 0, "server connection to %s disallowed", inet_ntoa(peerAddr.sin_addr));
+	message(0, 0, "connection with server %s disallowed", inet_ntoa(peerAddr.sin_addr));
 	goto fatal;
     }
 
@@ -6675,6 +6698,7 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "listenmode")) setBoolean(value, &ListenMode);
     else if (!strcasecmp(key, "clienthost")) setString(value, &ClientHost);
     else if (!strcasecmp(key, "connecttimeout")) setUShort(value, &ConnectTimeout);
+    else if (!strcasecmp(key, "readtimeout")) setUShort(value, &ReadTimeout);
     else if (!strcasecmp(key, "target")) setTarget(value);
     else if (!strcasecmp(key, "tunnel")) setTunnel(value);
     else if (!strcasecmp(key, "transparent")) setBoolean(value, &Transparent);

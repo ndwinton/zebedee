@@ -1142,17 +1142,18 @@ time.
 B<Zebedee> can be installed as a service by specifying the B<install>
 parameter with the name of a configuration file, for example:
 
- zebedee -Sinstall=c:\zebedee\service.zbd
+ zebedee "-Sinstall=c:\zebedee\service.zbd"
 
 You should always specify the full path to the configuration file. This will
 be read at service start-up and must contain all the parameters required for
-the service to run.
+the service to run. Note that if the path contains spaces you must enclose
+it in double quotes, as shown.
 
 By default, the name of the installed service will be taken from the name of
 the program file, and hence is usually B<zebedee>, but you can change this by
 using the B<-n> option:
 
- zebedee -n "Zebedee Client Service" -Sinstall=c:\zebedee\clientsvc.zbd
+ zebedee -n "Zebedee Client Service" "-Sinstall=c:\zebedee\clientsvc.zbd"
 
 Once the service has been installed it will be automatically started the next
 time that the system reboots. Alternatively you can start it manually using
@@ -1917,4 +1918,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.7 2002-03-22 15:47:18 ndwinton Exp $
+ $Id: zebedee.pod,v 1.8 2002-04-10 14:31:21 ndwinton Exp $

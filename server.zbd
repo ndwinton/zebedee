@@ -4,15 +4,28 @@
 # This shows the use of many, but not all, of the configuration file
 # options available for use by a server.
 #
-# $Id: server.zbd,v 1.1.1.1 2001-04-12 18:07:44 ndwinton Exp $
+# $Id: server.zbd,v 1.2 2002-04-10 14:31:21 ndwinton Exp $
 
-verbosity 2		# Slightly more than basic messages
+verbosity 2	# Slightly more than basic messages
 
-server true		# Yes, it's a server!
-detached true		# Run detached from terminal
-udpmode false		# Are we operating in UDP mode?
+# Comment out the following line once you have read the comments
+# in this file and enabled or disabled the appropriate options!
 
-# Uncomment the following line to log messages to a file
+message "DEFAULT CONFIGURATION FILE -- EDIT BEFORE USE"
+
+detached false	# You will probably want this 'true' for normal
+		# use but I want to make sure that you see the
+		# preceding message if you haven't edited this.
+
+server true	# Yes, it's a server!
+ipmode both	# Operate in mixed TCP/UDP mode
+
+compression zlib:9	# Allow maximum zlib compression
+keylength 256		# Allow keys up to 256 bits
+keylifetime 36000	# Shared keys last 10 hours
+maxbufsize 16383	# Allow maximum possible buffer size
+
+# Uncomment the following line to log messages to a local file.
 #
 #  logfile './server.log'
 #
@@ -20,31 +33,58 @@ udpmode false		# Are we operating in UDP mode?
 #
 #  logfile SYSLOG
 
+keygenlevel 2	# Generate maximum strength private keys
+
 # Uncomment the following line if you want to use a fixed private
 # key stored in a static file. The file should contain a line of
-# the form "privatekey hexadecimal-key-string"
+# the form "privatekey hexadecimal-key-string". This file should
+# be readable by the user running Zebedee but no-one else.
 #
 #  include './server.key'
 
-keygenlevel 2		# Generate maximum strength private keys
-
-# To validate the identity of clients uncomment the following
-# line:
+# To validate the identity of clients use a line something like
+# the following:
 #
 #  checkidfile './clients.id'
 
-# Set up allowed redirection ports.
-# These should be pretty safe -- but it's not a good idea
-# to open up all ports.
+# Set up allowed targets. Note that there are NO targets allowed
+# by this file by default. You must explicitly edit it to enable
+# them.
 
-redirect "telnet ftp"		# Basic services
-redirect 5900-5999		# VNC traffic
-redirect 6000-6010		# X Window System
-redirect "daytime chargen"	# Ports useful for testing
+# The "redirect" expression can be use to set the default ports
+# allowed when a target specification consists of a hostname but
+# no other ports. The "redirect 1" is a hack to prohibit tunnelling
+# anywhere useful by default.
 
-targethost localhost		# Redirection is to the local machine
+redirect 1
 
-compression zlib:9		# Allow maximum zlib compression
-keylength 256			# Allow keys up to 256 bits
-keylifetime 36000		# Shared keys last 10 hours
-maxbufsize 16383		# Allow maximum possible buffer size
+# The following are good for testing purposes
+#
+#  target localhost:daytime,echo,chargen
+
+# Basic interactive services
+#
+#  target localhost:telnet,ftp
+
+# VNC traffic -- usually you will only need a subset of this
+# range, perhaps 5900 or 5901.
+#
+#  target localhost:5900-5999
+
+# X Window System -- again, usually you will only need
+# a subset of this range.
+#
+#  target localhost:6000-6010
+
+# Here is an example of specifying targets using a subnet. In
+# this case allowing tunnels to be established to VNC servers
+# on the 10.1.1.xx subnet.
+#
+#  target 10.1.1.0/24:5900,5901
+
+# The following line ensures that the default target host
+# is the local machine. The last named host becomes the
+# default so leaving this here ensures that "localhost" is,
+# the default unless overridden on the command line.
+
+target localhost
