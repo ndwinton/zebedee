@@ -10,6 +10,8 @@ closed.
 Added "ipmode" and -U option to support mixed traffic mode for a single
 client or server.
 
+Makefile changes for Irix and HPUX from Kyle Dent.
+
 Japanese documentation NOT YET updated.
 
 * Release 2.2.2 (2001/04/13)
