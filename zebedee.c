@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.42 2003-09-19 20:45:11 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.43 2003-09-19 21:10:39 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -658,6 +658,8 @@ void setString(char *value, char **resultP);
 void setLogFile(char *newFile);
 void setCmpInfo(char *value, unsigned short *resultP);
 void setStackSize(char *value);
+void setRunAsUser(const char *user);
+
 void readConfigFile(const char *fileName, int level);
 int parseConfigLine(const char *lineBuf, int level);
 
@@ -1906,7 +1908,7 @@ char *
 ipString(struct in_addr addr, char *buf)
 {
     unsigned long val = ntohl(addr.s_addr);
-    sprintf(buf, "%d.%d.%d.%d",
+    sprintf(buf, "%lu.%lu.%lu.%lu",
 	    (val >> 24) & 0xff,
 	    (val >> 16) & 0xff,
 	    (val >>  8) & 0xff,
@@ -2717,7 +2719,6 @@ socketIsUsable(int sock)
 {
     fd_set testSet;
     struct timeval delay;
-    unsigned long num;
     unsigned char buf[1];
     struct sockaddr_in addr;
     int addrLen = sizeof(addr);
@@ -5446,7 +5447,6 @@ client(FnArgs_t *argP)
     const unsigned short serverPort = ServerPort;
     unsigned short redirectPort = 0;
     unsigned short maxSize = MaxBufSize;
-    struct sockaddr_in addr;
     int serverFd = -1;
     unsigned short response = 0;
     char generator[MAX_LINE_SIZE];
@@ -5466,14 +5466,12 @@ client(FnArgs_t *argP)
     unsigned char clientNonce[NONCE_SIZE];
     unsigned char serverNonce[NONCE_SIZE];
     char *targetHost = NULL;
-    char *idFile = NULL;
     struct sockaddr_in peerAddr;
     struct sockaddr_in targetAddr;
     int inLine = argP->inLine;
     int udpMode = argP->udpMode;
     char ipBuf[IP_BUF_SIZE];
     unsigned short cksumLevel = CHECKSUM_NONE;
-    unsigned char cksumSeed[CHECKSUM_SHA_LEN];
     SHA_INFO sha;
 
 
@@ -6269,7 +6267,6 @@ server(FnArgs_t *argP)
     int udpMode = argP->udpMode;    /* Overridden by client request */
     char ipBuf[IP_BUF_SIZE];
     unsigned short cksumLevel = CHECKSUM_NONE;
-    unsigned char cksumSeed[CHECKSUM_SHA_LEN];
     SHA_INFO sha;
 
 
