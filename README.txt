@@ -1,6 +1,10 @@
 Zebedee Secure Tunnel
 =====================
 
+NOTE: Versions of Zebedee in the 2.3.x series are "development"
+releases that contain new functionality that may not have been
+extensively tested. The current "stable" version is 2.2.2.
+
 Zebedee is a simple program to establish an encrypted, compressed
 "tunnel" for TCP/IP or UDP traffic between two systems. This
 allows data from, for example, telnet, ftp and X sessions to be
@@ -10,8 +14,8 @@ low-bandwidth networks.
 
 The main goals for Zebedee are to:
 
- * Provide client and server functionality under both UNIX
-   and Windows 95/98/NT.
+ * Provide client and server functionality under both UNIX/Linux
+   and Windowss.
 
  * Be easy to install, use and maintain with little or no
    configuration required.
@@ -59,4 +63,4 @@ launch Zebedee clients automatically from Explorer or elsewhere
 -- provided that all the necessary information is contained
 within the configuration file.
 
-Neil Winton, 2000/05/30
+Neil Winton, 2002/03/15

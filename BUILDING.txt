@@ -1,12 +1,12 @@
 Linux
 =====
 
-Zebedee is developed and tested on Caldera OpenLinux 2.3 and
-Mandrake 7.1. It should build easily on other Linux distributions
-too although older versions (RedHat 5 I believe) may have problems
-with one or more of the pthread library functions being missing.
-Compile without HAVE_PTHREADS defined if this appears to be a
-problem.
+Zebedee is developed and tested on Mandrake 8.1. It should build easily on
+other Linux distributions too although older versions (RedHat 5 I believe) may
+have problems with one or more of the pthread library functions being missing.
+Compile without HAVE_PTHREADS defined if this appears to be a problem.
+
+You may build with system-supplied zlib and bzip2 libraries if you have them.
 
 Zebedee:
 
@@ -19,7 +19,7 @@ blowfish-0.9.5a:
     Builds without modification to the Makefile. Use "make optmimze" to build
     the best version for your platform.
     
-zlib-1.1.3:
+zlib-1.1.4:
 
     Configure and build using:
 
@@ -34,11 +34,13 @@ Other UNIX-like systems
 
 In general, follow any instructions given with the distributions of each of
 the libraries Zebedee depends on. Zebedee itself has been built and tested, at
-some point or other, by the author on:
+some point or other, on:
 
 	Solaris -- use "make OS=solaris"
 	FreeBSD -- use "make OS=freebsd"
 	Tru64 UNIX -- use "make OS=tru64"
+	HPUX -- use "make OS=hpux"
+	Irix -- use "make OS=irix"
 
 I have received reports of Zebedee being built successfully under AIX
 (some AIX-related changes have been made to the base code) and SCO Unix.  I
@@ -53,12 +55,9 @@ Windows
 =======
 
 Zebedee was built using the Cygwin tools (http://sourceware.cygnus.com) and
-Mumit Khan's "mingw32" version of gcc 2.95.2 (see http://www.mingw.org). Make
-sure that this version of gcc is on your path before the "normal" Cygwin gcc
-version.
+the "mingw32" version of gcc (see http://www.mingw.org).
 
-It is currently built using CRTLIB.DLL which should be present on all Windows
-systems. I may swap to MSVCRT.DLL in the future.
+Zebedee is now built to use MSVCRT.DLL.
 
 Zebedee:
 
@@ -73,7 +72,7 @@ blowfish-0.9.5a:
     really want to try to optimize performance do "make bf_opts" and
     then run bf_opts.
 	
-zlib-1.1.3:
+zlib-1.1.4:
 
     Run "configure" and then make. It's a breeze!
 
