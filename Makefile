@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.21 2003-09-17 07:54:44 ndwinton Exp $
+# $Id: Makefile,v 1.22 2003-09-19 21:10:39 ndwinton Exp $
 
 ZBD_VERSION = 2.5.2
 
@@ -30,7 +30,7 @@ CC = $(CC_$(OS))
 # Optimise/debug compilation
 
 #OPTIM = -Wall -g
-OPTIM = -O3
+OPTIM = -Wall -O3
 
 # Location of gmp include and library
 #
