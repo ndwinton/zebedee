@@ -8,16 +8,17 @@ Zebedee --- a simple, free, secure TCP and UDP tunnel program
 
 =item Server:
 
-B<zebedee> B<-s> [B<-dDtuU>] [B<-b> I<address>] [B<-c> I<host>]
-[B<-f> I<file>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<logfile>]
-[B<-r> I<ports>] [B<-T> I<port>] [B<-v> I<level>] [B<-x> I<config>]
-[B<-z> I<level>] [I<target> ...]
+B<zebedee> B<-s> [B<-dDtuU>] [B<-b> I<address>] [B<-c> I<host>] [B<-F>
+I<char>] [B<-f> I<file>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<logfile>]
+[B<-r> I<ports>] [B<-T> I<port>] [B<-v> I<level>] [B<-x> I<config>] [B<-z>
+I<level>] [I<target> ...]
 
 =item Client:
 
-B<zebedee> [B<-dDlmtuU>] [B<-b> I<address>] [B<-e> I<command>] [B<-f> I<file>]
-[B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<log>] [B<-T> I<port>] [B<-v>
-I<level>] [B<-x> I<config>] [B<-z> I<level>] [server] [I<tunnel-spec> ...]
+B<zebedee> [B<-dDlmtuU>] [B<-b> I<address>] [B<-e> I<command>] [B<-F> I<char>]
+[B<-f> I<file>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<log>] [B<-T>
+I<port>] [B<-v> I<level>] [B<-x> I<config>] [B<-z> I<level>] [server]
+[I<tunnel-spec> ...]
 
 =item Key generation:
 
@@ -1146,6 +1147,26 @@ configuration file. These are described below.
 
 =over 4
 
+=item -F B<char>
+
+The first character of the argument to this option specifies an additional
+field separator character, used in parsing configuration file option lines.
+All instances of this character will be replaced with a space before lines are
+parsed. It exists primarily to be used in conjunction with the B<-x> option
+where there may be difficulties in constructing and invoking commands
+containing spaces, owing to limitations in command interpreters. So, for
+example, the command:
+
+ zebedee -F~ -x "message~'Hello,~World!'"
+
+will output a message like the following:
+
+ zebedee(1128/1348):  Hello, World!
+
+Please be aware that you can specify B<any> character as a separator. It is
+your responsibility to ensure that the character you choose does not conflict
+with any other usage in the configuration file.
+
 =item -p
 
 This causes B<Zebedee> to generate a private key value and to write
@@ -1286,6 +1307,8 @@ brief description.
 
 Other options that have no keyword equivalents:
 
+ -F char
+     Specify an additional field separator (whitespace) character
  -p  Generate a private key
  -P  Generate a public "identity"
  -h file ...
@@ -2095,4 +2118,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.13 2002-04-24 15:39:07 ndwinton Exp $
+ $Id: zebedee.pod,v 1.14 2002-04-30 11:42:41 ndwinton Exp $

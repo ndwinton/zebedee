@@ -21,6 +21,14 @@ to defend very sensitive traffic against snooping from determined and
 well-equipped attackers I wouldn't worry too much. And if you are trying to do
 that, Zebedee may not be the right choice for you anyway :-)
 
+Changed server tunnel establishment message to be more informative.
+
+Fixed (implemented!) "detached" mode for server-initiated connections. It
+now detaches after having contacted the client but before establishing any
+tunnels.
+
+Added -F option to specify configuration file field separator character.
+
 Numerous changes to the (English) documentation.
 
 * Release 2.3.2 (2002/04/18)
