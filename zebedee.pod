@@ -384,6 +384,11 @@ This is a boolean indicating whether the program should run as a client or a
 server. The default is to run as a client if this keyword is not specified. The
 command-line B<-s> option is equivalent to setting this keyword to B<true>.
 
+=item B<targetconnecttimeout>
+
+This specifies the about of time, in seconds, that a server should block
+trying to connect to a target host. The default is 300 seconds.
+
 =back
 
 =head3 Client-Only Keywords
@@ -2461,4 +2466,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.24 2003-09-16 20:38:29 ndwinton Exp $
+ $Id: zebedee.pod,v 1.25 2003-09-17 06:13:36 ndwinton Exp $
