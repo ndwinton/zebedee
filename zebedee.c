@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.4 2001-08-02 15:21:58 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.5 2002-03-07 10:25:21 ndwinton Exp $";
 #define RELEASE_STR "PRE-2.3.0"
 
 #include <stdio.h>
@@ -128,7 +128,9 @@ extern int svcRemove(char *name);
 #include <sys/time.h>
 #include <sys/times.h>
 #include <sys/socket.h>
+#ifndef DONT_HAVE_SELECT_H
 #include <sys/select.h>
+#endif
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <dirent.h>
@@ -423,7 +425,7 @@ int UdpMode = 0;		/* Run in UDP mode */
 int TcpMode = 1;		/* Run in TCP mode */
 unsigned short TcpTimeout = DFLT_TCP_TIMEOUT;	/* TCP inactivity timeout */
 unsigned short UdpTimeout = DFLT_UDP_TIMEOUT;	/* UDP inactivity timeout */
-int LocalSource = 0;		/* True if only local source connections */
+char *ListenIp = NULL;		/* IP address on which to listen */
 int ListenMode = 0;		/* True if client waits for server connection */
 char *ClientHost = NULL;	/* Server initiates connection to client */
 int ListenSock = -1;		/* Socket on which to listen for server */
@@ -487,7 +489,7 @@ int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 
 int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr **addrList);
 int makeConnection(const char *host, const unsigned short port, int udpMode, struct sockaddr_in *localAddrP);
-int makeListener(unsigned short *portP, int localOnly, int udpMode);
+int makeListener(unsigned short *portP, char *listenIp, int udpMode);
 int acceptConnection(int listenFd, const char *host, int loop, unsigned short timeout);
 
 void headerSetUShort(unsigned char *hdrBuf, unsigned short value, int offset);
@@ -1593,9 +1595,8 @@ makeConnection(const char *host, const unsigned short port,
 /*
 ** makeListener
 **
-** Set up a listener socket on the port supplied via portP. If localOnly
-** is true then the socket will only be set up for listening to connections
-** from localhost.
+** Set up a listener socket on the port supplied via portP. If listenIp
+** is not NULL then it specifies the address on which we will listen.
 **
 ** If the requested port is 0 then a new port will be allocated and
 ** returned in portP. If the requested port is non-zero then an attempt
@@ -1605,7 +1606,7 @@ makeConnection(const char *host, const unsigned short port,
 */
 
 int
-makeListener(unsigned short *portP, int localOnly, int udpMode)
+makeListener(unsigned short *portP, char *listenIp, int udpMode)
 {
     int sfd = -1;
     struct sockaddr_in addr;
@@ -1632,9 +1633,17 @@ makeListener(unsigned short *portP, int localOnly, int udpMode)
     }
 
     memset(&addr, 0, sizeof(addr));
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (listenIp != NULL)
+    {
+	if (!getHostAddress(listenIp, &addr, NULL))
+	{
+	    message(0, 0, "can't resolve listen address '%s'", listenIp);
+	}
+    }
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = localOnly ? htonl(INADDR_LOOPBACK) : htonl(INADDR_ANY);
     addr.sin_port = (portP ? htons(*portP) : 0);
+    message(5, 0, "listening on %s", inet_ntoa(addr.sin_addr));
 
     if (bind(sfd, (struct sockaddr *)&addr, addrLen) < 0)
     {
@@ -3949,7 +3958,7 @@ clientListener(PortList_t *ports)
     {
 	message(3, 0, "listening for server connection on port %hu", ServerPort);
 
-	if ((ListenSock = makeListener(&ServerPort, 0, 0)) == -1)
+	if ((ListenSock = makeListener(&ServerPort, ListenIp, 0)) == -1)
 	{
 	    message(0, errno, "can't create listener socket for server connection");
 	    exit(EXIT_FAILURE);
@@ -4031,7 +4040,7 @@ clientListener(PortList_t *ports)
 			    /* Create a "loopback" socket */
 
 			    localPort = 0;
-			    if ((clientFd = makeListener(&localPort, 1, 1)) == -1)
+			    if ((clientFd = makeListener(&localPort, "127.0.0.1", 1)) == -1)
 			    {
 				continue;
 			    }
@@ -4146,7 +4155,7 @@ makeClientListeners(PortList_t *ports, FD_SET *listenSetP, int udpMode)
 	    message(3, 0, "creating %s-mode local listener socket for port %hu",
 		    (udpMode ? "UDP" : "TCP"), localPort);
 
-	    if ((listenFd = makeListener(&localPort, LocalSource, udpMode)) == -1)
+	    if ((listenFd = makeListener(&localPort, ListenIp, udpMode)) == -1)
 	    {
 		message(0, errno, "can't create listener socket");
 		exit(EXIT_FAILURE);
@@ -4809,7 +4818,7 @@ serverListener(unsigned short *portPtr)
 
     /* Create the listener socket */
 
-    if ((listenFd = makeListener(portPtr, 0, 0)) == -1)
+    if ((listenFd = makeListener(portPtr, ListenIp, 0)) == -1)
     {
 	message(0, 0, "server can't listen on port %hu", *portPtr);
 	exit(EXIT_FAILURE);
@@ -6298,7 +6307,13 @@ parseConfigLine(const char *lineBuf, int level)
 	setUShort(value, &TcpTimeout);
 	setUShort(value, &UdpTimeout);
     }
-    else if (!strcasecmp(key, "localsource")) setBoolean(value, &LocalSource);
+    else if (!strcasecmp(key, "localsource"))
+    {
+	int yesNo = 0;
+	setBoolean(value, &yesNo);
+	setString(yesNo ? "127.0.0.1" : "0.0.0.0", &ListenIp);
+    }
+    else if (!strcasecmp(key, "listenip")) setString(value, &ListenIp);
     else if (!strcasecmp(key, "listenmode")) setBoolean(value, &ListenMode);
     else if (!strcasecmp(key, "clienthost")) setString(value, &ClientHost);
     else if (!strcasecmp(key, "connecttimeout")) setUShort(value, &ConnectTimeout);
@@ -6375,6 +6390,7 @@ usage(void)
 
     fprintf(stderr,
 	    "Options are:\n"
+	    "    -b address  Bind only this address when listening for connections\n"
 	    "    -c host     Server initiates connection to client host\n"
 	    "    -D          Debug mode\n"
 	    "    -d          Do not detach from terminal\n"
@@ -6397,6 +6413,7 @@ usage(void)
 	    "    -t          Timestamp log entries\n"
 	    "    -T port     Specify the server (tunnel) port\n"
 	    "    -u          Run in UDP mode\n"
+	    "    -U          Run in TCP and UDP mode\n"
 	    "    -v level    Set message verbosity level (default 1)\n"
 	    "    -x config   Extended configuration statement\n"
 	    "    -z type     Set the compression type and level (default zlib:6)\n");
@@ -6495,12 +6512,16 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "c:Dde:f:hHk:lmn:o:pPr:sS:tT:uv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "b:c:Dde:f:hHk:lmn:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
 	case 'c':
 	    ClientHost = optarg;
+	    break;
+
+	case 'b':
+	    ListenIp = optarg;
 	    break;
 
 	case 'D':
@@ -6599,6 +6620,11 @@ main(int argc, char **argv)
 	case 'u':
 	    UdpMode = 1;
 	    TcpMode = 0;
+	    break;
+
+	case 'U':
+	    UdpMode = 1;
+	    TcpMode = 1;
 	    break;
 
 	case 'v':

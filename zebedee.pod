@@ -8,14 +8,14 @@ Zebedee --- a simple, free, secure TCP and UDP tunnel program
 
 =item Server:
 
-B<zebedee> B<-s> [B<-dDtu>] [B<-c> I<host>] [B<-f> I<file>] [B<-k>
-I<keybits>] [B<-n> I<name>] [B<-o> I<logfile>] [B<-r> I<ports>]
-[B<-T> I<port>] [B<-v> I<level>] [B<-x> I<config>] [B<-z> I<level>]
-[I<target> ...]
+B<zebedee> B<-s> [B<-dDtuU>] [B<-b> I<address>] [B<-c> I<host>]
+[B<-f> I<file>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<logfile>]
+[B<-r> I<ports>] [B<-T> I<port>] [B<-v> I<level>] [B<-x> I<config>]
+[B<-z> I<level>] [I<target> ...]
 
 =item Client:
 
-B<zebedee> [B<-dDlmtu>] [B<-e> I<command>] [B<-f> I<file>]
+B<zebedee> [B<-dDlmtuU>] [B<-b> I<address>] [B<-e> I<command>] [B<-f> I<file>]
 [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<log>] [B<-T> I<port>] [B<-v>
 I<level>] [B<-x> I<config>] [B<-z> I<level>] [server] [I<tunnel-spec> ...]
 
@@ -79,7 +79,7 @@ available. It does not pretend to compete with the likes of B<ssh> or B<SSL>
 in terms of breadth of function but if you want something quick, simple and
 I<completely free> then it may be the tool for you.
 
-This document describes the features of B<Zebedee> as at release 2.1.0.
+This document describes the features of B<Zebedee> as at release 2.3.0.
 
 =head2 What's in a name?
 
@@ -183,20 +183,19 @@ B<L<tunnel|/item_tunnel>> keyword for more details.
 =head2 UDP Tunnelling
 
 Originally B<Zebedee> was designed only to be able to handle TCP/IP traffic.
-As of version 2.0.0 it can also handle connectionless UDP data. To enable
-this start B<Zebedee> with the B<-u> option (or use the
-B<L<udpmode|/item_udpmode>> keyword). For example:
+It can now also handle connectionless UDP data. To enable this start B<Zebedee>
+with the B<-U> option (or use the B<L<ipmode|/item_ipmode>> keyword). For
+example:
 
- zebedee -s -u
+ zebedee -s -U
 
 on the server host and
 
- zebedee -u 10000:somehost:echo
+ zebedee -U 10000:somehost:echo
 
-on the client. Note that a single client or server can only handle TCP or UDP
-data, not both. If you need to tunnel both types of data you must run two
-separate instances. It is safe run both a TCP-mode and a UDP-mode server on
-the same system because they use different ports.
+on the client. When run in this way B<Zebedee> will handle both TCP and UDP
+traffic. This is new in version 2.3.0, previously it could only handle
+one traffic type at a time.
 
 The tunnel between B<Zebedee> clients and servers still uses a TCP/IP
 connection even in UDP-mode. This connection is timed out after a certain
@@ -206,7 +205,8 @@ nature of the application using it. You should note that there is also a limit
 on the size of UDP datagrams that can be handled.
 
 For further details see the B<L<maxbufsize|/item_maxbufsize>>,
-B<L<udpmode|/item_udpmode>> and B<L<udptimeout|/item_udptimeout>> keywords.
+B<L<ipmode|/item_ipmode>>, B<L<udptimeout|/item_udptimeout>> and
+B<L<tcptimeout|/item_tcptimeout>> keywords.
 
 =head2 Some Terminology
 
@@ -433,6 +433,9 @@ the same as the "client" system.
 
 The default is for this value to be B<false> and for connections to be allowed
 from any arbitrary source machine.
+
+This has been superseded by the more generic B<L<listenip|/item_listenip>>
+keyword. So "C<localsource true>" is equivalent to "C<listenip 127.0.0.1>".
 
 =item B<multiuse> (command-line B<-m>)
 
@@ -761,6 +764,12 @@ This will start B<Zebedee> in a new console session from which it will then
 detach. You may see a console window appear briefly before it detaches but
 B<Zebedee> should be running in the background when it disappears.
 
+=item B<idletimeout>
+
+This sets both the B<L<tcptimeout|/item_tcptimeout>> and
+B<L<udptimeout|/item_udptimeout>> to the same value, causing idle connections
+to be closed. Please see those keywords for further details.
+
 =item B<include> (command-line B<-f>)
 
 This specifies the name of another configuration file to read and parse at
@@ -769,6 +778,49 @@ for example, where a private key is stored in a separate, more tightly
 protected file. There is a limit of 5 levels deep of include processing
 (counting the initial configuration file as level 1). This avoids
 unintentional recursion.
+
+=item B<ipmode>
+
+As of version 2.3.0, a B<Zebedee> client or server can handle both TCP and UDP
+traffic simultaneously. This is controlled by the B<ipmode> keyword. It can
+have a value of B<tcp>, B<udp> or B<both>.
+
+The default value is B<tcp> and B<Zebedee> will only handle TCP traffic in
+this case. The value B<udp> is equivalent to setting
+B<L<udpmode|/item_udpmode>> to be B<true>. In this case only UDP traffic will
+be handled and the B<Zebedee> server will, by default use a different port
+(11230). If it is set to B<both> then a client will listen for both TCP and
+UDP traffic and a server will handle requests to tunnel both TCP and UDP
+traffic. In this case the server uses only one port, by default the normal
+TCP-mode port of 11965. The command-line option B<-U> is equivalent to
+"C<ipmode both>".
+
+Please be aware that a client or server running purely in UDP mode will expect
+to use port 11230 by default. If the corresponding B<Zebedee> server or client
+is running in "mixed" mode you may have to specify the port explictly. For
+example, if the server is running in mixed mode:
+
+ zebedee -s -U
+
+then a client running in UDP-only mode will need to specify the server port:
+
+ zebedee -u -T 11965 10000:serverhost:echo
+
+=item B<listenip> (command-line B<-b>)
+
+Specifies the local IP address used to listen for connections. This can be
+useful on a system with multiple network interfaces, but where B<Zebedee>
+should only use one of them. If B<listenip> is not specified the default is to
+listen on all of the system's interfaces.
+
+The address can be given as a "dotted quad" or by name but in the case where
+the name can resolve to multiple IP addresses the results may be
+unpredictable. The address must, obviously, also correspond to one of those
+belonging to the system.
+
+Note that B<listenip> is a more general form of
+B<L<localsource|/item_localsource>> and setting B<localsource> will override
+B<listenip> and vice versa.
 
 =item B<maxbufsize>
 
@@ -818,13 +870,24 @@ B<syslog> service.
 =item B<serverport> (command-line <-T>)
 
 This is the port on which the B<Zebedee> server will listen for tunnel
-connections. The default is 11965 (0x2EBD) when running in TCP mode and 11230
-(0x2BDE) in UDP mode. The keyword causes a server to listen on this port and a
-client to attempt to connect to this port on the server system.
+connections. The default is 11965 (0x2EBD) when running in TCP mode or mixed
+TCP and UDP mode. It is 11230 (0x2BDE) in UDP-only mode. The keyword causes a
+server to listen on this port and a client to attempt to connect to this port
+on the server system.
 
 If using server-initiated connections (see B<L<listenmode|/item_listenmode>>
 and B<L<clienthost|/item_clienthost>>) then this is also the port on which the
 client listens for the server's incoming connections.
+
+=item B<tcptimeout>
+
+By default, TCP-mode tunnels will stay open until either the connection is
+closed by either source or target. This keyword allows them to be closed
+after a certain period of inactivity. The value is in seconds and must be no
+greater than 65535. Setting it to zero results in an indefinite timeout.
+
+See also B<L<idletimeout|/item_idletimeout>> and
+B<L<udptimeout|/item_udptimeout>>.
 
 =item B<timestamplog> (command-line B<-t>)
 
@@ -835,7 +898,7 @@ equivalent to setting this to B<true>.
 =item B<udpmode> (command-line B<-u>)
 
 By default B<Zebedee> handles connection-oriented TCP/IP traffic. If this
-keyword is set true handles UDP/IP connectionless traffic instead.
+keyword is set true B<Zebedee> handles UDP/IP connectionless traffic instead.
 
 The tunnel between B<Zebedee> clients and servers still uses a TCP/IP
 connection. A separate connection is established for each different
@@ -856,9 +919,14 @@ The command-line B<-u> option is equivalent to setting this to B<true>.
 =item B<udptimeout>
 
 By default, UDP-mode tunnels will shut down after 300 seconds of inactivty.
-This value can be changed by using this keyword to specify the timeout in
-seconds. It must be no greater than 65535. Setting it to zero is legal but may
-result in no data being transferred!
+They are recreated automatically if any further traffic arrives. The timeout
+value can be changed by using this keyword to specify the timeout in seconds.
+It must be no greater than 65535. Setting it to zero results in an indefinite
+timeout. This is probably not a good idea for UDP traffic as it means that
+there is no way ever to indicate that those connections should be closed.
+
+See also B<L<idletimeout|/item_idletimeout>> and
+B<L<tcptimeout|/item_tcptimeout>>.
 
 =item B<verbosity> (command-line B<-v>)
 
@@ -1049,11 +1117,14 @@ brief description.
  debug          boolean        CS  Run in single-threaded "debug" mode
  detached       boolean   -d   CS  Detach from the terminal/console
  generator      string         CS  Hexadecimal Diffie-Hellman generator value
+ idletimeout    seconds        CS  Inactivity timeout for all tunnels
  include        filename  -f   CS  Read in the named configuration file
+ ipmode         type           CS  Run in TCP, UDP or mixed mode (tcp/udp/both)
  keygencommand  string         CS  Command to run to generate key
  keygenlevel    level          CS  Key generation strength level (0 to 2)
  keylength      bits           CS  Requested maximum keylength in bits
  keylifetime    seconds        CS  Lifetime of shared secret keys
+ listenip       address   -b   CS  Listens only on the specified IP address
  listenmode     boolean   -l   C   Client listens for server connections
  localsource    boolean        C   Only accepts connections from local machine
  logfile        filename  -o   CS  Set the output log file
@@ -1069,9 +1140,10 @@ brief description.
  serverhost     hostname       C   Name of server host to which to connect
  serverport     port      -T   CS  Set the port on which the server listens
  target         spec           S   Specifies allowed target host and ports
+ tcptimeout     seconds        CS  Inactivity timeout for TCP tunnels
  timestamplog   boolean   -t   CS  Add timestamps to the log file
  tunnel         spec           C   Specifies client ports and matching targets
- udpmode        boolean   -u   CS  Handle UDP traffic
+ udpmode        boolean   -u   CS  Handle UDP traffic only
  udptimeout     seconds        CS  Inactivity timeout for UDP tunnels
  verbosity      level     -v   CS  Set the message logging level
 
@@ -1089,6 +1161,8 @@ Other options that have no keyword equivalents:
      Remove Windows service
  -x string
      Parse option string
+ -U
+     Shorthand for "ipmode both"
 
 =head2 Identity Checking
 
@@ -1762,4 +1836,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.1.1.1 2001-04-12 18:07:40 ndwinton Exp $
+ $Id: zebedee.pod,v 1.2 2002-03-07 10:25:21 ndwinton Exp $
