@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.33 2003-07-06 13:59:49 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.34 2003-09-03 06:17:15 ndwinton Exp $";
 #define RELEASE_STR "2.5.1"
 
 #include <stdio.h>
@@ -509,6 +509,7 @@ int DumpData = 0;		/* Dump out message contents only if true */
 uid_t ProcessUID = -1;		/* User id to run zebedee process if started as root */
 gid_t ProcessGID = -1;          /* Group id to run zebedee process if started as root */
 #endif
+long ThreadStackSize = THREAD_STACK_SIZE; /* As it says */
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -677,7 +678,7 @@ threadInit(void)
     conditionInit();
 #if defined(HAVE_PTHREADS)
     pthread_attr_init(&ThreadAttr);
-    pthread_attr_setstacksize(&ThreadAttr, THREAD_STACK_SIZE);
+    pthread_attr_setstacksize(&ThreadAttr, (size_t)ThreadStackSize);
     pthread_attr_setdetachstate(&ThreadAttr, PTHREAD_CREATE_DETACHED);
 #endif
 }
@@ -2190,7 +2191,7 @@ proxyConnection(const char *host, const unsigned short port,
 
     /* Check for an OK response */
 
-    if (strncmp(buf, "HTTP/1.0 200", 12))
+    if (strncmp(buf, "HTTP/1.0 200", 12) && strncmp(buf, "HTTP/1.1 200", 12))
     {
 	if ((bufP = strchr(buf, '\r')) != NULL)
 	{
@@ -4693,7 +4694,7 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
 
 	message(4, 0, "spawning handler function thread");
 	if ((tid = (unsigned long)_beginthread((void (*)(void *))handler,
-					       THREAD_STACK_SIZE,
+					       (DWORD)ThreadStackSize,
 					       (LPVOID)argP)) == 0)
 	{
 	    message(0, errno, "failed to create handler thread");
@@ -7505,6 +7506,12 @@ parseConfigLine(const char *lineBuf, int level)
 #ifndef WIN32
     else if (!strcasecmp(key, "runasuser")) setRunAsUser(value);
 #endif
+    else if (!strcasecmp(key, "threadstacksize"))
+    {
+	unsigned short tmp;
+	setUShort(value, &tmp);
+	ThreadStackSize = tmp * 1024;
+    }
     else
     {
 	return 0;

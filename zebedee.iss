@@ -7,7 +7,6 @@ DefaultDirName={pf}\Zebedee
 DefaultGroupName=Zebedee
 
 LicenseFile=LICENCE.txt
-AlwaysCreateUninstallIcon=1
 
 [Files]
 Source: "zebedee.exe"; DestDir: "{app}"
@@ -32,6 +31,7 @@ Name: "{group}\Documentation (Japanese - 2.2)"; Filename: "{app}\zebedee.ja_JP.h
 Name: "{group}\Licence"; Filename: "{app}\LICENCE.txt"
 Name: "{group}\Shortcut to Zebedee Directory"; Filename: "{app}"
 Name: "{group}\Edit Server Configuration"; Filename: "notepad.exe"; Parameters: """{app}\server.zbd"""
+Name: "{group}\Uninstall Zebedee Secure Tunnel"; Filename: "{uninstallexe}"
 
 [Registry]
 ; Set up association with .zbd file type
