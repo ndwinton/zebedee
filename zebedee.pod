@@ -575,6 +575,11 @@ Note that B<Zebedee> does not itself provide a mechanism for co-ordinating the
 starting of client and server to set up a "reverse" tunnel. That must be
 handled by some "out-of-band" mechanism.
 
+=item B<connectattempts> (command-line B<-C>)
+
+This specifies the number of attempts the server makes to connect back to
+a client when a B<L<clienthost|/item_clienthost>> is given. The default is 1.
+
 =item B<dropunknownprotocol>
 
 This is a boolean indicating whether a B<Zebedee> server should attempt to
@@ -670,6 +675,14 @@ create tunnels to this target.
 
 You can't combine both the "C<?>" and "C<@>" forms. But you really wouldn't
 want to do that anyway, would you?
+
+=item B<targetconnecttimeout>
+
+This sets maximum timeout for server attempting to make a connection to a
+target endpoint. Normally a connection attempt will fail immediately if there
+is no target server running. However, with certain kinds on network or system
+failures connection attempts can block almost indefinitely. This timeout
+prevents these hangs. The default is 300 seconds.
 
 =item B<transparent>
 
@@ -986,7 +999,7 @@ last value will be used.
 If a B<L<keylength|/item_keylength>> of zero
 has been agreed then no identity checking will be performed.
 
-=item B<connecttimeout>
+=item B<acceptconnecttimeout>
 
 When B<Zebedee> is used in "reverse-mode" (see
 B<L<listenmode|/item_listenmode>> and B<L<clienthost|/item_clienthost>>)
@@ -1224,6 +1237,12 @@ you wish to cause valid but apparently idle connections to be timed out you
 should use B<L<tcptimeout|/item_tcptimeout>> or
 B<L<udptimeout|/item_udptimeout>>.
 
+This value may also be useful when a client is running in
+B<L<listenmode|/item_listenmode>>.  While B<Zebedee> tries to determine
+whether a connection from a server will be usable, and if it has already been
+closed, this is not always possible. In this case setting this to a non-zero
+value will stop the client hanging if it accepts such a "dead" connection.
+
 =item B<runasuser> (command-line B<-N>)
 
 This keyword and option apply to UNIX/Linux systems only.
@@ -1265,6 +1284,15 @@ on the server system.
 If using server-initiated connections (see B<L<listenmode|/item_listenmode>>
 and B<L<clienthost|/item_clienthost>>) then this is also the port on which the
 client listens for the server's incoming connections.
+
+=item B<serverconnecttimeout>
+
+This sets maximum timeout for a client attempting to make a connection to a
+server or (if running in "reverse" mode) for a server to connect back to a
+client. Normally a connection attempt will fail immediately if there is no
+remote B<Zebedee> process running. However, with certain kinds on network or
+system failures connection attempts can block almost indefinitely. This
+timeout prevents these hangs. The default is 300 seconds.
 
 =item B<tcptimeout>
 
@@ -2469,4 +2497,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.26 2003-09-22 06:15:29 ndwinton Exp $
+ $Id: zebedee.pod,v 1.27 2003-09-22 16:30:29 ndwinton Exp $
