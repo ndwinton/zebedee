@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.21 2002-04-29 15:45:34 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.22 2002-04-30 11:42:41 ndwinton Exp $";
 #define RELEASE_STR "2.4.0"
 
 #include <stdio.h>
@@ -452,6 +452,7 @@ int ActiveCount = 0;		/* Count of active handlers */
 char *ProxyHost = NULL;		/* HTTP proxy host, if used */
 unsigned short ProxyPort = 0;	/* HTTP proxy port, if used */
 int Transparent = 0;		/* Try to propagate the client IP address */
+char *FieldSeparator = NULL;	/* Input field separator character */
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -5451,6 +5452,17 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
 	}
 
 	/*
+	** Now is the time to detach, if we are going to do so. The check
+	** against -1 is so that we don't try to do this multiple times.
+	*/
+
+	if (IsDetached && IsDetached != -1)
+	{
+	    message(3, 0, "detaching from terminal");
+	    makeDetached();
+	}
+
+	/*
 	** Now we will wait until either there is data ready to
 	** read from the client or we exceed the timeout value.
 	*/
@@ -5710,8 +5722,6 @@ server(FnArgs_t *argP)
 		message(3, 0, "made connection to target -- writing back %hu to client", port);
 		headerSetUShort(hdrData, port, HDR_OFFSET_PORT);
 	    }
-	    free(targetHost);
-	    targetHost = NULL;
 	}
 	else
 	{
@@ -5873,8 +5883,6 @@ server(FnArgs_t *argP)
 	    goto fatal;
 	}
 	port = request;
-	free(targetHost);
-	targetHost = NULL;
 
 	message(3, 0, "made local connection -- writing back %hu to client", request);
 
@@ -6161,7 +6169,7 @@ server(FnArgs_t *argP)
 	}
     }
 
-    message(1, 0, "tunnel established to port %hu", port);
+    message(1, 0, "tunnel established to target %s, port %hu", targetHost, port);
     message(2, 0, "compression level %#hx, key length %hu", cmpInfo, keyBits);
 
     /* Now loop handling i/o */
@@ -6184,6 +6192,7 @@ server(FnArgs_t *argP)
 
     closesocket(clientFd);
     closesocket(localFd);
+    if (targetHost != NULL && targetHost != TargetHost) free(targetHost);
     freeMsgBuf(msg);
     free(argP);
     incrActiveCount(-1);
@@ -6195,7 +6204,7 @@ server(FnArgs_t *argP)
 fatal:
     if (clientFd != -1) closesocket(clientFd);
     if (localFd != -1) closesocket(localFd);
-    if (targetHost) free(targetHost);
+    if (targetHost != NULL && targetHost != TargetHost) free(targetHost);
     if (exponent) free(exponent);
     if (dhKey) free(dhKey);
     if (sessionKeyStr && sessionKeyStr != secretKeyStr) free(sessionKeyStr);
@@ -6853,7 +6862,29 @@ parseConfigLine(const char *lineBuf, int level)
     char key[MAX_LINE_SIZE];
     char value[MAX_LINE_SIZE];
     char comment[2];
+    char tmpBuf[MAX_LINE_SIZE];
+    const char *s = NULL;
+    char *t = NULL;
 
+
+    /* Substitute field separator, if any */
+
+    if (FieldSeparator)
+    {
+	for (s = lineBuf, t = tmpBuf; *s; s++, t++)
+	{
+	    if (*s == *FieldSeparator)
+	    {
+		*t = ' ';
+	    }
+	    else
+	    {
+		*t = *s;
+	    }
+	}
+	*t = '\0';
+	lineBuf = tmpBuf;
+    }
 
     /* Split into key-value pairs */
 
@@ -7082,6 +7113,7 @@ usage(void)
 	    "    -D          Debug mode\n"
 	    "    -d          Do not detach from terminal\n"
 	    "    -e command  Run command connected to local port (client only)\n"
+	    "    -F char     Specify additional field separator character\n"
 	    "    -f file     Read configuration file\n"
 	    "    -H          Generate hash of string values\n"
 	    "    -h          Generate hash of file contents\n"
@@ -7199,7 +7231,7 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "b:c:Dde:f:hHk:lmn:o:pPr:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:lmn:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
@@ -7226,6 +7258,10 @@ main(int argc, char **argv)
 
 	case 'f':
 	    readConfigFile(optarg, 1);
+	    break;
+
+	case 'F':
+	    FieldSeparator = optarg;
 	    break;
 
 	case 'h':
