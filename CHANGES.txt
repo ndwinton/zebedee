@@ -18,6 +18,10 @@ the server address).
 
 Fixed bug writing to syslog when detached -- thanks to Kyle Dent.
 
+Set FD_SETSIZE to 512 by default on Windows, to allow many more simultaneous
+connections to be handled correctly (approx 250). This can be overridden
+at compile time. Thanks to <TBD>.
+
 * Release 2.4.1 (2002/05/29)
 
 Fixed incorrect selection of client TCP/UDP mode when handler function is
