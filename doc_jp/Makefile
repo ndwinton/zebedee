@@ -10,10 +10,11 @@ JAMANDIR = $(ROOTDIR)/man/ja/man1
 all : zebedee.1 zebedee.html ftpgw.tcl.1 ftpgw.tcl.html ../zebedee.ja_JP.html
 
 zebedee.1 : zebedee.pod
-	rm -f ../tmp/zebedee.pod
-	$(PERL) -pe 's/^\=head3/\=head2/;' zebedee.pod > ../tmp/zebedee.pod
-	$(POD2MAN) --release="Zebedee 2.1.0" --center=Zebedee ../tmp/zebedee.pod > zebedee.1
-	rm -f ../tmp/zebedee.pod
+	rm -f ./tmp/zebedee.pod
+	mkdir -p ./tmp
+	$(PERL) -pe 's/^\=head3/\=head2/;' zebedee.pod > ./tmp/zebedee.pod
+	$(POD2MAN) --release="Zebedee 2.1.0" --center=Zebedee ./tmp/zebedee.pod > zebedee.1
+	rm -f ./tmp/zebedee.pod
 
 zebedee.html : zebedee.pod
 	$(POD2HTML) --title="Zebedee: A simple, secure IP tunnel" --noindex zebedee.pod > zebedee.tmp
