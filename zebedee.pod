@@ -47,7 +47,7 @@ You can also use compression, either with or without data encryption, to gain
 performance over low-bandwidth networks.
 
 This document describes the features of B<Zebedee> as at release 2.4.0. For
-details of the new features in this release see L<CHANGES>.
+details of the new features in this release see L<CHANGES|/changes>.
 
 The main goals for B<Zebedee> are to:
 
@@ -2259,4 +2259,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.17 2002-05-09 07:56:32 ndwinton Exp $
+ $Id: zebedee.pod,v 1.18 2002-05-09 08:23:55 ndwinton Exp $
