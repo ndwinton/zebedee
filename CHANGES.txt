@@ -1,3 +1,7 @@
+* Release 2.5.3
+
+Fix file descriptor leak when IP address lookup fails.
+
 * Release 2.5.2
 
 Cross-platform fix for checksumming code. This is *incompatible* with version
