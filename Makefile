@@ -1,7 +1,9 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.2 2001-04-13 17:41:21 ndwinton Exp $
+# $Id: Makefile,v 1.3 2001-08-02 15:21:58 ndwinton Exp $
+
+ZBD_VERSION = 2.3.0
 
 OS = 
 
@@ -53,12 +55,14 @@ BZLIB = ../bzip2-1.0.1/libbz2.a
 #
 # Tools needed for Perl "POD"-format documentation conversion.
 #
-PERL = perl
+PERL_$(OS) = perl
+PERL_win32 = c:/perl/bin/perl	# Avoid Cygwin port
+PERL = $(PERL_$(OS))
 
 BAT_win32 = .bat
 
-POD2HTML = pod2html$(BAT_$(OS))
-POD2MAN = pod2man$(BAT_$(OS))
+POD2HTML = $(PERL) -S pod2html$(BAT_$(OS))
+POD2MAN = $(PERL) -S pod2man$(BAT_$(OS))
 
 # Installation directories for the Linux/Solaris/*NIX World
 
@@ -158,10 +162,11 @@ zebedee$(EXE) : $(OBJS)
 huge.o : huge.h
 
 zebedee.1 : zebedee.pod
-	rm -f /tmp/zebedee.pod
-	$(PERL) -pe 's/^\=head3/\=head2/;' zebedee.pod > /tmp/zebedee.pod
-	$(POD2MAN) --release="Zebedee 2.1.0" --center=Zebedee /tmp/zebedee.pod > zebedee.1
-	rm -f /tmp/zebedee.pod
+	rm -f ./tmp/zebedee.pod
+	mkdir -p tmp
+	$(PERL) -pe 's/^\=head3/\=head2/;' zebedee.pod > ./tmp/zebedee.pod
+	$(POD2MAN) --release="Zebedee $(ZBD_VERSION)" --center=Zebedee ./tmp/zebedee.pod > zebedee.1
+	rm -f ./tmp/zebedee.pod
 
 zebedee.html : zebedee.pod
 	$(POD2HTML) --title="Zebedee: A simple, secure IP tunnel" --noindex zebedee.pod > zebedee.tmp

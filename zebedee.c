@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.3 2001-04-13 20:42:23 ndwinton Exp $";
-#define RELEASE_STR "2.2.2"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.4 2001-08-02 15:21:58 ndwinton Exp $";
+#define RELEASE_STR "PRE-2.3.0"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -221,6 +221,7 @@ pthread_attr_t ThreadAttr;
 #define DFLT_TCP_PORT	    0x2EBD  /* Port on which TCP-mode server listens */
 #define DFLT_UDP_PORT	    0x2BDE  /* Port on which UDP-mode server listens */
 #define DFLT_KEY_LIFETIME   3600    /* Reuseable keys last an hour */
+#define DFLT_TCP_TIMEOUT    0	    /* Default never close idle TCP tunnels */
 #define DFLT_UDP_TIMEOUT    300	    /* Close UDP tunnels after 5 mins */
 #define DFLT_CONN_TIMEOUT   300	    /* Timeout for server-initiated connections */
 
@@ -357,6 +358,7 @@ typedef struct FnArgs_s
     struct sockaddr_in addr;
     int listenFd;
     int inLine;
+    int udpMode;
 }
 FnArgs_t;
 
@@ -417,8 +419,10 @@ int MultiUse = 1;		/* Client handles multiple connections? */
 unsigned short MaxBufSize = DFLT_BUF_SIZE;  /* Maximum buffer size */
 unsigned long CurrentToken = 0;	/* Client reuseable key token */
 unsigned short KeyLifetime = DFLT_KEY_LIFETIME;	/* Key lifetime in seconds */
-int UDPMode = 0;		/* Run in UDP mode */
-unsigned short UDPTimeout = DFLT_UDP_TIMEOUT;	/* Inactivity t/o for UDP */
+int UdpMode = 0;		/* Run in UDP mode */
+int TcpMode = 1;		/* Run in TCP mode */
+unsigned short TcpTimeout = DFLT_TCP_TIMEOUT;	/* TCP inactivity timeout */
+unsigned short UdpTimeout = DFLT_UDP_TIMEOUT;	/* UDP inactivity timeout */
 int LocalSource = 0;		/* True if only local source connections */
 int ListenMode = 0;		/* True if client waits for server connection */
 char *ClientHost = NULL;	/* Server initiates connection to client */
@@ -510,14 +514,15 @@ unsigned long generateToken(KeyInfo_t *list, unsigned long oldToken);
 unsigned long getCurrentToken(void);
 
 int spawnCommand(unsigned short port, char *cmdFormat);
-int filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf, struct sockaddr_in *addrP, int replyFd);
+int filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
+	       struct sockaddr_in *addrP, int replyFd, int udpMode);
 
 void hashStrings(char *hashBuf, ...);
 void hashFile(char *hashBuf, char *fileName);
 int checkIdentity(char *idFile, char *generator, char *modulus, char *key);
 char *generateIdentity(char *generator, char *modulus, char *exponent);
 
-unsigned long spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd, int inLine, struct sockaddr_in *addrP);
+unsigned long spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd, int inLine, struct sockaddr_in *addrP, int udpMode);
 int findHandler(struct sockaddr_in *fromAddrP, struct sockaddr_in *localAddrP);
 void addHandler(struct sockaddr_in *fromAddrP, unsigned long id, int fd, struct sockaddr_in *localAddrP);
 void removeHandler(struct sockaddr_in *addrP);
@@ -3008,13 +3013,15 @@ spawnCommand(unsigned short port, char *cmdFormat)
 ** 1 and a local failure -1.
 **
 ** In UDP mode replies are sent back to the address specified by addrP using
-** the socket named in replyFd and the select will timeout (and the
-** connection be closed) after UDPTimeout seconds.
+** the socket named in replyFd.
+**
+** The select will timeout (and the connection be closed) after TcpTimeout
+** or UdpTimeout seconds, as applicable.
 */
 
 int
 filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
-	   struct sockaddr_in *addrP, int replyFd)
+	   struct sockaddr_in *addrP, int replyFd, int udpMode)
 {
     fd_set testSet;
     int ready = 0;
@@ -3026,9 +3033,9 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 
     do
     {
-	/* Set up the delay for select (UDP only) */
+	/* Set up the delay for select */
 
-	delay.tv_sec = UDPTimeout;
+	delay.tv_sec = (udpMode ? UdpTimeout : TcpTimeout);
 	delay.tv_usec = 0;
 
 	/* Set up file descriptors in mask to test */
@@ -3045,11 +3052,11 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 
 	/* Do a blocking select waiting for any i/o */
 
-	ready = select(maxTestFd, &testSet, 0, 0, (UDPMode ? &delay : NULL));
+	ready = select(maxTestFd, &testSet, 0, 0, (delay.tv_sec ? &delay : NULL));
 
 	/*
 	** If we get zero then there is nothing left on either fd
-	** or we hit the timeout (UDP mode).
+	** or we hit the timeout.
 	*/
 
 	if (ready == 0)
@@ -3097,7 +3104,7 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 	    num = readMessage(remoteFd, msgBuf, 0);
 	    if (num > 0)
 	    {
-		if (UDPMode)
+		if (udpMode)
 		{
 		    num = sendto(replyFd, (char *)(msgBuf->data), msgBuf->size,
 				 0, (struct sockaddr *)addrP,
@@ -3123,6 +3130,8 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 	}
     }
     while (1);
+
+    message(3, 0, "connection closed or timed out");
 
     message(2, 0, "read %lu bytes (%lu expanded) in %lu messages",
 	    msgBuf->bytesIn, msgBuf->expBytesIn, msgBuf->readCount);
@@ -3600,7 +3609,7 @@ mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP)
 
 unsigned long
 spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
-	     int inLine, struct sockaddr_in *addrP)
+	     int inLine, struct sockaddr_in *addrP, int udpMode)
 {
     FnArgs_t *argP = NULL;
     struct sockaddr_in localAddr;
@@ -3643,6 +3652,8 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
 	(*handler)(argP);
 	return 0;
     }
+
+    argP->udpMode = udpMode;
 
 #if defined(HAVE_PTHREADS)
     {
@@ -3691,7 +3702,7 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
 	{
 	    /* Child -- listenFd no longer needed */
 
-	    if (!UDPMode) closesocket(listenFd);
+	    if (!udpMode) closesocket(listenFd);
 
 	    (*handler)(argP);
 	    exit(EXIT_SUCCESS);
@@ -3700,7 +3711,7 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
 	{
 	    /* Parent -- clientFd no longer needed */
 
-	    if (!UDPMode) closesocket(clientFd);
+	    if (!udpMode) closesocket(clientFd);
 
 	    message(4, 0, "handler sub-process %lu created", (unsigned long)pid);
 	    return (unsigned long)pid;
@@ -3862,7 +3873,7 @@ removeHandler(struct sockaddr_in *addrP)
 ** along with a local "loopback" socket which it passes to the handler along
 ** with the address of the original client. It then sends the messages it
 ** receives to the loopback socket. The handler itself will exit after
-** UDPTimeout seconds of inactivity.
+** UdpTimeout seconds of inactivity.
 */
 
 void
@@ -3875,7 +3886,9 @@ clientListener(PortList_t *ports)
     int addrLen;
     struct linger lingerVal;
     unsigned short localPort = 0;
-    fd_set listenSet;
+    fd_set tcpSet;
+    fd_set udpSet;
+    fd_set unionSet;
     fd_set testSet;
     int maxFd = -1;
     int ready = 0;
@@ -3892,45 +3905,19 @@ clientListener(PortList_t *ports)
     ** process does not inherit the connection to the server.
     */
 
-    FD_ZERO(&listenSet);
-    while (ports)
+    FD_ZERO(&tcpSet);
+    FD_ZERO(&udpSet);
+    if (TcpMode)
     {
-	for (localPort = ports->lo; localPort <= ports->hi; localPort++)
+	maxFd = makeClientListeners(ports, &tcpSet, 0);
+    }
+    if (UdpMode)
+    {
+	listenFd = makeClientListeners(ports, &udpSet, 1);
+	if (listenFd > maxFd)
 	{
-	    message(3, 0, "creating local listener socket for port %hu", localPort);
-
-	    if ((listenFd = makeListener(&localPort, LocalSource, UDPMode)) == -1)
-	    {
-		message(0, errno, "can't create listener socket");
-		exit(EXIT_FAILURE);
-	    }
-
-	    message(5, 0, "local port %hu has socket %d", localPort, listenFd);
-
-	    FD_SET(listenFd, &listenSet);
-	    if (listenFd > maxFd)
-	    {
-		maxFd = listenFd;
-	    }
-
-	    if (!CommandString)
-	    {
-		message(1, 0, "Listening on local port %hu", localPort);
-	    }
-	    else
-	    {
-		message(3, 0, "listening on local port %hu", localPort);
-	    }
-
-	    /* Special case port was zero -- modify entry */
-
-	    if (ports->hi == 0)
-	    {
-		ports->lo = ports->hi = localPort;
-	    }
+	    maxFd = listenFd;
 	}
-
-	ports = ports->next;
     }
 
     /* Spawn the sub-command, if specified */
@@ -3939,12 +3926,7 @@ clientListener(PortList_t *ports)
     {
 	message(3, 0, "spawning command '%s'", CommandString);
 
-	/*
-	** Note the "localPort - 1" here because of the loop exit
-	** condition above.
-	*/
-
-	if (!spawnCommand(localPort - 1, CommandString))
+	if (!spawnCommand(ports->lo, CommandString))
 	{
 	    exit(EXIT_FAILURE);
 	}
@@ -3980,19 +3962,34 @@ clientListener(PortList_t *ports)
     ** will be a "one shot" connection.
     */
 
-    if (UDPMode) message(1, 0, "listening for client data");
+    if (UdpMode) message(1, 0, "listening for client data");
+
+    /* Create union fd sets from the TCP and UDP sets */
+
+    FD_ZERO(&unionSet);
+    for (listenFd = 0; listenFd <= maxFd; listenFd++)
+    {
+	if (FD_ISSET(listenFd, &tcpSet))
+	{
+	    FD_SET(listenFd, &unionSet);
+	}
+	else if (FD_ISSET(listenFd, &udpSet))
+	{
+	    FD_SET(listenFd, &unionSet);
+	}
+    }
 
     do
     {
-	memcpy(&testSet, &listenSet, sizeof(fd_set));
+	memcpy(&testSet, &unionSet, sizeof(fd_set));
 
-	message((UDPMode ? 5 : 1), 0, "waiting for client connection", localPort);
+	message((UdpMode ? 5 : 1), 0, "waiting for client connection", localPort);
 
 	/* Do a blocking select waiting for any i/o */
 
 	ready = select(maxFd + 1, &testSet, 0, 0, 0);
 
-	message((UDPMode ? 5 : 3), 0, "select returned %d", ready);
+	message((UdpMode ? 5 : 3), 0, "select returned %d", ready);
 
 	/* If we get zero then there is nothing available on any fd. */
 
@@ -4015,7 +4012,7 @@ clientListener(PortList_t *ports)
 	{
 	    if (FD_ISSET(listenFd, &testSet))
 	    {
-		if (UDPMode)
+		if (FD_ISSET(listenFd, &udpSet))
 		{
 		    /* See who this is from */
 
@@ -4040,7 +4037,7 @@ clientListener(PortList_t *ports)
 			    }
 
 			    id = spawnHandler(client, listenFd, clientFd,
-					      (Debug || !MultiUse), &fromAddr);
+					      (Debug || !MultiUse), &fromAddr, 1);
 
 			    if (id != 0)
 			    {
@@ -4109,7 +4106,7 @@ clientListener(PortList_t *ports)
 			/* Create the handler process/thread */
 
 			spawnHandler(client, listenFd, clientFd,
-				     (Debug || !MultiUse), &fromAddr);
+				     (Debug || !MultiUse), &fromAddr, 0);
 		    }
 		}
 	    }
@@ -4121,13 +4118,69 @@ clientListener(PortList_t *ports)
 
     for (listenFd = 0; listenFd <= maxFd; listenFd++)
     {
-	if (FD_ISSET(listenFd, &listenSet)) closesocket(listenFd);
+	if (FD_ISSET(listenFd, &unionSet)) closesocket(listenFd);
     }
     listenFd = -1;
 
     /* Wait for handler threads to terminate (should not be necessary) */
 
     waitForInactivity();
+}
+
+/*
+** makeClientListeners
+**
+*/
+
+int
+makeClientListeners(PortList_t *ports, FD_SET *listenSetP, int udpMode)
+{
+    int listenFd = -1;
+    unsigned short localPort = 0;
+    int maxFd = -1;
+
+    while (ports)
+    {
+	for (localPort = ports->lo; localPort <= ports->hi; localPort++)
+	{
+	    message(3, 0, "creating %s-mode local listener socket for port %hu",
+		    (udpMode ? "UDP" : "TCP"), localPort);
+
+	    if ((listenFd = makeListener(&localPort, LocalSource, udpMode)) == -1)
+	    {
+		message(0, errno, "can't create listener socket");
+		exit(EXIT_FAILURE);
+	    }
+
+	    message(5, 0, "local port %hu has socket %d", localPort, listenFd);
+
+	    FD_SET(listenFd, listenSetP);
+	    if (listenFd > maxFd)
+	    {
+		maxFd = listenFd;
+	    }
+
+	    if (!CommandString)
+	    {
+		message(1, 0, "Listening on local port %hu", localPort);
+	    }
+	    else
+	    {
+		message(3, 0, "listening on local port %hu", localPort);
+	    }
+
+	    /* Special case port was zero -- modify entry */
+
+	    if (ports->hi == 0)
+	    {
+		ports->lo = ports->hi = localPort;
+	    }
+	}
+
+	ports = ports->next;
+    }
+
+    return maxFd;
 }
 
 /*
@@ -4166,6 +4219,7 @@ client(FnArgs_t *argP)
     char *targetHost = NULL;
     struct sockaddr_in targetAddr;
     int inLine = argP->inLine;
+    int udpMode = argP->udpMode;
 
 
     incrActiveCount(1);
@@ -4267,8 +4321,8 @@ client(FnArgs_t *argP)
 
     if (protocol >= PROTOCOL_V200)
     {
-	message(3, 0, "requesting %s mode", (UDPMode ? "UDP" : "TCP"));
-	headerSetUShort(hdrData, (UDPMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
+	message(3, 0, "requesting %s mode", (UdpMode ? "UDP" : "TCP"));
+	headerSetUShort(hdrData, (UdpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
 
 	message(3, 0, "requesting buffer size %hu", maxSize);
 	headerSetUShort(hdrData, maxSize, HDR_OFFSET_MAXSIZE);
@@ -4320,16 +4374,16 @@ client(FnArgs_t *argP)
 	    goto fatal;
 	}
 
-	if ((UDPMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) != HDR_FLAG_UDPMODE) ||
-	    (!UDPMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
+	if ((UdpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) != HDR_FLAG_UDPMODE) ||
+	    (!UdpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
 	{
 	    message(0, 0, "client requested %s mode and server is in %s mode",
-		    (UDPMode ? "UDP" : "TCP"), (UDPMode ? "TCP" : "UDP"));
+		    (UdpMode ? "UDP" : "TCP"), (UdpMode ? "TCP" : "UDP"));
 	    goto fatal;
 	}
 	else
 	{
-	    message(3, 0, "accepted %s mode", (UDPMode ? "UDP" : "TCP"));
+	    message(3, 0, "accepted %s mode", (UdpMode ? "UDP" : "TCP"));
 	}
 
 	maxSize = headerGetUShort(hdrData, HDR_OFFSET_MAXSIZE);
@@ -4694,7 +4748,7 @@ client(FnArgs_t *argP)
 
     message(3, 0, "entering filter loop");
 
-    switch (filterLoop(clientFd, serverFd, msg, &(argP->addr), argP->listenFd))
+    switch (filterLoop(clientFd, serverFd, msg, &(argP->addr), argP->listenFd, udpMode))
     {
     case 1:
 	message(0, errno, "failed communicating with remote server");
@@ -4782,7 +4836,7 @@ serverListener(unsigned short *portPtr)
 	else
 	{
 	    message(1, 0, "accepted connection from %s", inet_ntoa(addr.sin_addr));
-	    spawnHandler(server, listenFd, clientFd, Debug, &addr);
+	    spawnHandler(server, listenFd, clientFd, Debug, &addr, 0);
 	}
     }
 }
@@ -4837,7 +4891,7 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
 	}
 	else
 	{
-	    spawnHandler(server, -1, clientFd, 0, NULL);
+	    spawnHandler(server, -1, clientFd, 0, NULL, 0);
 	}
     }
 
@@ -4883,6 +4937,7 @@ server(FnArgs_t *argP)
     unsigned char serverNonce[NONCE_SIZE];
     char *targetHost = TargetHost;
     int inLine = argP->inLine;
+    int udpMode = argP->udpMode;    /* Overridden by client request */
 
 
     incrActiveCount(1);
@@ -4947,17 +5002,18 @@ server(FnArgs_t *argP)
 	    goto fatal;
 	}
 
-	if ((UDPMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) != HDR_FLAG_UDPMODE) ||
-	    (!UDPMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
+	udpMode = (headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE);
+	if ((udpMode && !UdpMode) || (!udpMode && !TcpMode))
 	{
 	    message(0, 0, "client requested %s mode tunnel to %s mode server",
-		    (UDPMode ? "TCP" : "UDP"), (UDPMode ? "UDP" : "TCP"));
+		    (udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
+	    headerSetUShort(hdrData, (udpMode ? 0 : HDR_FLAG_UDPMODE), HDR_OFFSET_FLAGS);
 	}
 	else
 	{
-	    message(3, 0, "replying with %s mode", (UDPMode ? "UDP" : "TCP"));
+	    message(3, 0, "replying with %s mode", (udpMode ? "UDP" : "TCP"));
+	    headerSetUShort(hdrData, (udpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
 	}
-	headerSetUShort(hdrData, (UDPMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
 
 	maxSize = headerGetUShort(hdrData, HDR_OFFSET_MAXSIZE);
 	message(3, 0, "read buffer size request of %hu", maxSize);
@@ -5034,7 +5090,7 @@ server(FnArgs_t *argP)
 	    message(3, 0, "opening connection to port %hu on %s", request, targetHost);
 
 	    memset(&localAddr, 0, sizeof(localAddr));
-	    if ((localFd = makeConnection(targetHost, request, UDPMode, &localAddr)) == -1)
+	    if ((localFd = makeConnection(targetHost, request, udpMode, &localAddr)) == -1)
 	    {
 		port = 0;
 		message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
@@ -5200,7 +5256,7 @@ server(FnArgs_t *argP)
 	message(3, 0, "opening connection to port %hu on %s", request, targetHost);
 
 	memset(&localAddr, 0, sizeof(localAddr));
-	if ((localFd = makeConnection(targetHost, request, UDPMode, &localAddr)) == -1)
+	if ((localFd = makeConnection(targetHost, request, udpMode, &localAddr)) == -1)
 	{
 	    message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
 	    writeUShort(clientFd, 0);
@@ -5500,7 +5556,7 @@ server(FnArgs_t *argP)
 
     message(3, 0, "entering filter loop");
 
-    switch (filterLoop(localFd, clientFd, msg, &localAddr, localFd))
+    switch (filterLoop(localFd, clientFd, msg, &localAddr, localFd, udpMode))
     {
     case 1:
 	message(0, errno, "failed communicating with remote client");
@@ -5603,7 +5659,7 @@ scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP)
 	return 0;
     }
 
-    if ((entry = getservbyname(portName, (UDPMode ? "udp" : "tcp"))) == NULL)
+    if ((entry = getservbyname(portName, (TcpMode ? "tcp" : "udp"))) == NULL)
     {
 	message(0, errno, "can't find port name entry for '%s'", portName);
 	return 0;
@@ -6207,8 +6263,41 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "redirecthost")) setString(value, &TargetHost);
     else if (!strcasecmp(key, "targethost")) setTarget(value);
     else if (!strcasecmp(key, "keylifetime")) setUShort(value, &KeyLifetime);
-    else if (!strcasecmp(key, "udpmode")) setBoolean(value, &UDPMode);
-    else if (!strcasecmp(key, "udptimeout")) setUShort(value, &UDPTimeout);
+    else if (!strcasecmp(key, "udpmode"))
+    {
+	setBoolean(value, &UdpMode);
+	TcpMode = !UdpMode;
+    }
+    else if (!strcasecmp(key, "ipmode"))
+    {
+	if (!strcasecmp(value, "tcp"))
+	{
+	    TcpMode = 1;
+	    UdpMode = 0;
+	}
+	else if (!strcasecmp(value, "udp"))
+	{
+	    TcpMode = 0;
+	    UdpMode = 1;
+	}
+	else if (!strcasecmp(value, "both"))
+	{
+	    TcpMode = 1;
+	    UdpMode = 1;
+	}
+	else
+	{
+	    message(0, 0, "invalid value for ipmode: %s", value);
+	    return 0;
+	}
+    }
+    else if (!strcasecmp(key, "udptimeout")) setUShort(value, &UdpTimeout);
+    else if (!strcasecmp(key, "tcptimeout")) setUShort(value, &TcpTimeout);
+    else if (!strcasecmp(key, "idletimeout"))
+    {
+	setUShort(value, &TcpTimeout);
+	setUShort(value, &UdpTimeout);
+    }
     else if (!strcasecmp(key, "localsource")) setBoolean(value, &LocalSource);
     else if (!strcasecmp(key, "listenmode")) setBoolean(value, &ListenMode);
     else if (!strcasecmp(key, "clienthost")) setString(value, &ClientHost);
@@ -6508,7 +6597,8 @@ main(int argc, char **argv)
 	    break;
 
 	case 'u':
-	    UDPMode = 1;
+	    UdpMode = 1;
+	    TcpMode = 0;
 	    break;
 
 	case 'v':
@@ -6570,7 +6660,14 @@ main(int argc, char **argv)
 
     if (ServerPort == 0)
     {
-	ServerPort = (UDPMode ? DFLT_UDP_PORT : DFLT_TCP_PORT);
+	if (UdpMode && !TcpMode)
+	{
+	    ServerPort = DFLT_UDP_PORT;
+	}
+	else
+	{
+	    ServerPort = DFLT_TCP_PORT;
+	}
     }
 
     /*
