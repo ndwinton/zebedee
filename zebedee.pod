@@ -1388,7 +1388,7 @@ B<L<tunnel|/item_tunnel>> specification.
 =item B<connecttimeout>
 
 This has been replaced by the
-B<L<acceptconnecttimeout|item_acceptconnecttimeout>> keyword.
+B<L<acceptconnecttimeout|/item_acceptconnecttimeout>> keyword.
 
 =item B<localport>
 
@@ -2224,9 +2224,9 @@ key generation commands (add a "C<+>" to the end of the command to get three
 extra arguments provided). See B<L<keygencommand|/item_keygencommand>> and
 B<L<sharedkeygencommand|/item_keygencommand>> for further details.
 
-Added B<L<httpproxyauth|item_httpproxyauth>>" -- thanks to James CE Johnson.
+Added B<L<httpproxyauth|/item_httpproxyauth>>" -- thanks to James CE Johnson.
 
-Added B<runasuser|item_runasuser>> (and the B<-N> option) -- thanks to Thomas
+Added B<runasuser|/item_runasuser>> (and the B<-N> option) -- thanks to Thomas
 Melzer.
 
 The B<L<target|/item_target>> specification has been extended to allow
@@ -2234,10 +2234,10 @@ per-target client identity and address checking. The identity checking was
 originally submitted by Alain Turbide and address checking by Henrik Lund
 (again!)
 
-The B<L<acceptconnecttimeout|item_acceptconnecttimeout>>
-B<L<connectattempts|item_connectattempts>>,
-B<L<serverconnecttimeout|item_serverconnecttimeout>>
-and B<L<targetconnecttimeout|item_targetconnecttimeout>> keywords have been
+The B<L<acceptconnecttimeout|/item_acceptconnecttimeout>>
+B<L<connectattempts|/item_connectattempts>>,
+B<L<serverconnecttimeout|/item_serverconnecttimeout>>
+and B<L<targetconnecttimeout|/item_targetconnecttimeout>> keywords have been
 added to significantly improve the "reverse-mode" operation.
 
 =head1 CREDITS AND LEGALITIES
@@ -2497,4 +2497,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.27 2003-09-22 16:30:29 ndwinton Exp $
+ $Id: zebedee.pod,v 1.28 2003-09-22 16:32:29 ndwinton Exp $
