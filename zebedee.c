@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.43 2003-09-19 21:10:39 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.44 2003-09-21 07:04:15 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -6099,7 +6099,7 @@ serverListener(unsigned short *portPtr)
 /*
 ** serverInitiator
 **
-** Make a connection back to clientHost
+** Initiates a connection back to a client host running in listen-mode.
 */
 
 void
