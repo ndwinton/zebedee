@@ -1,4 +1,4 @@
-* Release 2.4.0
+* Release 2.4.0 (2002/05/07)
 
 Added support for building on MacOS X (sorry, no support for "classic" MacOS
 yet). This required a larger initial thread stack size, which can now be
@@ -32,6 +32,8 @@ Added -F option to specify configuration file field separator character.
 Added "sharedkey" and "sharedkeygencommand" to allow a pre-established shared
 secret key to be specified. This and the -F option have been added primarily
 for use in Ed Suominen's PRIVARIA.
+
+Included "passphrase.tcl" in the distribution.
 
 Numerous changes to the (English) documentation.
 
