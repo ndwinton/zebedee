@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.5 2002-03-07 10:25:21 ndwinton Exp $";
-#define RELEASE_STR "PRE-2.3.0"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.6 2002-03-07 10:29:49 ndwinton Exp $";
+#define RELEASE_STR "2.3.0"
 
 #include <stdio.h>
 #include <stdlib.h>
