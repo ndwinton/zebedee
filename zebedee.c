@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.8 2002-03-11 15:06:05 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.9 2002-03-11 16:24:16 ndwinton Exp $";
 #define RELEASE_STR "2.3.1"
 
 #include <stdio.h>
@@ -540,7 +540,7 @@ void makeDetached(void);
 void serverListener(unsigned short *portPtr);
 void serverInitiator(char *client, unsigned short port, unsigned short timeout);
 int allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP);
-int checkPeerAddress(int fd);
+int checkPeerAddress(int fd, struct sockaddr_in *addrP);
 int countPorts(PortList_t *list);
 unsigned short mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP);
 void server(FnArgs_t *argP);
@@ -1488,7 +1488,7 @@ getHostAddress(const char *host,
     if ((s = strchr(host, '/')) != NULL)
     {
 	hostCopy = (char *)malloc(strlen(host) + 1);
-	if (!hostCopy || (sscanf(host, "%[^/]%hu", hostCopy, &bits) != 2))
+	if (!hostCopy || (sscanf(host, "%[^/]/%hu", hostCopy, &bits) != 2))
 	{
 	    errno = 0;
 	    result = 0;
@@ -1497,7 +1497,7 @@ getHostAddress(const char *host,
 	if (maskP)
 	{
 	    if (bits <= 0 || bits > 32) bits = 32;
-	    *maskP = 0xffffffff << (32 - bits);
+	    *maskP = htonl(0xffffffff << (32 - bits));
 	}
     }
 
@@ -3568,10 +3568,10 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
 */
 
 int
-checkPeerAddress(int fd)
+checkPeerAddress(int fd, struct sockaddr_in *addrP)
 {
     struct sockaddr_in addr;
-    int addrLen = sizeof(addr);
+    int addrLen = sizeof(struct sockaddr_in);
     unsigned short port = 0;
     PortList_t *lp1, *lp2;
     struct in_addr *alp = NULL;
@@ -3580,26 +3580,28 @@ checkPeerAddress(int fd)
 
     if (!AllowedPeers) return 1;
 
-    if (getpeername(fd, (struct sockaddr *)&addr, &addrLen))
+    if (addrP == NULL) addrP = &addr;
+
+    if (getpeername(fd, (struct sockaddr *)addrP, &addrLen))
     {
 	message(0, errno, "can't get peer address for socket");
 	return 0;
     }
-    message(4, 0, "peer address from connection is %s", inet_ntoa(addr.sin_addr));
+    message(4, 0, "peer address from connection is %s", inet_ntoa(addrP->sin_addr));
 
-    port = ntohs(addr.sin_port);
+    port = ntohs(addrP->sin_port);
 
-    for (lp1 = AllowedTargets; lp1; lp1 = lp1->next)
+    for (lp1 = AllowedPeers; lp1; lp1 = lp1->next)
     {
 	mask = lp1->mask;
 
-	if ((addr.sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
+	if ((addrP->sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
 	{
 	    /* Did not match primary address, check aliases */
 
 	    for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
 	    {
-		if ((addr.sin_addr.s_addr & mask) == (alp->s_addr & mask))
+		if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
 		{
 		    /* Found a matching address in the aliases */
 
@@ -4350,6 +4352,7 @@ client(FnArgs_t *argP)
     unsigned char clientNonce[NONCE_SIZE];
     unsigned char serverNonce[NONCE_SIZE];
     char *targetHost = NULL;
+    struct sockaddr_in peerAddr;
     struct sockaddr_in targetAddr;
     int inLine = argP->inLine;
     int udpMode = argP->udpMode;
@@ -4404,9 +4407,9 @@ client(FnArgs_t *argP)
 
     message(3, 0, "validating server IP address");
 
-    if (!checkPeerAddress(serverFd))
+    if (!checkPeerAddress(serverFd, &peerAddr))
     {
-	message(0, 0, "server connection not from a permitted address");
+	message(0, 0, "server connection to %s disallowed", inet_ntoa(peerAddr.sin_addr));
 	goto fatal;
     }
 
@@ -4981,23 +4984,7 @@ serverListener(unsigned short *portPtr)
 	else
 	{
 	    message(1, 0, "accepted connection from %s", inet_ntoa(addr.sin_addr));
-
-	    /*
-	    ** Validate the client IP address, if required. We could do
-	    ** this in the handler routine but doing it here saves the
-	    ** creation of a thread unnecessarily.
-	    */
-
-	    message(3, 0, "validating client IP address");
-	    if (!checkPeerAddress(clientFd))
-	    {
-		message(0, 0, "client connection from %s disallowed", inet_ntoa(addr.sin_addr));
-		close(clientFd);
-	    }
-	    else
-	    {
-		spawnHandler(server, listenFd, clientFd, Debug, &addr, 0);
-	    }
+	    spawnHandler(server, listenFd, clientFd, Debug, &addr, 0);
 	}
     }
 }
@@ -5103,6 +5090,15 @@ server(FnArgs_t *argP)
 
     incrActiveCount(1);
     message(3, 0, "server routine entered");
+
+    /* Validate the client IP address, if required. */
+
+    message(3, 0, "validating client IP address");
+    if (!checkPeerAddress(clientFd, &localAddr))
+    {
+	message(0, 0, "client connection from %s disallowed", inet_ntoa(localAddr.sin_addr));
+	goto fatal;
+    }
 
     /* Read protocol version */
 
@@ -5268,7 +5264,7 @@ server(FnArgs_t *argP)
 	}
 	else
 	{
-	    message(0, 0, "client requested redirection to a disallowed port (%hu)", request);
+	    message(0, 0, "client requested redirection to a disallowed target (%s:%hu)", inet_ntoa(localAddr.sin_addr), request);
 	    headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
 	}
 
@@ -6471,7 +6467,7 @@ parseConfigLine(const char *lineBuf, int level)
 	    TcpMode = 0;
 	    UdpMode = 1;
 	}
-	else if (!strcasecmp(value, "both"))
+	else if (!strcasecmp(value, "both") || !strcasecmp(value, "mixed"))
 	{
 	    TcpMode = 1;
 	    UdpMode = 1;
