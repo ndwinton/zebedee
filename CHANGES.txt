@@ -1,3 +1,17 @@
+* Release 2.3.0 (2002/03/07)
+
+New functionality (at last!).
+
+Added "listenip" and -b option to set listening address.
+
+Added "tcptimeout" and "idletimeout" to allow inactive TCP tunnels to be
+closed.
+
+Added "ipmode" and -U option to support mixed traffic mode for a single
+client or server.
+
+Japanese documentation NOT YET updated.
+
 * Release 2.2.2 (2001/04/13)
 
 Include missing Japanese documentation.

@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.3 2001-08-02 15:21:58 ndwinton Exp $
+# $Id: Makefile,v 1.4 2002-03-07 10:25:21 ndwinton Exp $
 
 ZBD_VERSION = 2.3.0
 
@@ -16,11 +16,13 @@ OS =
 
 CC_$(OS) = gcc
 
-CC_win32 = c:/gcc-2.95.2/bin/gcc
+CC_win32 = c:/msys/1.0/mingw/bin/gcc
 CC_linux = gcc -pthread
 CC_solaris = gcc
 CC_freebsd = gcc -pthread
 CC_tru64 = cc
+CC_irix = cc -n32 -woff 1110
+CC_hpux = cc -Ae +DAportable
 CC = $(CC_$(OS))
 
 # Optimise/debug compilation
@@ -79,11 +81,14 @@ INSTALL_linux = install -c
 INSTALL_solaris = /usr/ucb/install -c
 INSTALL_freebsd = install -c
 INSTALL_tru64 = installbsd -c
+INSTALL_irix = install -c
+INSTALL_hpux = install -c
 INSTALL = $(INSTALL_$(OS))
 
 # InnoSetup compiler for Win32 (see http://www.jordanr.dhs.org/)
-
-ISCOMP = "c:/Program Files/Inno Setup 1.11/compil32.exe"
+# (Well, actually Martin Laan's extended version, but I don't use any
+# of the extensions here).
+ISCOMP = "c:/Program Files/My Inno Setup Extensions/compil32.exe"
 
 ###
 ### OS-specific definitions
@@ -103,12 +108,20 @@ ISCOMP = "c:/Program Files/Inno Setup 1.11/compil32.exe"
 # Use of bzip2 compression:
 #   Use -DDONT_HAVE_BZIP2 if you do not have or do not want to support
 #   the use of bzip2 compression
+#
+# Lack of "inline" support in compiler (Irix, HPUX):
+#   Use -Dinline=
+#
+# Lack of <sys/select.h> (HPUX):
+#   Use -DDONT_HAVE_SELECT_H
 
 DEFINES_win32 =
 DEFINES_linux = -DHAVE_PTHREADS
 DEFINES_solaris = -D_REENTRANT -DHAVE_PTHREADS
 DEFINES_freebsd = -DHAVE_PTHREADS -DBUGGY_FORK_WITH_THREADS
 DEFINES_tru64 = -D_REENTRANT -DHAVE_PTHREADS
+DEFINES_irix = -D_REENTRANT -DHAVE_PTHREADS -Dinline=
+DEFINES_hpux = -D_REENTRANT -DHAVE_PTHREADS -DDONT_HAVE_SELECT_H -Dinline=
 DEFINES = $(DEFINES_$(OS))
 
 # Suffix for executables
@@ -123,6 +136,8 @@ OSLIBS_linux = -lpthread
 OSLIBS_solaris = -lsocket -lnsl -lthread
 OSLIBS_freebsd =
 OSLIBS_tru64 = -lpthread
+OSLIBS_irix = -lpthread
+OSLIBS_hpux = -lpthread -lnsl
 OSLIBS = $(OSLIBS_$(OS))
 
 # Supplementary object files (Win32 ONLY)
@@ -154,7 +169,7 @@ EXTRAFILES = $(ZBDFILES) $(TXTFILES)
 all : precheck zebedee$(EXE) zebedee.1 zebedee.html ftpgw.tcl.1 ftpgw.tcl.html zebedee.ja_JP.html
 
 precheck :
-	@ if test -z "$(OS)"; then echo "Use '$(MAKE) OS=xxx' where xxx is win32, linux, solaris, freebsd or tru64"; exit 1; fi
+	@ if test -z "$(OS)"; then echo "Use '$(MAKE) OS=xxx' where xxx is win32, linux, solaris, freebsd, tru64, irix or hpux"; exit 1; fi
 
 zebedee$(EXE) : $(OBJS)
 	$(CC) $(CFLAGS) -o zebedee$(EXE) $(OBJS) $(LIBS)
