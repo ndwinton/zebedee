@@ -1,10 +1,6 @@
 Zebedee Secure Tunnel
 =====================
 
-NOTE: Versions of Zebedee in the 2.3.x series are "development"
-releases that contain new functionality that may not have been
-extensively tested. The current "stable" version is 2.2.2.
-
 Zebedee is a simple program to establish an encrypted, compressed
 "tunnel" for TCP/IP or UDP traffic between two systems. This
 allows data from, for example, telnet, ftp and X sessions to be
@@ -36,6 +32,10 @@ zebedee.html in the distribution (or the manual page for
 zebedee(1) under UNIX -- it is basically the same text). Example
 configuration files are also provided.
 
+Versions of Zebedee in the 2.4.x series are stable, "production"
+versions. The next development series, containing new features
+will be numbered 2.5.x.
+
 Building Zebedee
 ----------------
 
@@ -49,8 +49,10 @@ The installation on Windows systems creates a Start Menu entry
 that contains an icon to start a Zebedee server. If you select
 this menu entry Zebedee will take its configuration information
 from the file "server.zbd" in the Zebedee installation directory.
-You may edit this file if you wish to change the server's
-behaviour.
+You MUST edit this file before you can do anything useful with
+Zebedee. The "out of the box" configuration is deliberately
+as secure as possible and will not allow you create any tunnels
+to the server without you explicitly enabling them.
 
 The Zebedee service is not installed automatically. If you want
 to run Zebedee as a service you must use the "-Sinstall" option

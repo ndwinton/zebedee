@@ -566,6 +566,18 @@ be accepted by default.
 The keyword (or B<-r> option) may be specified multiple times in which case
 redirection will be allowed to any of the ports specified.
 
+It is generally better to use the B<L<target|/item_target>> keyword instead of
+B<redirect>, where possible. The main reason to prefer B<redirect> is when you
+want to specify a common range of ports for a number of targets, for example:
+
+ # Set up common target redirections
+ redirect telnet,ftp,daytime
+ target hosta
+ target hostb
+ target hostc
+ # Set up additional host-specific redirections
+ target hostb:http
+
 =item B<target>
 
 This specifies a target host and, optionally, list of ports to which a server
@@ -1682,7 +1694,7 @@ B<xlocal:0>. You now want to send a secure B<xterm> session back to your local
 display from a machine called B<xremote>. To do this you might run the
 following command on B<xlocal>:
 
- zebedee -r 6000 -s
+ zebedee -s localhost:6000
 
 Then on B<xremote> you could run:
 
@@ -1739,13 +1751,13 @@ B<Zebedee> distribution.
 The simplest approach, which works with some FTP servers, is to run the
 B<Zebedee> server as follows:
 
- zebedee -s -r ftp ftpserverhost
+ zebedee -s ftpserverhost:ftp
 
 Note that even if you are running B<Zebedee> on the same machine as the FTP
 server you should explictly name it on the command line (or using the
-B<L<redirecthost|/item_redirecthost>> keyword). Do not refer to it as
-B<localhost>. On the client system you could then run B<Zebedee> as follows to
-set up a tunnel via port 10000:
+B<L<target|/item_target>> keyword). Do not refer to it as B<localhost>. On the
+client system you could then run B<Zebedee> as follows to set up a tunnel via
+port 10000:
 
  zebedee 10000:ftpserverhost:ftp
 
@@ -1774,7 +1786,7 @@ hang then it is likely that your server is one of the strict ones.
 
 To help overcome this problem there is an "FTP gateway" script in the
 B<Zebedee> distribution called B<ftpgw.tcl>. This is a program, written using
-the freely-available B<Tcl> scripting language (see http://www.scriptics.com)
+the freely-available B<Tcl> scripting language (see http://tcl.activestate.com)
 that intercepts FTP requests and re-writes them so that a server is shielded
 from the presence of B<Zebedee>. You should run this on the same system as the
 B<Zebedee> server.  Assuming that the FTP server is also running on the same
@@ -1786,10 +1798,10 @@ This will start the gateway listening on port 2121. Obviously, in real usage
 you will probably want to start this in the background. You then start the
 B<Zebedee> server as:
 
- zebedee -s -r 2121
+ zebedee -s localhost:2121
 
-Note that in this case you do not have to specify the local host name,
-although you may do so if you wish. On the client side you can now run:
+Note that in this case you do specify the local host as the target. On the
+client side you can now run:
 
  zebedee 2121:ftpserverhost:2121
 
@@ -1814,7 +1826,7 @@ this port range:
 
 The B<Zebedee> server would then be started as:
 
- zebedee -s -r 2121,30000-30100
+ zebedee -s localhost:2121,30000-30100
 
 and the client as
 
@@ -2084,4 +2096,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.11 2002-04-16 16:57:32 ndwinton Exp $
+ $Id: zebedee.pod,v 1.12 2002-04-23 16:18:14 ndwinton Exp $
