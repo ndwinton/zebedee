@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.20 2002-04-29 11:46:58 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.21 2002-04-29 15:45:34 ndwinton Exp $";
 #define RELEASE_STR "2.4.0"
 
 #include <stdio.h>
@@ -2415,22 +2415,35 @@ generateKey(void)
 #if defined(WIN32)
     {
 	LARGE_INTEGER perf;
-	DWORD ticks = timeGetTime();
 	FILETIME created, exited, kernel, user;
-
+	LONG val;
+	POINT point;
+	MEMORYSTATUS memoryStatus;
 
 	/*
-	** The "ticks" value is the elapsed time in milliseconds since
-	** Windows was started.
+	** Add in a large number of reasonable hard to guess (from the
+	** outside) values. Someone with access to the machines may,
+	** however be able to pinpoint these with some accuracy. We will
+	** assume a maximum of 8 BOU for each call an a minimum of 1.
 	**
-	** Assume that the time at which the key is generated can be
-	** predicted within 0.01 sec and that the clock resolution is 10ms.
-	**
-	** Min BOU: 2
-	** Max BOU: 32
+	** Min BOU: 13
+	** Max BOU: 104
 	*/
 
-	sha_update(&sha, (SHA_BYTE *)&ticks, sizeof(ticks));
+#define ADDLONGVAL(func) val = ((LONG)func()); sha_update(&sha, (SHA_BYTE *)&val, sizeof(val))
+	ADDLONGVAL(GetActiveWindow);
+	ADDLONGVAL(GetCapture);
+	ADDLONGVAL(GetClipboardOwner);
+	ADDLONGVAL(GetClipboardViewer);
+	ADDLONGVAL(GetDesktopWindow);
+	ADDLONGVAL(GetFocus);
+	ADDLONGVAL(GetInputState);
+	ADDLONGVAL(GetMessagePos);
+	ADDLONGVAL(GetMessageTime);
+	ADDLONGVAL(GetOpenClipboardWindow);
+	ADDLONGVAL(GetProcessHeap);
+	ADDLONGVAL(GetProcessWindowStation);
+	ADDLONGVAL(GetTickCount);
 
 	/*
 	** QueryPerformanceCounter gives a very high resolution 64-bit
@@ -2439,9 +2452,10 @@ generateKey(void)
 	** I have available the resolution is over 1 million counts per
 	** second.
 	**
-	** Assume the same accuracy of guessing as above.
+	** Assume, in the worst case that the process start time can
+	** be determined with millisecond accuracy.
 	**
-	** Min BOU: 12 (but not independent from the previous quantity).
+	** Min BOU: 10
 	** Max BOU: 64
 	*/
 
@@ -2470,9 +2484,38 @@ generateKey(void)
 	sha_update(&sha, (SHA_BYTE *)&user, sizeof(user));
 
 	/*
+	** Current caret and cursor positon. Maybe somewhere in a 800x600
+	** area ... but known to an attacker with physical access.
+	**
+	** Min BOU: 0
+	** Max BOU: 175
+	*/
+
+	GetCaretPos(&point);
+	sha_update(&sha, (SHA_BYTE *)&point, sizeof(point));
+	GetCursorPos( &point );
+	sha_update(&sha, (SHA_BYTE *)&point, sizeof(point));
+
+	/*
+	** Memory usage statistics -- percent of memory in use, bytes of
+	** physical memory, bytes of free physical memory, bytes in paging
+	** file, free bytes in paging file, user bytes of address space,
+	** and free user bytes. Even to an attacker with physical access
+	** there is likely to be some uncertainty here, but maybe only
+	** a bit per variable quantity.
+	**
+	** Min BOU: 3
+	** Max BOU: 20+
+	*/
+
+	memoryStatus.dwLength = sizeof(MEMORYSTATUS);
+	GlobalMemoryStatus(&memoryStatus);
+	sha_update(&sha, (SHA_BYTE *)&memoryStatus, sizeof(memoryStatus));
+
+	/*
 	** Total estimates for Win32
 	**
-	** Min BOU: 17, Max BOU: 144
+	** Min BOU: 31, Max BOU: 400+
 	*/
     }
 #else	/* !WIN32 */
