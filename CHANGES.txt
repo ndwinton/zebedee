@@ -1,0 +1,249 @@
+* Release 2.2.1 (2001/02/07)
+
+Fix bug handling client access using IP address rather than host name.
+
+* Release 2.2.0 (2001/02/02)
+
+Add SO_KEEPALIVE code to (eventually) reap dead client connections.
+
+Modify ftpgw.tcl to mitigate memory leak that shows up with Tcl versions < 8.4
+(an possibly that too). It's still not perfect, but it's better!
+
+Fix FreeBSD detaching (again!)
+
+Handle hostnames that resolve to multiple addresses on both client and server
+side.
+
+Fix bug in picking up default target host.
+
+* Release 2.1.3 (2000/10/13)
+
+Version numbering changed to common open-source practice -- odd numbered
+minor releases are development versions.
+
+Added support and fixes for building on FreeBSD and Tru64 (Compaq Alpha).
+FreeBSD requires the BUGGY_FORK_WITH_THREADS definition and an interesting
+method of detaching a process ...
+
+Changed the definition of SHA_LONG in sha.h for 64-bit platforms.
+
+Handle the case where the client key-reuse token expires before the server's.
+This would lead to a client failing to establish any connections after a
+period of time.
+
+Make sure messages still get written to stderr before a process actually
+detaches from the terminal.
+
+Mutex-protect gethostbyname to cope with platforms where it is not re-entrant.
+
+Don't erroneously convert addresses returned by inet_addr to network byte
+order -- they already are.
+
+Ensure digest and nonce values are formatted correctly on 64-bit platforms.
+
+Output network address values in host byte order so that the values are
+consistent across platforms.
+
+Transfer requested target host addresses by value otherwise big and
+little-endian platforms will not interwork.
+
+Changed default installation root to /usr and eliminated warnings when
+building man-page for better RPM integration.
+
+Upgraded to a newer version of the Blowfish library (from OpenSSL 0.9.5a).
+
+Upgraded to a newer version of the bzip2 library (1.0.1).
+
+Documentation fixes, including missing "target" documentation!
+
+A Japanese translation of the manual for Zebedee and ftpgw are included in the
+doc_jp sub-directory. These are not (yet) built by default, you must do so
+separately. Thanks to NAKAJIMA Taku <tnaka@brain-tokyo.com>.
+
+* Release 2.1.0 BETA-2 (2000/08/31)
+
+Fix bug interpreting "*" as a valid server hostname.
+
+Fix infinite loop if creation of server listen socket fails.
+
+Fix parsing of tunnel specifications with embedded spaces.
+
+* Release 2.1.0 BETA-1 (2000/08/26)
+
+Implemented server-initiated connections. This allows a Zebedee server behind
+a firewall to connect out to a waiting client. New keywords connecttimeout,
+listenmode and clienthost have been introduced along with command-line options
+-c and -l.
+
+Added support for multiple targets being handled by a single client/server
+pair. New keywords "tunnel" and "target" have been added to support this
+(largely obsoleting clientport, localport, targethost and targetport).
+
+Added -T command line option to allow the "serverport" value to be specified
+more easily on the command-line.
+
+Improve UDP mode to handle clients that use "connected" sockets and others
+that expect the response to come from the same port that they sent the data
+to. I'm told it should work with Quake now ...
+
+Stop the private key generation code generating "trivial" key values (0 or 1).
+It was highly unlikely but ...
+
+Fix bug with Zebedee failing to exit when running in single-use mode on
+Windows.
+
+Fixed the "reusable session token" generation code. It was possible (and on
+Windows 9x reasonable likely) for a new server to generate the same token
+stream as a previous one, leading client and server to get out of sync.
+
+Now close stdin/out/err when detaching for both Windows and UN*X.
+
+Support for FreeBSD has been added to the Makefile.
+
+A table summarising all of the keywords and options has been added to the
+documentation.
+
+* Release 2.0.1 (2000/08/13)
+
+Fix bug in parsing configuration file when no command-line target port
+was specified.
+
+Fixed bugs compiling for "generic" UNIX, i.e. without threads.
+
+* Release 2.0.0 (2000/05/30)
+
+Added support for UDP datagram tunnelling. This is controlled with the new
+keywords "udpmode" and "udptimeout". There is also a new "-u" command-line
+option to enable UDP mode.
+
+Added support for the reuse of a previously established shared secret key for
+subsequent connections. As part of this change the shared key itself is now no
+longer used directly for encryption of the data. Instead a unique "session
+key" is established for each connection. The connection establishment protocol
+has also been optimized to require far fewer message exchanges. Full support
+for previous protocol versions has, however, been retained. Key reuse is
+controlled through the use of the "keylifetime" keyword.
+
+The default mode of operation is now "multi-use" mode unless a command string
+has been specified. This change should be largely transparent apart from the
+fact that it renders the "-m" command-line option obsolete, although it is
+still supported.
+
+Zebedee now ships with a "big number" library derived from the Python sources
+(by way of "mirrordir"). This removes the dependency on the GMP library,
+although that can still be used if USE_GMP_LIBRARY is defined at compile
+time.
+
+By default a Zebedee client now listens on all local addresses and not
+just "localhost" so that it can act as a gateway. This can be disabled by
+setting the "localsource" option to "true".
+
+A number of keywords have been renamed for greater consistency and clarity.
+The old keywords are still supported for backwards compatibility. The old and
+new mappings are:
+
+	remoteport	->	targetport
+	redirecthost	->	targethost
+	remotehost	->	serverhost
+	localport	->	clientport
+
+Expanded the sample configuration files to show more examples.
+
+Fix bug hanging when writing to stderr in detached mode.
+
+/dev/urandom is now used in preference to /dev/random, when it exists. This
+is theoretically slightly less secure but it prevents Zebedee blocking too
+long in key generation.
+
+The code now includes <sys/select.h> directly (previously it was conditional
+on AIX). This should be more portable.
+
+* Release 1.3.0 (2000/01/21)
+
+If the agreed key-length is zero then the key exchange part of the protocol
+will now be omitted. If you only want to use Zebedee for compression then
+it will now be much more efficient at connection setup. Both client and
+server are fully interoperable with previous protocol versions.
+
+Added the ability for a single Zebedee client to handle tunnels to multiple
+destinations on the same remote host. This is much more efficient than having
+to start a separate process for each.
+
+Fixed FTP tunnelling, added examples of how to do it and provided the
+ftpgw.tcl script to facilitate tunnelling to "stricter" FTP servers such
+as wu-fd.
+
+Added the "redirecthost" keyword and optional command-line argument in server
+mode to specify the target host to which tunnels should be connected.
+Similarly made the client listen on addresses other than localhost.
+
+Added the "minkeylength" keyword to specify the minimum key length that either
+client or server will accept.
+
+Added the "keygenlevel" to specify the strength of the key generation
+mechanism. This trades security for speed.
+
+Sockets have has the SO_LINGER option set false so should not hang on closing.
+
+Documented the use of Zebedee as a service under Windows (the functionality
+was there from the beginning but I forgot to document it!). Also allowed
+clients to run as services too.
+
+Ensured that the status of defunct sub-processes is reaped so that "zombie"
+processes do not proliferate if using multiple processes rather than
+threads.
+
+Changed the Makefile so that the target platform can be specified on the
+command line rather than having to modify the Makefile. For details of
+how to support other platforms see the comments in the Makefile.
+
+Remove the compile-time specification of the use of /dev/random and
+/proc. This is now done at run-time.
+
+* Release 1.2.0 (99/11/19)
+
+Added the ability to set the network buffer size using the "maxbufsize"
+configuration parameter. (The underlying protocol version has changed to
+support this but complete backwards compatibility has been maintained).
+
+Added the ability to access "extended" configuration settings (those that
+can usually only be set in a configuration file) on the command-line by
+using the "-x" option.
+
+Added per-connection data transfer statistics (output at verbosity level 2
+or greater).
+
+If the output log-file name is specified as "NULL" all messages are turned
+off. If it is specified as "SYSLOG" messages are written using syslog() on
+UNIX/Linux and to the system application event log on Windows. Messages
+are no longer written to the Windows application event log by default,
+only if SYSLOG is specified.
+
+Fixed a number of minor portability and configuration bugs. This includes
+making SHA figure out the machine byte-order at runtime so there is no
+need for the BIG/LITTLE_ENDIAN defines.
+
+* Release 1.1.0 (99/11/06)
+
+Added the "multi-use" client mode to support "reusable" tunnels between a
+fixed local end-point and a remote port. New configuration keyword "multiuse"
+and the -m command-line switch.
+
+Added support for bzip2 compression.
+
+"Canonicalize" any modulus and generator values in a config file so that a
+consistent identity will be generated from equivalent values.
+
+Fixed a bug in the "vncviewer.zbd" sample configuration file.
+
+Expanded and corrected the documentation.
+
+Enabled multi-threading support properly in the Makefile!
+
+* Release 1.0.1 (99/10/25)
+
+Fixed a stupid bug in calculating "public key" values.
+
+* Release 1.0.0 (99/10/22)
+
+Initial release.

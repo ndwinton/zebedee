@@ -4,7 +4,7 @@
 # This shows the use of many, but not all, of the configuration file
 # options available for use by a server.
 #
-# $Id: server.zbd,v 1.1 2001-04-12 18:07:44 ndwinton Exp $
+# $Id: server.zbd,v 1.1.1.1 2001-04-12 18:07:44 ndwinton Exp $
 
 verbosity 2		# Slightly more than basic messages
 

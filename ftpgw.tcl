@@ -45,7 +45,7 @@
 # For further details on "zebedee" see http://www.winton.org.uk/zebedee/
 #
 #
-# $Id: ftpgw.tcl,v 1.1 2001-04-12 18:07:51 ndwinton Exp $
+# $Id: ftpgw.tcl,v 1.1.1.1 2001-04-12 18:07:51 ndwinton Exp $
 #
 # Restart using tclsh. Do not delete this backslash -> \
     exec tclsh $0 ${1+"$@"}

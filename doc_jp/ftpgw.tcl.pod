@@ -1,0 +1,72 @@
+=head1 NAME
+
+ftpgw.tcl --- トンネリングを可能にする FTPゲートウエイスクリプト
+
+=begin License
+
+Zebedee Manual
+
+For license terms, see the COPYRIGHT
+ at the bottom of this document.
+
+Japanese Version Copyright (c) 2000 NAKAJIMA Taku
+         all rights reserved.
+
+
+Translated Wed Oct 11 16:01:33 JST 2000
+  by NAKAJIMA Taku <tnaka@brain-tokyo.com>
+
+=end License
+
+=head1 書式
+
+=over 4
+
+B<ftpgw.tcl> [B<-p> <port-range>] [B<-v>] [I<listen-port> [I<ftpd-host> [I<ftpd-port>]]]
+
+=back
+
+=head1 DESCRIPTION
+
+
+このプログラムは単純なFTPゲートウエイであり、
+PORTコマンドとパッシブモードのレスポンスに干渉し、
+関連づけられたデータストリームを扱えるハンドラを起動する。
+それから、コントロールコマンドを書換えて、
+あたかも、FTPサーバへのトラフィックがゲートウエイプロセスから来ているかのように見せる。
+同様に、クライアントはパッシブモードの通信が可能なリモートポートを見ることになる。
+この方法で、FTPのコントロールチャンネルは暗号化されてトンネルされる
+(ただし、データチャネルはそうではない)。
+
+
+デフォルトでは、このプログラムは2121番ポートをlistenして、
+ローカルの21番ポートにいるFTPサーバにリダイレクトする。
+これらの値はコマンドラインから変更できる。
+B<-v>オプションはメッセージログを標準エラー出力に切り替える。
+
+
+もしB<-p>オプションが指定されていたら、
+引数はI<xxx>-I<yyy>という形式のポート番号の範囲になる。
+全てのパッシブモードのデータポートはI<xxx> から I<yyy> の中になる。
+そして、クライアントへのレスポンスラインは127.0.0.1(localhost)の対応するポートになる。
+この方法で、コントロールコネクションに加えて、
+パッシブモードのデータコネクションもトンネルすることが可能である。
+
+=head1 COPYRIGHT
+
+Copyright (c) 2000 by Neil Winton. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+USA.

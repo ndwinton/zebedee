@@ -17,14 +17,14 @@
 ** along with this program; if not, write to the Free Software
 ** Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 **
-** $Id: service.c,v 1.1 2001-04-12 18:07:12 ndwinton Exp $
+** $Id: service.c,v 1.1.1.1 2001-04-12 18:07:12 ndwinton Exp $
 **
 ** $Log: service.c,v $
-** Revision 1.1  2001-04-12 18:07:12  ndwinton
-** Initial revision
+** Revision 1.1.1.1  2001-04-12 18:07:12  ndwinton
+** Imported source of Zebedee 2.2.1
 **
-** Revision 1.1  2001/04/12 18:07:12  ndwinton
-** Initial revision
+** Revision 1.1.1.1  2001/04/12 18:07:12  ndwinton
+** Imported source of Zebedee 2.2.1
 **
 ** Revision 1.2  2000/01/08 21:35:22  nwinton
 ** Version 1.3.0
@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <process.h>
 
-char *service_c_rcsid = "$Id: service.c,v 1.1 2001-04-12 18:07:12 ndwinton Exp $";
+char *service_c_rcsid = "$Id: service.c,v 1.1.1.1 2001-04-12 18:07:12 ndwinton Exp $";
 
 extern void message(unsigned short, int, char *, ...);
 

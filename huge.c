@@ -6,7 +6,7 @@
 ** This is a minor modification of the file "huge-number.c" taken from
 ** mirrordir-0.10.49 which in turn contains these copyrights ...
 **
-** $Id: huge.c,v 1.1 2001-04-12 18:08:01 ndwinton Exp $
+** $Id: huge.c,v 1.1.1.1 2001-04-12 18:08:01 ndwinton Exp $
 */
 
 /* huge-number.c: arbitrary precision integer library from Python sources

@@ -7,7 +7,7 @@
 /* This code is in the public domain */
 
 /* Modifications to dynamically determine endianness by Neil Winton */
-/* $Id: sha_func.c,v 1.1 2001-04-12 18:07:04 ndwinton Exp $ */
+/* $Id: sha_func.c,v 1.1.1.1 2001-04-12 18:07:04 ndwinton Exp $ */
 
 #include <string.h>
 #include "sha.h"

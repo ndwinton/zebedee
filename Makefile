@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.1 2001-04-12 18:05:34 ndwinton Exp $
+# $Id: Makefile,v 1.1.1.1 2001-04-12 18:05:34 ndwinton Exp $
 
 OS = 
 

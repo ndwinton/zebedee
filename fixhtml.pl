@@ -2,7 +2,7 @@
 #
 # Prettify and fix pod2html output
 #
-# $Id: fixhtml.pl,v 1.1 2001-04-12 18:06:54 ndwinton Exp $
+# $Id: fixhtml.pl,v 1.1.1.1 2001-04-12 18:06:54 ndwinton Exp $
 #
 
 while (<>)
