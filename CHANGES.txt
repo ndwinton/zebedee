@@ -1,8 +1,27 @@
 * Release 2.4.0
 
-Fix handling of subnet range targets.
+Added support for building on MacOS X (sorry, no support for "classic" MacOS
+yet). This required a larger initial thread stack size, which can now be
+specified at compile time.
 
-Eliminate use of non-reentrant inet_ntoa() calls.
+Fix handling of targets containing sub-net specifications.
+
+Eliminate use of non-reentrant inet_ntoa() calls. This has never been
+observed as a problem but could, potentially, cause issues with confusing
+messages or even incorrect connections.
+
+"Modernised" vncserver.zbd configuration file.
+
+Improved the Windows key generation code. Note, however, that Zebedee's key
+generation for all platforms is still not guaranteed to be cryptographically
+strong. If you are really, really, concerned with the quality of key
+generation please examine the code, improve it if necessary or call out to an
+external command (such as "gpg --gen-random"). However, unless you are trying
+to defend very sensitive traffic against snooping from determined and
+well-equipped attackers I wouldn't worry too much. And if you are trying to do
+that, Zebedee may not be the right choice for you anyway :-)
+
+Numerous changes to the (English) documentation.
 
 * Release 2.3.2 (2002/04/18)
 
