@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.38 2003-09-17 12:53:08 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.39 2003-09-18 08:21:07 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -117,7 +117,8 @@ typedef Huge *mpz_t;
 #define vsnprintf	_vsnprintf
 #define strcasecmp	_stricmp
 #define ETIMEDOUT	WSAETIMEDOUT
-#define ioctl(fd, cmd, arg)	ioctlsocket(fd, cmd, arg)
+#define EWOULDBLOCK	WSAEWOULDBLOCK
+#define EINPROGRESS	WSAEINPROGRESS
 
 /*
 ** Winsock state data
@@ -157,7 +158,6 @@ extern int svcRemove(char *name);
 #include <libnet.h>
 #endif
 #include <pwd.h>
-#include <sys/filio.h>
 
 #ifndef INADDR_NONE
 #define INADDR_NONE 0xffffffff
@@ -2040,9 +2040,19 @@ makeConnection(const char *host, const unsigned short port,
 
 	    setNonBlocking(sfd, 1);
 
-	    /* Issue the connect (which should return EWOULDBLOCK) */
+	    /*
+	    ** Issue the connect. This may succeed immediately, which
+	    ** is highly unlikely, or "fail" but with errno set to
+	    ** EWOULDBLOCK or EINPROGRESS. EINTR is also possible
+	    */
 
 	    connect(sfd, (struct sockaddr *)&addr, sizeof(addr));
+	    if (errno != 0 && errno != EWOULDBLOCK
+		&& errno != EINPROGRESS && errno != EINTR)
+	    {
+		closesocket(0);
+		return -1;
+	    }
 
 	    /* Now wait for socket to be writable -- connect complete */
 
@@ -2494,7 +2504,11 @@ setKeepAlive(int fd)
 void
 setNonBlocking(int fd, unsigned long nonBlock)
 {
-    ioctl(fd, FIONBIO, &nonBlock);
+#ifdef WIN32
+    ioctlsocket(fd, FIONBIO, &nonBlock);
+#else
+    fcntl(fd, F_SETFL, (nonBlock ? O_NONBLOCK | 0));
+#endif
 }
 
 /*
