@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.17 2002-04-16 13:03:58 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.18 2002-04-18 11:59:45 ndwinton Exp $";
 #define RELEASE_STR "2.3.2"
 
 #include <stdio.h>
@@ -4376,6 +4376,17 @@ clientListener(PortList_t *ports)
 	}
     }
 
+    /*
+    ** Catch possible mix-ups in the client tunnels specification leading to
+    ** there being no valid ports to listen on.
+    */
+
+    if (maxFd == -1)
+    {
+	message(0, 0, "client not listening on any ports -- check tunnel specifications");
+	exit(EXIT_FAILURE);
+    }
+
     /* Spawn the sub-command, if specified */
 
     if (CommandString)
@@ -4590,6 +4601,9 @@ clientListener(PortList_t *ports)
 /*
 ** makeClientListeners
 **
+** Create the listen sockets for the ports in the supplied port list.
+** Set the appropriate bits in the fd_set. The udpMode value indicates
+** whether we're doing TCP or UDP listens.
 */
 
 int
@@ -5102,7 +5116,8 @@ client(FnArgs_t *argP)
 
 	/*
 	** Now generate our exponent (the private key). This is returned
-	** as a hex string.
+	** as a hex string. If a private key string has been specified
+	** then use this.
 	*/
 
 	message(3, 0, "generating private key");
@@ -5117,7 +5132,6 @@ client(FnArgs_t *argP)
 
 	/*
 	** Generate the public DH key.
-	** If a private key string has been specified then use this.
 	*/
 
 	message(3, 0, "generating public DH key");
@@ -6150,6 +6164,7 @@ scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP, unsigne
 	    return 0;
 	}
     }
+    if (typeP) *typeP = type;
 
     switch (sscanf(str, "%hu-%hu", &loVal, &hiVal))
     {
@@ -6196,7 +6211,6 @@ scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP, unsigne
     loVal = ntohs(entry->s_port);
     if (loP) *loP = loVal;
     if (hiP) *hiP = loVal;
-    if (typeP) *typeP = type;
 
     return loVal;
 }
@@ -6366,7 +6380,7 @@ setPortList(char *value, PortList_t **listP, char *host, int zeroOk)
     unsigned short lo = 0;
     unsigned short hi = 0;
     PortList_t *last = *listP;
-    unsigned short type = 0;
+    unsigned short type = PORTLIST_ANY;
 
 
     /* Set "last" to point to the last element of the list */
