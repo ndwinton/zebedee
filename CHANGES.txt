@@ -1,7 +1,9 @@
 * Release 2.5.2
 
 Cross-platform fix for checksumming code. This is *incompatible* with version
-2.5.1. Sorry :-(
+2.5.1. As a temporary workaround, setting "bugcompatibility 251" will maintain
+compatibility with release 2.5.1 for little-endian platforms (e.g. Intel).
+This will be removed from the final production release.
 
 Upgrade to Inno Setup 4.
 

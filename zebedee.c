@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.40 2003-09-18 08:28:12 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.41 2003-09-18 10:48:35 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -87,6 +87,10 @@ typedef Huge *mpz_t;
 
 #define COND_ACTIVE	0   /* Condition for change in active handler count */
 #define COND_MAX	1   /* How many condition variables? */
+
+/* BUG COMPATIBILITY -- REMOVE FOR PRODUCTION RELEASE */
+#define BUGHTONL(x) (BugCompatibility == 251 ? (x) : htonl(x))
+#define BUGNTOHL(x) (BugCompatibility == 251 ? (x) : ntohl(x))
 
 #ifdef WIN32
 /*
@@ -516,6 +520,7 @@ uid_t ProcessUID = -1;		/* User id to run zebedee process if started as root */
 gid_t ProcessGID = -1;          /* Group id to run zebedee process if started as root */
 #endif
 long ThreadStackSize = THREAD_STACK_SIZE; /* As it says */
+unsigned short BugCompatibility = 0;	/* Be nice to development users */
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -578,7 +583,7 @@ char *ipString(struct in_addr addr, char *buf);
 int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP, unsigned short timeout);
 int proxyConnection(const char *host, const unsigned short port, struct sockaddr_in *localAddrP, unsigned short timeout);
 int sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP);
-int makeListener(unsigned short *portP, char *listenIp, int udpMode);
+int makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue);
 void setNoLinger(int fd);
 void setKeepAlive(int fd);
 void setNonBlocking(int fd, unsigned long nonBlock);
@@ -1472,23 +1477,23 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 
     case CHECKSUM_ADLER:
 	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
-	crc32exp = ntohl(crc32exp);
+	crc32exp = BUGNTOHL(crc32exp);
 	crc32in = (unsigned long)adler32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
 	crc32in = (unsigned long)adler32(crc32in, (unsigned char *)&msg->tmp, size);
 	checksumOk = (crc32exp == crc32in);
 	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
-	crc32in = htonl(crc32in);
+	crc32in = BUGHTONL(crc32in);
 	memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
 	break;
 
     case CHECKSUM_CRC32:
 	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
-	crc32exp = ntohl(crc32exp);
+	crc32exp = BUGNTOHL(crc32exp);
 	crc32in = (unsigned long)crc32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
 	crc32in = (unsigned long)crc32(crc32in, (unsigned char *)&msg->tmp, size);
 	checksumOk = (crc32exp == crc32in);
 	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
-	crc32in = htonl(crc32in);
+	crc32in = BUGHTONL(crc32in);
 	memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
 	break;
 
@@ -1496,32 +1501,32 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 	sha_init(&shaExp);
 	sha_init(&shaIn);
 	memcpy(shaExp.digest, msg->tmp + size, sizeof(shaExp.digest));
-	shaExp.digest[0] = ntohl(shaExp.digest[0]);
-	shaExp.digest[1] = ntohl(shaExp.digest[1]);
-	shaExp.digest[2] = ntohl(shaExp.digest[2]);
-	shaExp.digest[3] = ntohl(shaExp.digest[3]);
-	shaExp.digest[4] = ntohl(shaExp.digest[4]);
+	shaExp.digest[0] = BUGNTOHL(shaExp.digest[0]);
+	shaExp.digest[1] = BUGNTOHL(shaExp.digest[1]);
+	shaExp.digest[2] = BUGNTOHL(shaExp.digest[2]);
+	shaExp.digest[3] = BUGNTOHL(shaExp.digest[3]);
+	shaExp.digest[4] = BUGNTOHL(shaExp.digest[4]);
 	sha_update(&shaIn, (SHA_BYTE *)&msg->inSeed, sizeof(msg->inSeed));
 	sha_update(&shaIn, (SHA_BYTE *)&msg->tmp, size);
 	sha_final(&shaIn);
 	checksumOk = (memcmp(&shaIn.digest, &shaExp.digest, sizeof(shaIn.digest)) == 0);
-	shaIn.digest[0] = htonl(shaIn.digest[0]);
-	shaIn.digest[1] = htonl(shaIn.digest[1]);
-	shaIn.digest[2] = htonl(shaIn.digest[2]);
-	shaIn.digest[3] = htonl(shaIn.digest[3]);
-	shaIn.digest[4] = htonl(shaIn.digest[4]);
+	shaIn.digest[0] = BUGHTONL(shaIn.digest[0]);
+	shaIn.digest[1] = BUGHTONL(shaIn.digest[1]);
+	shaIn.digest[2] = BUGHTONL(shaIn.digest[2]);
+	shaIn.digest[3] = BUGHTONL(shaIn.digest[3]);
+	shaIn.digest[4] = BUGHTONL(shaIn.digest[4]);
 	memcpy(&(msg->inSeed), &shaIn.digest, sizeof(shaIn.digest));
 	message(5, 0, "expected checksum %08lx%08lx%08lx%08lx%08lx, calculated checksum %08lx%08lx%08lx%08lx%08lx",
-		ntohl((unsigned long)shaExp.digest[0]),
-		ntohl((unsigned long)shaExp.digest[1]),
-		ntohl((unsigned long)shaExp.digest[2]),
-		ntohl((unsigned long)shaExp.digest[3]),
-		ntohl((unsigned long)shaExp.digest[4]),
-		ntohl((unsigned long)shaIn.digest[0]),
-		ntohl((unsigned long)shaIn.digest[1]),
-		ntohl((unsigned long)shaIn.digest[2]),
-		ntohl((unsigned long)shaIn.digest[3]),
-		ntohl((unsigned long)shaIn.digest[4]));
+		BUGNTOHL((unsigned long)shaExp.digest[0]),
+		BUGNTOHL((unsigned long)shaExp.digest[1]),
+		BUGNTOHL((unsigned long)shaExp.digest[2]),
+		BUGNTOHL((unsigned long)shaExp.digest[3]),
+		BUGNTOHL((unsigned long)shaExp.digest[4]),
+		BUGNTOHL((unsigned long)shaIn.digest[0]),
+		BUGNTOHL((unsigned long)shaIn.digest[1]),
+		BUGNTOHL((unsigned long)shaIn.digest[2]),
+		BUGNTOHL((unsigned long)shaIn.digest[3]),
+		BUGNTOHL((unsigned long)shaIn.digest[4]));
 	break;
 
     default:
@@ -1675,15 +1680,15 @@ writeMessage(int fd, MsgBuf_t *msg)
 
     case CHECKSUM_ADLER:
 	crc = (unsigned long)adler32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
-	crc = htonl((unsigned long)adler32(crc, data, size));
+	crc = BUGHTONL((unsigned long)adler32(crc, data, size));
 	memcpy(data + size, &crc, sizeof(crc));
 	memcpy(&msg->outSeed, &crc, sizeof(crc));
-	message(5, 0, "calculated checksum %#08lx", ntohl(crc));
+	message(5, 0, "calculated checksum %#08lx", BUGNTOHL(crc));
 	break;
 
     case CHECKSUM_CRC32:
 	crc = (unsigned long)crc32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
-	crc = htonl((unsigned long)crc32(crc, data, size));
+	crc = BUGHTONL((unsigned long)crc32(crc, data, size));
 	memcpy(data + size, &crc, sizeof(crc));
 	memcpy(&msg->outSeed, &crc, sizeof(crc));
 	message(5, 0, "calculated checksum %#08lx", crc);
@@ -1694,19 +1699,19 @@ writeMessage(int fd, MsgBuf_t *msg)
 	sha_update(&sha, (SHA_BYTE *)&msg->outSeed, sizeof(msg->outSeed));
 	sha_update(&sha, (SHA_BYTE *)data, size);
 	sha_final(&sha);
-	sha.digest[0] = htonl(sha.digest[0]);
-	sha.digest[1] = htonl(sha.digest[1]);
-	sha.digest[2] = htonl(sha.digest[2]);
-	sha.digest[3] = htonl(sha.digest[3]);
-	sha.digest[4] = htonl(sha.digest[4]);
+	sha.digest[0] = BUGHTONL(sha.digest[0]);
+	sha.digest[1] = BUGHTONL(sha.digest[1]);
+	sha.digest[2] = BUGHTONL(sha.digest[2]);
+	sha.digest[3] = BUGHTONL(sha.digest[3]);
+	sha.digest[4] = BUGHTONL(sha.digest[4]);
 	memcpy(data + size, &sha.digest, sizeof(sha.digest));
 	memcpy(&msg->outSeed, &sha.digest, sizeof(sha.digest));
 	message(5, 0, "calculated checksum %08lx%08lx%08lx%08lx%08lx",
-		(unsigned long)ntohl(sha.digest[0]),
-		(unsigned long)ntohl(sha.digest[1]),
-		(unsigned long)ntohl(sha.digest[2]),
-		(unsigned long)ntohl(sha.digest[3]),
-		(unsigned long)ntohl(sha.digest[4]));
+		(unsigned long)BUGNTOHL(sha.digest[0]),
+		(unsigned long)BUGNTOHL(sha.digest[1]),
+		(unsigned long)BUGNTOHL(sha.digest[2]),
+		(unsigned long)BUGNTOHL(sha.digest[3]),
+		(unsigned long)BUGNTOHL(sha.digest[4]));
 	break;
 
     default:
@@ -2075,6 +2080,15 @@ makeConnection(const char *host, const unsigned short port,
 	    /* Set socket back to blocking mode */
 
 	    setNonBlocking(sfd, 0);
+
+	    /* Now see if the socket is *really* usable */
+
+	    errno = 0;
+	    if (!socketIsUsable(sfd))
+	    {
+		closesocket(sfd);
+		return -1;
+	    }
 	}
     }
 
@@ -2378,7 +2392,7 @@ cleanup:
 */
 
 int
-makeListener(unsigned short *portP, char *listenIp, int udpMode)
+makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue)
 {
     int sfd = -1;
     struct sockaddr_in addr;
@@ -2426,7 +2440,7 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode)
 
     if (!udpMode)
     {
-	if (listen(sfd, MAX_LISTEN) < 0)
+	if (listen(sfd, listenQueue) < 0)
 	{
 	    message(0, errno, "listen failed");
 	    goto failure;
@@ -2694,7 +2708,8 @@ failure:
 /*
 ** socketIsUsable
 **
-** Check if socket is usable (hasn't been closed)
+** Check if socket is usable. It may be unusable if it has not properly
+** been connected or has been closed remotely.
 */
 
 int
@@ -2704,7 +2719,17 @@ socketIsUsable(int sock)
     struct timeval delay;
     unsigned long num;
     unsigned char buf[1];
+    struct sockaddr_in addr;
+    int addrLen = sizeof(addr);
 
+
+    /* Get the peer name -- will fail if never connected */
+
+    if (getpeername(sock, (struct sockaddr *)&addr, &addrLen))
+    {
+	message(4, errno, "socket %d has no peer address", sock);
+	return 0;
+    }
 
     /* Check writability */
 
@@ -5134,7 +5159,7 @@ clientListener(EndPtList_t *ports)
     {
 	message(3, 0, "listening for server connection on port %hu", ServerPort);
 
-	if ((ListenSock = makeListener(&ServerPort, ListenIp, 0)) == -1)
+	if ((ListenSock = makeListener(&ServerPort, ListenIp, 0, 1)) == -1)
 	{
 	    message(0, errno, "can't create listener socket for server connection");
 	    exit(EXIT_FAILURE);
@@ -5247,7 +5272,7 @@ clientListener(EndPtList_t *ports)
 			    /* Create a "loopback" socket */
 
 			    localPort = 0;
-			    if ((clientFd = makeListener(&localPort, "127.0.0.1", 1)) == -1)
+			    if ((clientFd = makeListener(&localPort, "127.0.0.1", 1, MAX_LISTEN)) == -1)
 			    {
 				continue;
 			    }
@@ -5368,7 +5393,7 @@ makeClientListeners(EndPtList_t *ports, fd_set *listenSetP, int udpMode)
 	    message(3, 0, "creating %s-mode local listener socket for port %hu",
 		    (udpMode ? "UDP" : "TCP"), localPort);
 
-	    if ((listenFd = makeListener(&localPort, ListenIp, udpMode)) == -1)
+	    if ((listenFd = makeListener(&localPort, ListenIp, udpMode, MAX_LISTEN)) == -1)
 	    {
 		message(0, errno, "can't create listener socket");
 		exit(EXIT_FAILURE);
@@ -5723,11 +5748,11 @@ client(FnArgs_t *argP)
     */
     if (protocol >= PROTOCOL_V202)
     {
-	sha.digest[0] = htonl(sha.digest[0]);
-	sha.digest[1] = htonl(sha.digest[1]);
-	sha.digest[2] = htonl(sha.digest[2]);
-	sha.digest[3] = htonl(sha.digest[3]);
-	sha.digest[4] = htonl(sha.digest[4]);
+	sha.digest[0] = BUGHTONL(sha.digest[0]);
+	sha.digest[1] = BUGHTONL(sha.digest[1]);
+	sha.digest[2] = BUGHTONL(sha.digest[2]);
+	sha.digest[3] = BUGHTONL(sha.digest[3]);
+	sha.digest[4] = BUGHTONL(sha.digest[4]);
 	memcpy(msg->inSeed, &sha.digest, sizeof(sha.digest));
 	memcpy(msg->outSeed, &sha.digest, sizeof(sha.digest));
     }
@@ -6025,7 +6050,7 @@ serverListener(unsigned short *portPtr)
 
     /* Create the listener socket */
 
-    if ((listenFd = makeListener(portPtr, ListenIp, 0)) == -1)
+    if ((listenFd = makeListener(portPtr, ListenIp, 0, MAX_LISTEN)) == -1)
     {
 	message(0, 0, "server can't listen on port %hu", *portPtr);
 	exit(EXIT_FAILURE);
@@ -6111,7 +6136,7 @@ serverInitiator(unsigned short *portPtr)
 	    }
 	    else
 	    {
-		message(0, errno, "failed to connect back to client at %s:%hu", ClientHost, port);
+		message(3, errno, "failed to connect back to client at %s:%hu", ClientHost, port);
 
 		/* We need to pause here to avoid continuous connection attempts */
 
@@ -6559,11 +6584,11 @@ server(FnArgs_t *argP)
     {
 	sha_update(&sha, hdrData, hdrSize);
 	sha_final(&sha);
-	sha.digest[0] = htonl(sha.digest[0]);
-	sha.digest[1] = htonl(sha.digest[1]);
-	sha.digest[2] = htonl(sha.digest[2]);
-	sha.digest[3] = htonl(sha.digest[3]);
-	sha.digest[4] = htonl(sha.digest[4]);
+	sha.digest[0] = BUGHTONL(sha.digest[0]);
+	sha.digest[1] = BUGHTONL(sha.digest[1]);
+	sha.digest[2] = BUGHTONL(sha.digest[2]);
+	sha.digest[3] = BUGHTONL(sha.digest[3]);
+	sha.digest[4] = BUGHTONL(sha.digest[4]);
 	memcpy(msg->inSeed, &sha.digest, sizeof(sha.digest));
 	memcpy(msg->outSeed, &sha.digest, sizeof(sha.digest));
     }
@@ -7766,6 +7791,7 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "runasuser")) setRunAsUser(value);
 #endif
     else if (!strcasecmp(key, "threadstacksize")) setStackSize(value);
+    else if (!strcasecmp(key, "bugcompatibility")) setUShort(value, &BugCompatibility);
     else
     {
 	return 0;
