@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.19 2002-04-23 14:49:43 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.20 2002-04-29 11:46:58 ndwinton Exp $";
 #define RELEASE_STR "2.4.0"
 
 #include <stdio.h>
@@ -187,6 +187,8 @@ pthread_attr_t ThreadAttr;
 
 #define	CMP_OVERHEAD	250	/* Maximum overhead on 16k message */
 #define	CMP_MINIMUM	32	/* Minimum message size to attempt compression */
+
+#define IP_BUF_SIZE	16	/* Size of buffer for IP address string */
 
 /*
 ** Information about the compression algorithm and level is encoded in
@@ -507,6 +509,7 @@ int writeMessage(int fd, MsgBuf_t *msg);
 int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 
 int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr **addrList, unsigned long *maskP);
+char *ipString(struct in_addr addr, char *buf);
 int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP);
 int proxyConnection(const char *host, const unsigned short port, struct sockaddr_in *localAddrP);
 int sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP);
@@ -1605,6 +1608,25 @@ getHostAddress(const char *host,
 }
 
 /*
+** ipString
+**
+** Convert IP address to a dotted-quad string. This is effectively a
+** reentrant version of inet_ntoa.
+*/
+
+char *
+ipString(struct in_addr addr, char *buf)
+{
+    unsigned long val = ntohl(addr.s_addr);
+    sprintf(buf, "%d.%d.%d.%d",
+	    (val >> 24) & 0xff,
+	    (val >> 16) & 0xff,
+	    (val >>  8) & 0xff,
+	    val & 0xff);
+    return buf;
+}
+
+/*
 ** makeConnection
 **
 ** Set up a socket connection to the specified host and port. The host
@@ -1919,6 +1941,7 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode)
     struct sockaddr_in addr;
     int addrLen = sizeof(addr);
     int trueVal = 1;
+    char ipBuf[IP_BUF_SIZE];
 
 
     /* Create the socket */
@@ -1950,7 +1973,7 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode)
     }
     addr.sin_family = AF_INET;
     addr.sin_port = (portP ? htons(*portP) : 0);
-    message(5, 0, "listening on %s", inet_ntoa(addr.sin_addr));
+    message(5, 0, "listening on %s", ipString(addr.sin_addr, ipBuf));
 
     if (bind(sfd, (struct sockaddr *)&addr, addrLen) < 0)
     {
@@ -2058,6 +2081,7 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
     struct in_addr *addrList = NULL;
     struct in_addr *addrPtr = NULL;
     unsigned long mask = 0xffffffff;
+    char ipBuf[IP_BUF_SIZE];
 
 
     memset(&hostAddr, 0, sizeof(hostAddr));
@@ -2154,7 +2178,7 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 	}
 
 	message(1, 0, "Warning: connection from %s rejected, does not match server host %s",
-		inet_ntoa(fromAddr.sin_addr), host);
+		ipString(fromAddr.sin_addr, ipBuf), host);
 	closesocket(serverFd);
 	errno = 0;
 	if (!loop)
@@ -2170,7 +2194,7 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 	free(addrList);
     }
 
-    message(3, 0, "accepted connection from %s", inet_ntoa(fromAddr.sin_addr));
+    message(3, 0, "accepted connection from %s", ipString(fromAddr.sin_addr, ipBuf));
 
     /*
     ** Set the "don't linger on close" and "keep alive" options. The latter
@@ -3771,7 +3795,8 @@ makeDetached(void)
 **
 ** Returns 1 if it is or 0 otherwise.
 **
-** The target hostname is also returned via hostP
+** The target hostname is also returned via hostP (this storage must be
+** later freed by the caller).
 */
 
 int
@@ -3780,6 +3805,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char 
     PortList_t *lp1, *lp2;
     struct in_addr *alp = NULL;
     unsigned long mask = 0;
+    char *ipName = NULL;
 
 
     assert(AllowedTargets != NULL);
@@ -3797,6 +3823,15 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char 
 	    return 0;
 	}
     }
+
+    /* Allocate and fill buffer for returned host IP address string */
+
+    if ((ipName = (char *)malloc(IP_BUF_SIZE)) == NULL)
+    {
+	message(0, errno, "out of memory allocating hostname");
+	return 0;
+    }
+    *hostP = ipString(addrP->sin_addr, ipName);
 
     /*
     ** Search the AllowedTargets list to determine whether the port lies
@@ -3849,7 +3884,6 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char 
 		{
 		    if (lp2->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP))
 		    {
-			*hostP = lp1->host;
 			return 1;
 		    }
 		}
@@ -3862,12 +3896,13 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, int udpMode, char 
 	{
 	    if (lp1->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP))
 	    {
-		*hostP = lp1->host;
 		return 1;
 	    }
 	}
     }
 
+    *hostP = NULL;
+    free(ipName);
     return 0;
 }
 
@@ -3890,6 +3925,7 @@ checkPeerAddress(int fd, struct sockaddr_in *addrP)
     PortList_t *lp1 = NULL;
     struct in_addr *alp = NULL;
     unsigned long mask = 0xffffffff;
+    char ipBuf[IP_BUF_SIZE];
 
 
     /*
@@ -3906,7 +3942,7 @@ checkPeerAddress(int fd, struct sockaddr_in *addrP)
 	message(0, errno, "can't get peer address for socket");
 	return 0;
     }
-    message(4, 0, "peer address from connection is %s", inet_ntoa(addrP->sin_addr));
+    message(4, 0, "peer address from connection is %s", ipString(addrP->sin_addr, ipBuf));
 
     /* Now return if there is nothing more to do */
 
@@ -4194,9 +4230,10 @@ findHandler(struct sockaddr_in *fromAddrP, struct sockaddr_in *localAddrP)
     HndInfo_t *ptr = NULL;
     HndInfo_t *tmp = NULL;
     int found = -1;
+    char ipBuf[IP_BUF_SIZE];
 
 
-    message(5, 0, "searching for handler for address %s:%hu", inet_ntoa(fromAddrP->sin_addr), ntohs(fromAddrP->sin_port));
+    message(5, 0, "searching for handler for address %s:%hu", ipString(fromAddrP->sin_addr, ipBuf), ntohs(fromAddrP->sin_port));
 
     mutexLock(MUTEX_HNDLIST);
 
@@ -4354,6 +4391,7 @@ clientListener(PortList_t *ports)
     unsigned long id = 0;
     char data[MAX_BUF_SIZE];
     int num;
+    char ipBuf[IP_BUF_SIZE];
 
 
     message(3, 0, "client listener routine entered");
@@ -4567,7 +4605,7 @@ clientListener(PortList_t *ports)
 		    }
 		    else
 		    {
-			message(1, 0, "accepted connection from %s", inet_ntoa(fromAddr.sin_addr));
+			message(1, 0, "accepted connection from %s", ipString(fromAddr.sin_addr, ipBuf));
 
 			/* Set the "don't linger on close" option */
 
@@ -4704,6 +4742,7 @@ client(FnArgs_t *argP)
     struct sockaddr_in targetAddr;
     int inLine = argP->inLine;
     int udpMode = argP->udpMode;
+    char ipBuf[IP_BUF_SIZE];
 
 
     incrActiveCount(1);
@@ -4757,7 +4796,7 @@ client(FnArgs_t *argP)
 
     if (!checkPeerAddress(serverFd, &peerAddr))
     {
-	message(0, 0, "connection with server %s disallowed", inet_ntoa(peerAddr.sin_addr));
+	message(0, 0, "connection with server %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
 	goto fatal;
     }
 
@@ -5301,6 +5340,7 @@ serverListener(unsigned short *portPtr)
     int clientFd;
     struct sockaddr_in addr;
     int addrLen;
+    char ipBuf[IP_BUF_SIZE];
 
 
     /* Create the listener socket */
@@ -5331,7 +5371,7 @@ serverListener(unsigned short *portPtr)
 	}
 	else
 	{
-	    message(1, 0, "accepted connection from %s", inet_ntoa(addr.sin_addr));
+	    message(1, 0, "accepted connection from %s", ipString(addr.sin_addr, ipBuf));
 
 	    /* Set the "don't linger on close" option */
 
@@ -5446,6 +5486,7 @@ server(FnArgs_t *argP)
     char *targetHost = TargetHost;
     int inLine = argP->inLine;
     int udpMode = argP->udpMode;    /* Overridden by client request */
+    char ipBuf[IP_BUF_SIZE];
 
 
     incrActiveCount(1);
@@ -5459,7 +5500,7 @@ server(FnArgs_t *argP)
     message(3, 0, "validating client IP address");
     if (!checkPeerAddress(clientFd, &peerAddr))
     {
-	message(0, 0, "client connection from %s disallowed", inet_ntoa(peerAddr.sin_addr));
+	message(0, 0, "client connection from %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
 	goto fatal;
     }
 
@@ -5580,7 +5621,7 @@ server(FnArgs_t *argP)
 	if (protocol >= PROTOCOL_V201)
 	{
 	    localAddr.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
-	    message(3, 0, "read target address %08x", ntohl(localAddr.sin_addr.s_addr));
+	    message(3, 0, "read target address %s", ipString(localAddr.sin_addr, ipBuf));
 	}
 
 	/*
@@ -5626,10 +5667,12 @@ server(FnArgs_t *argP)
 		message(3, 0, "made connection to target -- writing back %hu to client", port);
 		headerSetUShort(hdrData, port, HDR_OFFSET_PORT);
 	    }
+	    free(targetHost);
+	    targetHost = NULL;
 	}
 	else
 	{
-	    message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", inet_ntoa(localAddr.sin_addr), request, (udpMode ? "udp" : "tcp"));
+	    message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", ipString(localAddr.sin_addr, ipBuf), request, (udpMode ? "udp" : "tcp"));
 	    headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
 	}
 
@@ -5787,6 +5830,8 @@ server(FnArgs_t *argP)
 	    goto fatal;
 	}
 	port = request;
+	free(targetHost);
+	targetHost = NULL;
 
 	message(3, 0, "made local connection -- writing back %hu to client", request);
 
@@ -6107,6 +6152,7 @@ server(FnArgs_t *argP)
 fatal:
     if (clientFd != -1) closesocket(clientFd);
     if (localFd != -1) closesocket(localFd);
+    if (targetHost) free(targetHost);
     if (exponent) free(exponent);
     if (dhKey) free(dhKey);
     if (sessionKeyStr && sessionKeyStr != secretKeyStr) free(sessionKeyStr);

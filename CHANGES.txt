@@ -1,3 +1,9 @@
+* Release 2.4.0
+
+Fix handling of subnet range targets.
+
+Eliminate use of non-reentrant inet_ntoa() calls.
+
 * Release 2.3.2 (2002/04/18)
 
 Tunnel and target ports can now be suffixed with "/tcp" or "/udp" in order to
