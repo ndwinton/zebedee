@@ -2,7 +2,7 @@ Summary: Zebedee: a simple, free, secure TCP and UDP tunnel program
 %define name zebedee
 Name: %{name}
 %define version 2.4.0
-%define ostype linux # linux, freebsd, solaris, tru64, hpux, irix
+%define ostype linux
 Version: %{version}
 Release: 1
 Group: Applications/Security
@@ -37,21 +37,21 @@ The main goals for Zebedee are to:
 %setup
 
 %build
-make OS=%{ostype} ZINC= ZLIB=-lz BZINC= BZLIB=-lbz BFINC=-I/usr/include/openssl BFLIB=-lcrypto
+make OS=%{ostype} ZINC= ZLIB=-lz BZINC= BZLIB=-lbz2 BFINC=-I/usr/include/openssl BFLIB=-lcrypto
 
 %install
-make install OS=%{ostype} "ROOTDIR=$RPM_BUILD_DIR/usr"
+make install OS=%{ostype} "ROOTDIR=$RPM_BUILD_ROOT/usr"
 
 %files
 /usr/bin/zebedee
 /usr/bin/ftpgw.tcl
 /usr/lib/zebedee
-%doc /usr/man/man1/zebedee.1
-%doc /usr/man/man1/ftpgw.tcl.1
+%doc /usr/man/man1/zebedee.1*
+%doc /usr/man/man1/ftpgw.tcl.1*
 %doc *.txt *.html
 
 %changelog
-* Tue Apr 23 2002 Neil Winton <neil@winton.org.uk>
+* Thu May 09 2002 Neil Winton <neil@winton.org.uk>
 - Zebedee version 2.4.0
 
 * Fri Mar 22 2002 Neil Winton <neil@winton.org.uk>
