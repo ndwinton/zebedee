@@ -46,7 +46,7 @@ example, B<telnet>, B<ftp> and B<X> sessions to be protected from snooping.
 You can also use compression, either with or without data encryption, to gain
 performance over low-bandwidth networks.
 
-This document describes the features of B<Zebedee> as at release 2.4.0. For
+This document describes the features of B<Zebedee> as at release 2.4.1. For
 details of the new features in this release see L<CHANGES|/changes>.
 
 The main goals for B<Zebedee> are to:
@@ -900,6 +900,28 @@ This will start B<Zebedee> in a new console session from which it will then
 detach. You may see a console window appear briefly before it detaches but
 B<Zebedee> should be running in the background when it disappears.
 
+=item B<dumpdata>
+
+This is a boolean value indicating whether logging output should include
+details of the data sent to and received from local sockets. Because this data
+is potentially sensitive --- one of the reasons for using B<Zebedee> in the
+first place --- the default is for such data not to be included (B<dumpdata>
+is false). If it is set to true then, when the B<L<verbosity|/item_verbosity>>
+level is 5 or greater, the logging output will include lines such as the
+following:
+
+ read 39 bytes from local socket 324
+ < 0000 00 00 00 #  ff S  M  B  a2 4  00 00 c0 98 07 c8
+ < 0010 00 00 00 00 00 00 00 00 00 00 00 00 01 08 d0 03
+ < 0020 01 08 p  00 00 00 00 
+
+Lines beginning with "C<E<lt>>" or "C<E<gt>>" show the data that is being is
+read from or written to the local socket. Each line shows up to sixteen bytes
+of data and is prefixed by the offset, in hexadecimal, from the beginning of
+the data stream. Printable ASCII characters are shown verbatim, such as the
+three characters "C<SMB>" above, while other bytes are shown as a hexadecimal
+value.
+
 =item B<httpproxy>
 
 B<Zebedee> now has support for making the client-server TCP connection via an
@@ -942,7 +964,7 @@ unintentional recursion.
 
 =item B<ipmode> (command-line B<-U> for "both" mode)
 
-As of version 2.3, a B<Zebedee> client or server can handle both TCP and UDP
+As of version 2.4, a B<Zebedee> client or server can handle both TCP and UDP
 traffic simultaneously. This is controlled by the B<ipmode> keyword. It can
 have a value of B<tcp>, B<udp> or B<both>.
 
@@ -2002,6 +2024,9 @@ B<Zebedee> negotiate one itself. This, and the B<-F> option, has been added
 primarily for use in Ed Suominen's PRIVARIA (see L<http://privaria.org>)
 secure communication suite.
 
+Version 2.4.1 adds the B<L<dumpdata|/item_dumpdata>> keyword to allow local
+data details to be shown in logging output.
+
 =head1 CREDITS AND LEGALITIES
 
 The following information can also be found in the file F<LICENCE.txt> in the
@@ -2259,4 +2284,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.18 2002-05-09 08:23:55 ndwinton Exp $
+ $Id: zebedee.pod,v 1.19 2002-05-29 07:59:58 ndwinton Exp $
