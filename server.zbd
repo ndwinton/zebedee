@@ -1,0 +1,50 @@
+#
+# Sample Zebedee server configuration file
+#
+# This shows the use of many, but not all, of the configuration file
+# options available for use by a server.
+#
+# $Id: server.zbd,v 1.1 2001-04-12 18:07:44 ndwinton Exp $
+
+verbosity 2		# Slightly more than basic messages
+
+server true		# Yes, it's a server!
+detached true		# Run detached from terminal
+udpmode false		# Are we operating in UDP mode?
+
+# Uncomment the following line to log messages to a file
+#
+#  logfile './server.log'
+#
+# Or to log to the system logging facility uncomment this:
+#
+#  logfile SYSLOG
+
+# Uncomment the following line if you want to use a fixed private
+# key stored in a static file. The file should contain a line of
+# the form "privatekey hexadecimal-key-string"
+#
+#  include './server.key'
+
+keygenlevel 2		# Generate maximum strength private keys
+
+# To validate the identity of clients uncomment the following
+# line:
+#
+#  checkidfile './clients.id'
+
+# Set up allowed redirection ports.
+# These should be pretty safe -- but it's not a good idea
+# to open up all ports.
+
+redirect "telnet ftp"		# Basic services
+redirect 5900-5999		# VNC traffic
+redirect 6000-6010		# X Window System
+redirect "daytime chargen"	# Ports useful for testing
+
+targethost localhost		# Redirection is to the local machine
+
+compression zlib:9		# Allow maximum zlib compression
+keylength 256			# Allow keys up to 256 bits
+keylifetime 36000		# Shared keys last 10 hours
+maxbufsize 16383		# Allow maximum possible buffer size
