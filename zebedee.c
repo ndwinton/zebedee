@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.36 2003-09-16 20:38:29 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.37 2003-09-17 07:54:44 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -117,7 +117,7 @@ typedef Huge *mpz_t;
 #define vsnprintf	_vsnprintf
 #define strcasecmp	_stricmp
 #define ETIMEDOUT	WSAETIMEDOUT
-#define ioctl(fd, cmd, arg)	ioctl(fd, cmd, arg)
+#define ioctl(fd, cmd, arg)	ioctlsocket(fd, cmd, arg)
 
 /*
 ** Winsock state data

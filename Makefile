@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.20 2003-09-16 20:38:29 ndwinton Exp $
+# $Id: Makefile,v 1.21 2003-09-17 07:54:44 ndwinton Exp $
 
 ZBD_VERSION = 2.5.2
 
@@ -141,7 +141,7 @@ ISCOMP = "c:/Program Files/Inno Setup 4/compil32.exe"
 #   connections. If you need more then change the definition.
 #
 
-DEFINES_win32 = -DFD_SETSIZE=512 -DTHREAD_STACK_SIZE=49152
+DEFINES_win32 = -DFD_SETSIZE=512
 DEFINES_linux = -DHAVE_PTHREADS
 DEFINES_solaris = -D_REENTRANT -DHAVE_PTHREADS
 DEFINES_freebsd = -DHAVE_PTHREADS -DBUGGY_FORK_WITH_THREADS
