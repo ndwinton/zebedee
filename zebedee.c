@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.41 2003-09-18 10:48:35 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.42 2003-09-19 20:45:11 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -2757,9 +2757,10 @@ socketIsUsable(int sock)
     if (select(sock + 1, &testSet, 0, 0, &delay) > 0)
     {
 	message(4, 0, "socket %d is readable, checking for EOF", sock);
-	if (recv(sock, buf, sizeof(buf), MSG_PEEK) == 0)
+	errno = 0;
+	if (recv(sock, buf, sizeof(buf), MSG_PEEK) <= 0)
 	{
-	    message(4, 0, "socket %d has immediate EOF", sock);
+	    message(4, errno, "socket %d has immediate EOF or error", sock);
 	    return 0;
 	}
     }
