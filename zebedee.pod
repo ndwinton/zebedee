@@ -79,7 +79,7 @@ available. It does not pretend to compete with the likes of B<ssh> or B<SSL>
 in terms of breadth of function but if you want something quick, simple and
 I<completely free> then it may be the tool for you.
 
-This document describes the features of B<Zebedee> as at release 2.3.2.
+This document describes the features of B<Zebedee> as at release 2.4.0.
 
 =head2 What's in a name?
 
@@ -1256,7 +1256,7 @@ brief description.
  httpproxy	host:port      CS  Make connections via the given HTTP proxy
  idletimeout    seconds        CS  Inactivity timeout for all tunnels
  include        filename  -f   CS  Read in the named configuration file
- ipmode         type      -U   CS  Run in TCP, UDP or mixed mode (-U = mixed)
+ ipmode         type      -U   CS  Run in TCP, UDP or "both" mode (-U = both)
  keygencommand  string         CS  Command to run to generate key
  keygenlevel    level          CS  Key generation strength level (0 to 2)
  keylength      bits           CS  Requested maximum keylength in bits
@@ -1298,8 +1298,6 @@ Other options that have no keyword equivalents:
      Remove Windows service
  -x string
      Parse option string
- -U
-     Shorthand for "ipmode both"
 
 =head2 Identity Checking
 
@@ -1430,14 +1428,14 @@ require cracking the encrypted data stream itself, merely knowing that the
 same network packets sent to a server will elicit the same response.
 
 When B<Zebedee> is operating in "anonymous" mode the risk of such an attack
-being successful is low because different keys will be generated and used for
-every session. However, if the L<identity checking|Identity Checking> features
-are used the keys will be fixed and replay could be a possibility. B<Zebedee>
-protects against this by generating a unique session key for each connection.
-Following that, the final part of the connection setup also involves a
-challenge-response exchange that verifies that the system at the other end of
-the connection really knows the shared secret key and is not just parrotting
-back previously recorded data.
+being successful is low because different private keys will be generated every
+time B<Zebedee> is used. However, if the L<identity checking|Identity
+Checking> features are used the keys will be fixed and replay could be a
+possibility.  B<Zebedee> protects against this by generating a unique session
+key for each connection.  Following that, the final part of the connection
+setup also involves a challenge-response exchange that verifies that the
+system at the other end of the connection really knows the shared secret key
+and is not just parrotting back previously recorded data.
 
 In addition, B<Zebedee> uses Blowfish encryption in "cipher feedback" mode
 which means that decryption of any part of the data depends upon successful
@@ -1517,26 +1515,26 @@ B<Zebedee> distribution. This shows most of the common options.
  # This shows the use of many, but not all, of the configuration file
  # options available for use by a server.
  #
- 
+
  verbosity 2    # Slightly more than basic messages
- 
+
  # Comment out the following line once you have read the comments
  # in this file and enabled or disabled the appropriate options!
- 
+
  message "DEFAULT CONFIGURATION FILE -- EDIT BEFORE USE"
- 
+
  detached false # You will probably want this 'true' for normal
                 # use but I want to make sure that you see the
                 # preceding message if you haven't edited this.
- 
+
  server true    # Yes, it's a server!
  ipmode both    # Operate in mixed TCP/UDP mode
- 
+
  compression zlib:9     # Allow maximum zlib compression
  keylength 256          # Allow keys up to 256 bits
  keylifetime 36000      # Shared keys last 10 hours
  maxbufsize 16383       # Allow maximum possible buffer size
- 
+
  # Uncomment the following line to log messages to a local file.
  #
  #  logfile './server.log'
@@ -1544,62 +1542,62 @@ B<Zebedee> distribution. This shows most of the common options.
  # Or to log to the system logging facility uncomment this:
  #
  #  logfile SYSLOG
- 
+
  keygenlevel 2  # Generate maximum strength private keys
- 
+
  # Uncomment the following line if you want to use a fixed private
  # key stored in a static file. The file should contain a line of
  # the form "privatekey hexadecimal-key-string". This file should
  # be readable by the user running Zebedee but no-one else.
  #
  #  include './server.key'
- 
+
  # To validate the identity of clients use a line something like
  # the following:
  #
  #  checkidfile './clients.id'
- 
+
  # The "redirect" expression can be use to set the default ports
  # allowed when a target specification consists of a hostname but
  # no other ports. The "redirect none" statement prohibits
  # tunnelling anywhere by default.
- 
+
  redirect none
- 
+
  # Set up allowed targets. Note that there are NO targets allowed
  # by this file by default. You must explicitly edit it to enable
  # them.
- 
+
  # The following are good for testing purposes. Either TCP or UDP
  # are allowed.
  #
  #  target localhost:daytime,echo,chargen
- 
+
  # Basic interactive services, TCP only.
  #
  #  target localhost:telnet/tcp,ftp/tcp
- 
+
  # VNC traffic -- usually you will only need a subset of this
  # range, perhaps 5900 or 5901.
  #
  #  target localhost:5900-5999/tcp
- 
+
  # X Window System -- again, usually you will only need
  # a subset of this range.
  #
  #  target localhost:6000-6010/tcp
- 
+
  # Here is an example of specifying targets using a subnet. In
  # this case allowing tunnels to be established to VNC servers
  # on the 10.1.1.xx subnet.
  #
  #  target 10.1.1.0/24:5900/tcp
- 
+
  # The following line ensures that the default target host
  # is the local machine. The last named host becomes the
  # default so leaving this here ensures that "localhost" is,
  # the default unless overridden on the command line.
- 
+
  target localhost
 
 To test the identity checking facilities you can uncomment the
@@ -1615,18 +1613,19 @@ remotely or, with an "Xvnc" server to access an "X desktop" from any
 VNC client machine, or even a Java-enabled browser! See
 http://www.uk.research.att.com/vnc/ for more details.
 
-The supplied sample server configuration file F<server.zbd> is configured to
-allow redirection of ports 5900-5999 which will allow tunnelling of VNC
-sessions. This file can be used on both UNIX and Windows but note that on
-Windows you must set the "AllowLoopback" flag in the registry in order for
-tunnelling to work. Saving the following snippet (without any leading spaces)
-in file a and then importing it into B<regedit> will do the trick:
+The supplied sample server configuration file F<server.zbd> has sample target
+statements (commented out by default) that are configured to allow redirection
+of ports 5900-5999 which will allow tunnelling of VNC sessions. This file can
+be used on both UNIX and Windows but note that on Windows you must set the
+"AllowLoopback" flag in the registry in order for tunnelling to work. Saving
+the following snippet (without any leading spaces) in file a and then
+importing it into B<regedit> will do the trick:
 
  REGEDIT4
- 
+
  [HKEY_LOCAL_MACHINE\SOFTWARE\ORL\WinVNC3]
  "AllowLoopback"=dword:00000001
- 
+
  [HKEY_LOCAL_MACHINE\SOFTWARE\ORL\WinVNC3\Default]
  "AllowLoopback"=dword:00000001
 
@@ -1640,22 +1639,22 @@ named on the command line. Here are the contents of the file F<vncviewer.zbd>:
  #
  # Usage: zebedee -f vncviewer.zbd remote-host:vnc-port
  #
- 
+
  verbosity 1         # Basic messages only
- 
+
  server false        # It's a client
  detached true       # Detach from terminal
- 
+
  message "Starting VNC viewer"
- 
+
  # On Windows systems you might use the following:
- 
+
  command '"c:\Program Files\ORL\VNC\vncviewer.exe" localhost:%d'
- 
+
  # On UNIX systems you might use the following:
- 
+
  # command 'vncviewer localhost:%d'
- 
+
  compression 6       # Request normal Zlib compression
 
 So using this file as follows:
@@ -1879,17 +1878,17 @@ copyright:
 
  Copyright (C) 1995-1997 Eric Young (eay@mincom.oz.au)
  All rights reserved.
- 
+
  This package is an Blowfish implementation written
  by Eric Young (eay@mincom.oz.au).
- 
+
  This library is free for commercial and non-commercial use as long as
  the following conditions are aheared to.  The following conditions
  apply to all code found in this distribution.
- 
+
  Copyright remains Eric Young's, and as such any Copyright notices in
  the code are not to be removed.
- 
+
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions
  are met:
@@ -1901,7 +1900,7 @@ copyright:
  3. All advertising materials mentioning features or use of this software
  must display the following acknowledgement:
  This product includes software developed by Eric Young (eay@mincom.oz.au)
- 
+
  THIS SOFTWARE IS PROVIDED BY ERIC YOUNG ``AS IS'' AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -1913,12 +1912,12 @@ copyright:
  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  SUCH DAMAGE.
- 
+
  The license and distribution terms for any publically available version or
  derivative of this code cannot be changed.  i.e. this code cannot simply be
  copied and put under another distrubution license
  [including the GNU Public License.]
- 
+
  The reason behind this being stated in this direct manner is past
  experience in code simply being copied and the attribution removed
  from it and then being distributed as part of other packages. This
@@ -1953,26 +1952,26 @@ covered by the following licence:
 
  This program, "bzip2" and associated library "libbzip2", are
  copyright (C) 1996-1999 Julian R Seward.  All rights reserved.
- 
+
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions
  are met:
- 
+
  1. Redistributions of source code must retain the above copyright
     notice, this list of conditions and the following disclaimer.
- 
+
  2. The origin of this software must not be misrepresented; you must 
     not claim that you wrote the original software.  If you use this 
     software in a product, an acknowledgment in the product 
     documentation would be appreciated but is not required.
- 
+
  3. Altered source versions must be plainly marked as such, and must
     not be misrepresented as being the original software.
- 
+
  4. The name of the author may not be used to endorse or promote 
     products derived from this software without specific prior written 
     permission.
- 
+
  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
  OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -1984,7 +1983,7 @@ covered by the following licence:
  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
+
  Julian Seward, Cambridge, UK.
  jseward@acm.org
  bzip2/libbzip2 version 0.9.5 of 24 May 1999
@@ -1996,33 +1995,33 @@ this from the B<Python> sources. The copyright is as follows:
  huge-number.c: arbitrary precision integer library from Python sources
  This has nothing to do with cryptography.
  Copyright (C) 1998 Paul Sheer
- 
+
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- 
+
  This file was taken from the Python source for `long' type
  integers. I have changed it to compile independently of the
  Python source, and added the optimisation that GNU C can
  use 31 bit digits instead of Python's 15 bit. You can download
  the original from www.python.org. This file bears little
  resemblance to the original though - paul
- 
+
  Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
  The Netherlands.
- 
+
                          All Rights Reserved
- 
+
  Permission to use, copy, modify, and distribute this software and its
  documentation for any purpose and without fee is hereby granted,
  provided that the above copyright notice appear in all copies and that
@@ -2032,11 +2031,11 @@ this from the B<Python> sources. The copyright is as follows:
  CNRI not be used in advertising or publicity pertaining to
  distribution of the software without specific, written prior
  permission.
- 
+
  While CWI is the initial source for this software, a modified version
  is made available by the Corporation for National Research Initiatives
  (CNRI) at the Internet address ftp://ftp.python.org.
- 
+
  STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
  REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
  MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
@@ -2061,8 +2060,8 @@ Under Windows, B<Zebedee> uses an implementation of the F<getopt> function
 covered by the following copyright:
 
  Copyright (c) 1987, 1993, 1994
- 	The Regents of the University of California.  All rights reserved.
- 
+The Regents of the University of California.  All rights reserved.
+
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions
  are met:
@@ -2073,12 +2072,12 @@ covered by the following copyright:
  documentation and/or other materials provided with the distribution.
  3. All advertising materials mentioning features or use of this software
  must display the following acknowledgement:
- 	This product includes software developed by the University of
- 	California, Berkeley and its contributors.
+This product includes software developed by the University of
+California, Berkeley and its contributors.
  4. Neither the name of the University nor the names of its contributors
  may be used to endorse or promote products derived from this software
  without specific prior written permission.
- 
+
  THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -2096,4 +2095,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.12 2002-04-23 16:18:14 ndwinton Exp $
+ $Id: zebedee.pod,v 1.13 2002-04-24 15:39:07 ndwinton Exp $
