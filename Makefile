@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.4 2002-03-07 10:25:21 ndwinton Exp $
+# $Id: Makefile,v 1.5 2002-03-07 11:53:55 ndwinton Exp $
 
 ZBD_VERSION = 2.3.0
 
@@ -162,7 +162,7 @@ ZBDFILES = server.zbd vncviewer.zbd vncserver.zbd server.key server.id \
 	client1.key client2.key clients.id
 
 TXTFILES = README.txt LICENCE.txt GPL2.txt CHANGES.txt \
-	zebedee.html ftpgw.tcl.html zebedee.ja_JP.html
+	zebedee.html ftpgw.tcl.html zebedee.ja_JP.html zebedee.iss
 
 EXTRAFILES = $(ZBDFILES) $(TXTFILES)
 
