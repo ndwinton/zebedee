@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.45 2003-09-22 16:30:29 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.46 2003-09-22 16:34:26 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -7862,6 +7862,7 @@ usage(void)
     fprintf(stderr,
 	    "Options are:\n"
 	    "    -b address  Bind only this address when listening for connections\n"
+	    "    -C num      Set the number of attempts to connect back to client (default 1)\n"
 	    "    -c host     Server initiates connection to client host\n"
 	    "    -D          Debug mode\n"
 	    "    -d          Do not detach from terminal\n"
@@ -7883,7 +7884,6 @@ usage(void)
 	    "    -p          Generate private key\n"
 	    "    -P          Generate public key \"fingerprint\"\n"
 	    "    -r ports    Specify allowed port redirection list (server only)\n"
-	    "    -R num      Set the number of attempts to connect back to client (default 1)\n"
 	    "    -s          Run as a server\n"
 #ifdef WIN32
 	    "    -S option   Install/remove/run service\n"
