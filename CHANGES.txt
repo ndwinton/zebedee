@@ -1,5 +1,11 @@
 * Release 2.3.2
 
+Added support for UDP source address spoofing when run in "transparent" mode.
+This makes source to target UDP traffic "transparent" but the target server
+will be unlikely to be able to reply to any such datagrams received. Note that
+this is not compiled in by default and requires the use of the "libnet"
+library.
+
 Added "readtimeout" to allow some defence against denial of service attacks.
 If set to non-zero then remote data reads must be completed within this number
 of seconds. This primarily affects the Zebedee protocol exchanges, idle

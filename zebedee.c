@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.14 2002-04-11 14:44:21 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.15 2002-04-12 12:06:26 ndwinton Exp $";
 #define RELEASE_STR "2.3.2"
 
 #include <stdio.h>
@@ -141,6 +141,9 @@ extern int svcRemove(char *name);
 #include <netdb.h>
 #include <unistd.h>
 #include <syslog.h>
+#ifdef USE_UDP_SPOOFING
+#include <libnet.h>
+#endif
 
 #define DFLT_SHELL	"/bin/sh"
 #define FILE_SEP_CHAR	'/'
@@ -498,6 +501,7 @@ int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr **addrList, unsigned long *maskP);
 int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP);
 int proxyConnection(const char *host, const unsigned short port, struct sockaddr_in *localAddrP);
+int sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP);
 int makeListener(unsigned short *portP, char *listenIp, int udpMode);
 void setNoLinger(int fd);
 void setKeepAlive(int fd);
@@ -528,7 +532,8 @@ unsigned long getCurrentToken(void);
 
 int spawnCommand(unsigned short port, char *cmdFormat);
 int filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
-	       struct sockaddr_in *addrP, int replyFd, int udpMode);
+	       struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP,
+	       int replyFd, int udpMode);
 
 void hashStrings(char *hashBuf, ...);
 void hashFile(char *hashBuf, char *fileName);
@@ -1657,12 +1662,22 @@ makeConnection(const char *host, const unsigned short port,
 #else
     if (fromAddrP && fromAddrP->sin_addr.s_addr)
     {
+#ifdef USE_UDP_SPOOFING
+	closesocket(sfd);
+	if ((sfd = libnet_open_raw_sock(IPPROTO_RAW)) < 0)
+	{
+	    message(0, errno, "raw socket creation failed");
+	    errno = 0;
+	    return -1;
+	}
+#else
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_addr.s_addr = fromAddrP->sin_addr.s_addr;
 	if (bind(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
 	    message(1, errno, "WARNING: failed to set connection source address -- ignored");
 	}
+#endif
     }
 #endif
 
@@ -1801,6 +1816,77 @@ proxyConnection(const char *host, const unsigned short port,
     message(4, 0, "connection via proxy successful");
 
     return fd;
+}
+
+/*
+** sendSpoofed
+**
+** Send a UDP packet to the address and port in toAddrP, purporting to
+** originate from the address in fromAddrP.
+*/
+
+int
+sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP)
+{
+#ifdef USE_UDP_SPOOFING
+    u_char *packet = NULL;
+    int packetSize = 0;
+    int num = -1;
+
+
+    packetSize = LIBNET_IP_H + LIBNET_UDP_H + len;
+
+    libnet_init_packet(packetSize, &packet);
+    if (packet == NULL)
+    {
+	message(0, 0, "failed to allocate packet buffer");
+	return -1;
+    }
+
+    /* Build IP packet header */
+
+    libnet_build_ip(LIBNET_UDP_H + len,	/* Size beyond IP header */
+		    0,			/* IP ToS */
+		    rand() % 11965 + 1,	/* IP ID */
+		    0,			/* Frag */
+		    64,			/* TTL */
+		    IPPROTO_UDP,	/* Transport protocol */
+		    fromAddrP->sin_addr.s_addr,	/* Source address */
+		    toAddrP->sin_addr.s_addr,	/* Destination address */
+		    NULL,		/* Pointer to payload */
+		    0,			/* Size */
+		    packet);		/* Packet buffer */
+
+    /* Add UDP packet header and payload */
+
+    libnet_build_udp(ntohs(fromAddrP->sin_port),    /* Source port */
+		     ntohs(toAddrP->sin_port),	    /* Dest port */
+		     buf,		/* Payload */
+		     len,		/* Payload size */
+		     packet + LIBNET_IP_H);
+
+    /* Do the checksum for the UDP header */
+
+    if (libnet_do_checksum(packet, IPPROTO_UDP, LIBNET_UDP_H) == -1)
+    {
+	message(0, 0, "packet checksum failed");
+	goto cleanup;
+    }
+
+    /* Write the packet */
+
+    num = libnet_write_ip(fd, packet, packetSize);
+    if (num < packetSize)
+    {
+	message(1, 0, "Warning: short packet write (%d < %d)", num, packetSize);
+    }
+
+cleanup:
+    libnet_destroy_packet(&packet);
+    return num;
+#else
+    return -1;
+#endif
 }
 
 /*
@@ -3262,8 +3348,9 @@ spawnCommand(unsigned short port, char *cmdFormat)
 ** On a normal EOF (on either end) it returns 0, on a remote comms failure
 ** 1 and a local failure -1.
 **
-** In UDP mode replies are sent back to the address specified by addrP using
-** the socket named in replyFd.
+** In UDP mode replies are sent back to the address specified by toAddrP using
+** the socket named in replyFd. The fromAddrP is used only if UDP source
+** address spoofing is being used.
 **
 ** The select will timeout (and the connection be closed) after TcpTimeout
 ** or UdpTimeout seconds, as applicable.
@@ -3271,7 +3358,8 @@ spawnCommand(unsigned short port, char *cmdFormat)
 
 int
 filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
-	   struct sockaddr_in *addrP, int replyFd, int udpMode)
+	   struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP,
+	   int replyFd, int udpMode)
 {
     fd_set testSet;
     int ready = 0;
@@ -3356,9 +3444,19 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 	    {
 		if (udpMode)
 		{
-		    num = sendto(replyFd, (char *)(msgBuf->data), msgBuf->size,
-				 0, (struct sockaddr *)addrP,
-				 sizeof(struct sockaddr_in));
+#ifdef USE_UDP_SPOOFING
+		    if (Transparent)
+		    {
+			num = sendSpoofed(replyFd, (char *)(msgBuf->data),
+					  msgBuf->size, toAddrP, fromAddrP);
+		    }
+		    else
+#endif
+		    {
+			num = sendto(replyFd, (char *)(msgBuf->data), msgBuf->size,
+				     0, (struct sockaddr *)toAddrP,
+				     sizeof(struct sockaddr_in));
+		    }
 		}
 		else
 		{
@@ -5944,7 +6042,7 @@ server(FnArgs_t *argP)
 
     message(3, 0, "entering filter loop");
 
-    switch (filterLoop(localFd, clientFd, msg, &localAddr, localFd, udpMode))
+    switch (filterLoop(localFd, clientFd, msg, &localAddr, &peerAddr, localFd, udpMode))
     {
     case 1:
 	message(0, errno, "failed communicating with remote client");
