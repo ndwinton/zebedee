@@ -1,9 +1,12 @@
-* Release 2.5.0
+* Release 2.4.1
+
+Fixed incorrect selection of client TCP/UDP mode when handler function is
+run in-line (as a result of debug or multiuse setting).
+
+Fixed message when client requests incompatible TCP/UDP mode.
 
 Added "dumpdata" keyword to enable a dump of local traffic when this is
 true (and the verbosity level is 5 or greater).
-
-Fixed message when client requests incompatible TCP/UDP mode.
 
 * Release 2.4.0 (2002/05/09)
 
