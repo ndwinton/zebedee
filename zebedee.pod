@@ -196,8 +196,7 @@ on the server host and
  zebedee -U 10000:somehost:echo
 
 on the client. When run in this way B<Zebedee> will handle both TCP and UDP
-traffic. This is a new feature as of version 2.3.0, previously it could only
-handle one traffic type at a time, either TCP or UDP.
+traffic.
 
 The tunnel between B<Zebedee> clients and servers still uses a TCP/IP
 connection even in UDP-mode. This connection is timed out after a certain
@@ -246,9 +245,8 @@ connections between client and server.
 
 =head2 Multiple Destinations
 
-Originally a single B<Zebedee> client/server pair could only
-handle tunnels to a single target system. It is now possible, however,
-to direct tunnels to multiple targets.
+A single B<Zebedee> client/server pair can handle tunnels for multiple
+targets, not just the system on which the B<Zebedee> server is running.
 
 When a server is started it can be given a list of valid targets either
 on the command-line or by using the B<L<target|/item_target>> keyword.
@@ -277,22 +275,26 @@ on B<target3> then the above command could have been given as:
  zebedee 20000:target3:telnet 10000:target1:telnet
 
 In fact, a server also maintains a notion of a default target. This is the
-host name of the I<last> target specified. In the example above the default
-target becomes B<target3>. This is the target used when the server and target
-names specified by the client are the same. Be careful of this because you
-may get results that you not expect. For example, if the server was started
-as:
+host name of the I<last> target specified. In the example server invocation
+above the default target becomes B<target3>. This is the target used when the
+server and target names specified by the client are the same. Be careful of
+this because you may get results that you do not expect. For example, if the
+server was started on C<target3> as:
 
  zebedee -s target2:telnet target3 target1:daytime,telnet
 
-then the previous client invocation would result in connections to port
-20000 being tunnelled to B<target1> and not B<target3>. This is because
-when the server and target specified by the client are the same then the
-traffic goes to the server's default target. To avoid confusion, if you
-want to include the server host in a list of multiple destinations then
-always name it last. Note that as well as a default target host it is also
-possible to specify a list of default target ports where none are otherwise
-given. See the B<L<redirect|/item_redirect>> keyword for more details.
+then the client following client invocation:
+
+ zebedee 20000:target3:telnet
+
+would result in connections to port 20000 being tunnelled to B<target1> and
+not B<target3>. This is because when the server and target specified by the
+client are the same then the traffic goes to the server's default target. To
+avoid confusion, if you want to include the server host in a list of multiple
+destinations then always name it last. Note that as well as a default target
+host it is also possible to specify a list of default allowed target ports
+where none are otherwise given. See the B<L<redirect|/item_redirect>> keyword
+for more details.
 
 As with the B<L<target|/item_target>> keyword for the server, the
 equivalent of the command-line parameter for the client is the
@@ -409,14 +411,21 @@ the server to initiate the connection with a client --- to operate in
 "reverse."
 
 The B<listenmode> keyword, if true, causes a B<Zebedee> client to listen for
-connections initiated by the server rather than to connect directly. A
-connection from a server will not be accepted until a matching connection from
-the source system has been made. However, server connections could originate
-from arbitrary addresses then giving the client no control over the
-destination of the tunnel. To avoid this the client will validate that the
-address of the server's connection matches that specified, whether on the
-command-line, via the B<L<serverhost|/item_serverhost>> keyword or as part of
-the first tunnel specification.
+connections initiated by the server rather than to connect directly. The
+client will listen for connections at the network level but the connection
+from the server will not be fully accepted and activated until a matching
+connection from the source system has been received. Equally, a client will
+accept connections from source clients but no data will be read from or sent
+to these connections until a connection has been made with a server.
+
+Normally a client makes a connection to a specific server address.
+Server-initiated connections could, however, originate from arbitrary
+addresses, thus giving the client no control over the destination of the
+tunnel. To avoid this the client will validate that the address of the
+server's connection matches that specified, whether on the command-line, via
+the B<L<serverhost|/item_serverhost>> keyword or as part of the first tunnel
+specification. (The client can also use the
+B<L<checkaddress|/item_checkaddress>> keyword to perform such checking).
 
 When using B<listenmode> the server address can also contain a network mask.
 So the following client invocation:
@@ -685,10 +694,11 @@ If this keyword is specified its value is a command string that will be
 executed in order to generate a private key (see
 B<L<privatekey|/item_privatekey>>. The command should write a single line of
 hexadecimal digits to F<stdout>. This line must be a string of at least 10
-hexadecimal digits. A simple Tcl script (C<passphrase.tcl>) that prompts a
-user for a pass-phrase and then uses this to generate an appropriate key is
-included in the standard B<Zebedee> distribution. If might be used as follows
-(C<wish> is the Tcl script interpreter):
+hexadecimal digits. A simple B<Tcl> (see L<http://tcl.activestate.com>) script
+(C<passphrase.tcl>) that prompts a user for a pass-phrase and then uses this
+to generate an appropriate key is included in the standard B<Zebedee>
+distribution. If might be used as follows (C<wish> is the B<Tcl> script
+interpreter):
 
  keygencommand "/usr/bin/wish -f passphrase.tcl"
 
@@ -1300,7 +1310,7 @@ The following table lists the recognised keywords, their argument types,
 command-line equivalents, validity for client, server or both and a
 brief description.
 
- checkidfile    filename       CS  Checks peer identities against the 
+ checkidfile    filename       CS  Checks peer identities against this file
  clienthost     hostname  -c   S   Server initiates connection to client host
  command        string    -e   C   Specified command to run connected to tunnel
  compression    level     -z   CS  Requested maximum compression level
@@ -1331,6 +1341,9 @@ brief description.
  server         boolean   -s   CS  Selects server-mode or client-mode
  serverhost     hostname       C   Name of server host to which to connect
  serverport     port      -T   CS  Set the port on which the server listens
+ sharedkey      string         CS  Hexadecimal shared secret key string
+ sharedkeygencommand
+                string         CS  Command to run to generate shared key
  target         spec           S   Specifies allowed target host and ports
  tcptimeout     seconds        CS  Inactivity timeout for TCP tunnels
  timestamplog   boolean   -t   CS  Add timestamps to the log file
@@ -1799,13 +1812,12 @@ this.
 
 It is possible to protect the FTP control connection (over which the username
 and password are sent) for many FTP servers using B<Zebedee> "out of the box"
-by following the instructions below. It is also possible to protect the
+by following the instructions below. It may also be possible to protect the
 control connection for other servers and even "passive-mode" data connections
-by using B<Zebedee> in conjunction with the B<ftpgw.tcl> script in the
-B<Zebedee> distribution.
+by using B<Zebedee> in conjunction with one of the techniques described below.
 
-The simplest approach, which works with some FTP servers, is to run the
-B<Zebedee> server as follows:
+The simplest approach, which will protect the control connection and which
+works with some FTP servers, is to run the B<Zebedee> server as follows:
 
  zebedee -s ftpserverhost:ftp
 
@@ -1840,9 +1852,45 @@ this --- for good security reasons. If you can apparently establish a
 connection to the server but directory listing and file retrievals fail or
 hang then it is likely that your server is one of the strict ones.
 
-To help overcome this problem there is an "FTP gateway" script in the
-B<Zebedee> distribution called B<ftpgw.tcl>. This is a program, written using
-the freely-available B<Tcl> scripting language (see http://tcl.activestate.com)
+If you find yourself in this situation then a good approach (suggested by
+Magnus Wedburg) is to investigate your FTP server's support for operating with
+firewalls and Network Address Translation (NAT). Many modern servers,
+including B<wu-ftpd>, allow you to specify the address that a server will
+report for itself in FTP requests. They will also allow you to specify a
+range of ports which will be used for "passive mode" connections. If you can
+specify these two values you should be able to use B<Zebedee> to tunnel both
+control traffic and also data traffic for passive connections. Support for
+passive mode depends upon the particular FTP client being used. Netscape
+Navigator and the Windows program C<WS_FTP> are examples of clients able to do
+this.
+
+Assuming that you have the capability to specify the server response address
+and range of ports you can the use B<Zebedee> as follows. First, set the
+response address to the C<localhost> address, that is, C<127.0.0.1>. Then
+select a range of ports to be used for tunnelling passive-mode data
+connections. The size of the range will limit the number of simultaneous
+connections that can be handled. In this case we will chose 30000-30010. Now,
+on the FTP server run:
+
+ zebedee -s localhost:ftp,30000-30010
+
+Then on the client run:
+
+ zebedee 2121,30000-30010:ftpserverhost:ftp,30000-30010
+
+The value of 2121, for the FTP control connection, could be any other
+convenient port. The passive port range must, however, be the same as that on
+the server. To access the server with both control and data connections
+secured using Netscape you would then supply a URL of the form:
+
+ ftp://username@clienthost:2121/
+
+where I<username> is your user-name on the FTP server host.
+
+If you can't configure the target FTP server as described above then there is
+one more method that you can try. The B<Zebedee> distribution contains an "FTP
+gateway" script called B<ftpgw.tcl>. This is a program, written using the
+freely-available B<Tcl> scripting language (see L<http://tcl.activestate.com>)
 that intercepts FTP requests and re-writes them so that a server is shielded
 from the presence of B<Zebedee>. You should run this on the same system as the
 B<Zebedee> server.  Assuming that the FTP server is also running on the same
@@ -1869,14 +1917,13 @@ You must still, however, use the client host name here.
 
 This configuration will allow you to tunnel the FTP control connection but
 will not affect any data connections. Using B<ftpgw.tcl> it is, however,
-also possible to secure the data channels provided that your FTP client can
-operate in "passive" mode. Examples of clients that can do this are Netscape
-Navigator and the Windows program WS_FTP.
+also possible to secure the passive-mode data channels in a similar manner to
+that described above.
 
 To secure passive-mode data connections you must choose a range of ports on
-the server that will be used for data connections. In this example we will use
-30000 to 30100. You then start B<ftpgw.tcl> with the B<-p> option to specify
-this port range:
+the server that will be used for data connections. In this example we will
+again use 30000 to 30010. You then start B<ftpgw.tcl> with the B<-p> option to
+specify this port range:
 
  tclsh ftpgw.tcl -p 30000-30100
 
@@ -1889,11 +1936,10 @@ and the client as
  zebedee 2121,30000-30100:ftpserverhost:2121,30000-30100
 
 To access the server with both control and data connections secured using
-Netscape you would then supply a URL of the form:
+Netscape you would then supply a URL, identical to that shown above, of the
+form:
 
  ftp://username@clienthost:2121/
-
-where I<username> is your user-name on the FTP server host.
 
 =head1 CREDITS AND LEGALITIES
 
@@ -2152,4 +2198,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.15 2002-05-02 15:37:13 ndwinton Exp $
+ $Id: zebedee.pod,v 1.16 2002-05-07 08:28:10 ndwinton Exp $
