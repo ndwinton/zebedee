@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.31 2003-06-20 08:16:14 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.32 2003-07-02 13:20:29 ndwinton Exp $";
 #define RELEASE_STR "2.5.0"
 
 #include <stdio.h>
@@ -155,6 +155,10 @@ extern int svcRemove(char *name);
 #include <libnet.h>
 #endif
 #include <pwd.h>
+
+#ifndef INADDR_NONE
+#define INADDR_NONE 0xffffffff
+#endif
 
 #define DFLT_SHELL	"/bin/sh"
 #define FILE_SEP_CHAR	'/'
@@ -1801,7 +1805,7 @@ getHostAddress(const char *host,
     ** an unnecessary name-service lookup.
     */
 
-    if ((addrP->sin_addr.s_addr = inet_addr(host)) == 0xffffffff)
+    if ((addrP->sin_addr.s_addr = inet_addr(host)) == INADDR_NONE)
     {
 	if ((entry = gethostbyname(host)) == NULL)
 	{
@@ -2515,7 +2519,7 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 
 	    for (addrPtr = addrList; addrPtr->s_addr != 0xffffffff; addrPtr++)
 	    {
-		if ((fromAddr.sin_addr.s_addr &mask) ==
+		if ((fromAddr.sin_addr.s_addr & mask) ==
 		    (addrPtr->s_addr & mask))
 		{
 		    break;
