@@ -1,11 +1,15 @@
-* Release 2.5
+* Release 2.5.0
 
 Dropped backwards compatibility with Zebedee 1.x versions of the protocol.
 
 Added message integrity checking ("checksumlevel" and "minchecksumlevel"
 keywords), "dropunknownprotocol" and "lockprotocol" features and per-target
-address checking. These all come from, or are derived from patches
-submitted by, Henrick Lund. Great work Henrick!
+address checking. These are all derived from patches submitted by Henrick
+Lund. Great work Henrick!
+
+Added the ability to hand the peer address, target address and target
+port to key generation commands (add a "+" to the end of the command
+to get three extra arguments provided).
 
 Added "httpproxyauth" -- thanks to James CE Johnson.
 

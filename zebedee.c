@@ -1,7 +1,7 @@
 /*
 ** This file is part of "zebedee".
 **
-** Copyright 1999, 2000, 2001, 2002 by Neil Winton. All rights reserved.
+** Copyright 1999-2003 by Neil Winton. All rights reserved.
 ** 
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.29 2003-06-03 13:51:09 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.30 2003-06-19 13:58:07 ndwinton Exp $";
 #define RELEASE_STR "2.5.0"
 
 #include <stdio.h>
@@ -96,7 +96,7 @@ typedef Huge *mpz_t;
 #ifndef FD_SETSIZE
 /*
 ** This allows us to manipulate up to 512 sockets in a select call (i.e.
-** handle up to about 256 simultaneous tunnels). It can be overridden at
+** handle up to about 250 simultaneous tunnels). It can be overridden at
 ** compile time.
 */
 #define FD_SETSIZE	512
@@ -236,9 +236,9 @@ pthread_attr_t ThreadAttr;
 #define CHECKSUM_CRC32		2
 #define CHECKSUM_SHA		3
 #define CHECKSUM_MAX		CHECKSUM_SHA
-#define CHECKSUM_ADLER_LEN	4	/* ADLER32 message digest */
-#define CHECKSUM_CRC_LEN	4	/* CRC32 message digest */
-#define CHECKSUM_SHA_LEN	20	/* SHA message digest */
+#define CHECKSUM_ADLER_LEN	4	/* ADLER32 32-bit checksum */
+#define CHECKSUM_CRC32_LEN	4	/* CRC32 32-bit checksum */
+#define CHECKSUM_SHA_LEN	20	/* SHA 160-bit message digest */
 #define CHECKSUM_MAX_LEN	CHECKSUM_SHA_LEN /* Max message digest */
 #define CHECKSUM_INVALID	0xffff
 
@@ -291,9 +291,9 @@ pthread_attr_t ThreadAttr;
 
 #define HDR_FLAG_UDPMODE    0x1	/* Operate in UDP mode */
 
-#define PORTLIST_TCP	    0x1	/* TCP-type port list */
-#define PORTLIST_UDP	    0x2	/* UDP-type port list */
-#define PORTLIST_ANY	    (PORTLIST_TCP | PORTLIST_UDP)
+#define ENDPTLIST_TCP	    0x1	/* TCP-type port list */
+#define ENDPTLIST_UDP	    0x2	/* UDP-type port list */
+#define ENDPTLIST_ANY	    (ENDPTLIST_TCP | ENDPTLIST_UDP)
 
 /***************************\
 **			   **
@@ -317,13 +317,15 @@ typedef struct
 BFState_t;
 
 /*
-** The EndPtList_t structure holds the information about a single port
-** range (e.g. 10-20). A single port value has both hi and lo set the same.
-** A linked list of these structures holds information about a set of ranges.
-** The host element holds the name of the host associated with the port
-** range, addr the matching IP address and addrList, a list of alias
+** The EndPtList_t structure holds the information about a network end-point,
+** or range of similar end-point with ports from "lo" to "hi". A single
+** end-point value has both hi and lo set the same. A linked list of these
+** structures holds information about a set of ranges.
+**
+** The host element holds the name of the host associated with the end-
+** point, addr the matching IP address and addrList, a list of alias
 ** addresses. The mask is used if an address mask was specified. The type
-** is a bitmask combination of PORTLIST_UDP and PORTLIST_UDP. The idFile
+** is a bitmask combination of ENDPTLIST_TCP and ENDPTLIST_UDP. The idFile
 ** is the name of the identity file that should be checked for connections
 ** to this endpoint. If peer is not NULL then it is a list of valid
 ** peer connections for this endpoint.
@@ -334,31 +336,15 @@ typedef struct EndPtList_s
     unsigned short lo;
     unsigned short hi;
     char *host;
-    char *idFile;
     struct sockaddr_in addr;
     struct in_addr *addrList;
     struct EndPtList_s *next;
     unsigned long mask;
     unsigned short type;
+    char *idFile;
     struct EndPtList_s *peer;
 }
 EndPtList_t;
-
-#ifdef HL_KEYLIST
-/*
-** Structure used to allow multiple private keys based on server
-*/
-typedef struct KeyList_s
-{
-    char *host;
-    char *PrivateKey;
-    struct sockaddr_in addr;
-    unsigned long mask;
-    struct in_addr *addrList;
-    struct KeyList_s *next;
-}
-KeyList_t;
-#endif
 
 /*
 ** The MsgBuf_t is the general buffer used by the low-level readMessage
@@ -370,7 +356,7 @@ typedef struct MsgBuf_s
 {
     unsigned short maxSize;	/* Max size of data buffer read/writes */
     unsigned short size;	/* Size of current message */
-    unsigned char data[MAX_BUF_SIZE];	/* Data buffer */
+    unsigned char data[MAX_BUF_SIZE + CHECKSUM_MAX_LEN]; /* Data buffer */
     unsigned char tmp[MAX_BUF_SIZE + CMP_OVERHEAD + CHECKSUM_MAX_LEN]; /* Temporary work space */
     unsigned short cmpInfo;	/* Compression level and type */
     BFState_t *bfRead;		/* Encryption context for reads */
@@ -381,12 +367,9 @@ typedef struct MsgBuf_s
     unsigned long writeCount;	/* Number of writes */
     unsigned long bytesOut;	/* Actual data bytes to network */
     unsigned long expBytesOut;	/* Expanded data bytes out */
-    unsigned short checksumLevel;    /* Current checksum mode, 0 if none */
+    unsigned short checksumLevel;   /* Current checksum mode, 0 if none */
     unsigned short checksumLen;	    /* Current checksum length, 0 if none */
-    unsigned char checksumSeed[CHECKSUM_MAX_LEN];
-				    /* Seed for checksum (in fact first
-				       client/server header as hash)
-				       to avoid tampering) */
+    unsigned char seed[CHECKSUM_MAX_LEN];    /* Seed for checksum */
 }
 MsgBuf_t;
 
@@ -407,7 +390,7 @@ LogType_t;
 ** The KeyInfo_t structure holds the mapping between a key "token" value
 ** used to request the reuse of a previously established shared secret
 ** key and the key value itself. These structures are strung together in
-** a linked list.
+** a doubly linked list.
 */
 
 typedef struct KeyInfo_s
@@ -471,9 +454,6 @@ char *Program = "zebedee";	/* Program name (argv[0]) */
 char *Generator = "";		/* DH generator hex string ("" => default) */
 char *Modulus = "";		/* DH modulus hex string ("" => default) */ 
 char *PrivateKey = NULL;	/* Private key hex string */
-#ifdef HL_KEYLIST
-KeyList_t *PrivateKeyList = NULL;	/* Linked list of private keys for different servers */
-#endif
 unsigned short KeyLength = DFLT_KEY_BITS;	/* Key length in bits */
 unsigned short MinKeyLength = 0;		/* Minimum allowed key length */
 unsigned short CompressInfo = DFLT_CMP_LEVEL;	/* Compression type and level */
@@ -499,7 +479,7 @@ int MultiUse = 1;		/* Client handles multiple connections? */
 unsigned short MaxBufSize = DFLT_BUF_SIZE;  /* Maximum buffer size */
 unsigned long CurrentToken = 0;	/* Client reuseable key token */
 unsigned short KeyLifetime = DFLT_KEY_LIFETIME;	/* Key lifetime in seconds */
-unsigned short ChecksumLevel = CHECKSUM_MAX;	/* Type of checksum embedded in the message. Default SHA */
+unsigned short ChecksumLevel = CHECKSUM_CRC32;	/* Type of checksum embedded in the message. Default CRC32 */
 unsigned short MinChecksumLevel = CHECKSUM_NONE;
 int UdpMode = 0;		/* Run in UDP mode */
 int TcpMode = 1;		/* Run in TCP mode */
@@ -597,8 +577,8 @@ unsigned short headerGetUShort(unsigned char *hdrBuf, int offset);
 unsigned long headerGetULong(unsigned char *hdrBuf, int offset);
 
 BFState_t *setupBlowfish(char *keyStr, unsigned short keyBits);
-char *generateKey(struct sockaddr_in *addrP);
-char *runKeyGenCommand(char *keyGenCmd);
+char *generateKey(struct sockaddr_in *peerAddrP, struct sockaddr_in *targetAddrP, unsigned short targetPort);
+char *runKeyGenCommand(char *keyGenCmd, struct sockaddr_in *peerAddrP, struct sockaddr_in *targetAddrP, unsigned short targetPort);
 void generateNonce(unsigned char *);
 char *generateSessionKey(char *secretKey, unsigned char *cNonce, unsigned char *sNonce, unsigned short bits);
 unsigned short hexStrToBits(char *hexStr, unsigned short bits, unsigned char *bitVec);
@@ -609,7 +589,7 @@ int clientPerformChallenge(int serverFd, MsgBuf_t *msg);
 int serverPerformChallenge(int clientFd, MsgBuf_t *msg);
 
 void freeKeyInfo(KeyInfo_t *info);
-char *findKeyByToken(KeyInfo_t *list, unsigned long token);
+char *findKeyByToken(KeyInfo_t *list, unsigned long token, struct sockaddr_in *peerAddrP, struct sockaddr_in *targetAddrP, unsigned short targetPort);
 void addKeyInfoToList(KeyInfo_t *list, unsigned long token, char *key);
 unsigned long generateToken(KeyInfo_t *list, unsigned long oldToken);
 unsigned long getCurrentToken(void);
@@ -652,12 +632,6 @@ EndPtList_t *newEndPtList(unsigned short lo, unsigned short hi, char *host, char
 EndPtList_t *allocEndPtList(unsigned short lo, unsigned short hi, char *host, char *idFile, char *peer, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask, unsigned short type);
 void setEndPtList(char *value, EndPtList_t **listP, char *host, char *idFile, char *peer, int zeroOk);
 void setTarget(char *value);
-#ifdef HL_KEYLIST
-KeyList_t *newPrivateKeyList(char *host); /* HLNEW */
-KeyList_t *allocPrivateKeyList(char *host, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask); /* HLNEW */
-void setPrivateKeyList(char *value, KeyList_t **listP, char *key); /* HLNEW */
-void setPrivateKey(char *value); /* HLNEW */
-#endif
 void setChecksum(char *value, unsigned short *resultP);
 void setTunnel(char *value);
 void setAllowedPeer(char *value, EndPtList_t *peerList);
@@ -1316,12 +1290,8 @@ makeMsgBuf(unsigned short maxSize,
     msg->expBytesOut = 0;
     msg->checksumLevel = checksumLevel;
 
-    /*
-    ** Set the checksumLen based on current checksum mode.
-    ** In case the mode has been changed (or "somebody" sends a wrong mode
-    ** to this function) SHA will always be selected -- it is better to
-    ** choose a good checksum than none.
-    */
+    /* Set the checksumLen based on current checksum mode. */
+
     switch (checksumLevel)
     {
     case CHECKSUM_NONE:
@@ -1333,7 +1303,7 @@ makeMsgBuf(unsigned short maxSize,
 	break;
 
     case CHECKSUM_CRC32:
-	msg->checksumLen = CHECKSUM_CRC_LEN;
+	msg->checksumLen = CHECKSUM_CRC32_LEN;
 	break;
 
     case CHECKSUM_SHA:
@@ -1341,8 +1311,9 @@ makeMsgBuf(unsigned short maxSize,
 	break;
 
     default:
-	msg->checksumLevel = CHECKSUM_SHA;
-	msg->checksumLen = CHECKSUM_SHA_LEN;
+	message(0, 0, "invalid checksum level while allocating message buffer (%hu)", checksumLevel);
+	free(msg);
+	return NULL;
 	break;
     }
 
@@ -1406,8 +1377,12 @@ setMsgBuf(MsgBuf_t *msg, void *buffer, unsigned short size)
 ** by msg->maxSize UNLESS thisSize is non-zero in which case this overrides
 ** the value in the structure.
 **
-** The size of the expanded, unencrypted message is returned as the value
-** of the function and also via msg->size. If there is an error then -1 is
+** If checksumming is being used then the checksum value will have been
+** appended to the message (this is not included in the message size).
+** This will be extracted and checked here.
+**
+** The size of the expanded, unencrypted message, stripped of its checksum,
+** is returned as the value of the function and also via msg->size. If there is an error then -1 is
 ** returned.
 */
 
@@ -1416,6 +1391,7 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 {
     unsigned short hdr;
     unsigned short size;
+    unsigned short extSize; /* Size with extra checksum info */
     unsigned short flags;
     int num = 0;
     unsigned long uncmpSize = MAX_BUF_SIZE;
@@ -1437,24 +1413,25 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 
     /* Reject invalid messages */
 
-    if (thisSize ? (size - msg->checksumLen) > thisSize : (size - msg->checksumLen) > msg->maxSize)
+    if (thisSize ? size > thisSize : size > msg->maxSize)
     {
 	message(0, 0, "incoming message size too big (%hu > %hu)",
-		size - msg->checksumLen, (thisSize ? thisSize : msg->maxSize));
+		size, (thisSize ? thisSize : msg->maxSize));
 	return -1;
     }
 
     msg->size = size;
     msg->readCount++;
-    msg->bytesIn += size;
+    extSize = size + msg->checksumLen;
+    msg->bytesIn += extSize;
 
     message(4, 0, "readMessage: message size = %hu, %s, %s", size,
 	    ((flags & FLAG_ENCRYPTED) ? "encrypted" : "unencrypted"),
 	    ((flags & FLAG_COMPRESSED) ? "compressed" : "uncompressed"));
 
-    /* Read the remaining message data */
+    /* Read the remaining message data, and appended checksum */
 
-    if ((num = readData(fd, msg->tmp, size)) != (int)size) return num;
+    if ((num = readData(fd, msg->tmp, extSize))	!= (int)extSize) return num;
 
     /* Decrypt if necessary */
 
@@ -1466,13 +1443,11 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 	    return -1;
 	}
 
-	BF_cfb64_encrypt(msg->tmp, msg->bfRead->cryptBuf, size,
+	BF_cfb64_encrypt(msg->tmp, msg->bfRead->cryptBuf, extSize,
 			 &(msg->bfRead->key), msg->bfRead->iVec,
 			 &(msg->bfRead->pos), BF_DECRYPT);
-	memcpy(msg->tmp, msg->bfRead->cryptBuf, size);
+	memcpy(msg->tmp, msg->bfRead->cryptBuf, extSize);
     }
-    msg->size = size -= msg->checksumLen;
-
 
     switch (msg->checksumLevel)
     {
@@ -1482,32 +1457,32 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 
     case CHECKSUM_ADLER:
 	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
-	crc32in = (unsigned long)adler32(0L, (unsigned char *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	crc32in = (unsigned long)adler32(0L, (unsigned char *)&msg->seed, sizeof(msg->seed));
 	crc32in = (unsigned long)adler32(crc32in, (unsigned char *)&msg->tmp, size);
 	checksumOk = (crc32exp == crc32in);
-	memcpy(&(msg->checksumSeed), &crc32in, sizeof(crc32in));
-	message(6, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
+	memcpy(&(msg->seed), &crc32in, sizeof(crc32in));
+	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
 	break;
 
     case CHECKSUM_CRC32:
 	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
-	crc32in = (unsigned long)crc32(0L, (unsigned char *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	crc32in = (unsigned long)crc32(0L, (unsigned char *)&msg->seed, sizeof(msg->seed));
 	crc32in = (unsigned long)crc32(crc32in, (unsigned char *)&msg->tmp, size);
 	checksumOk = (crc32exp == crc32in);
-	memcpy(&(msg->checksumSeed), &crc32in, sizeof(crc32in));
-	message(6, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
+	memcpy(&(msg->seed), &crc32in, sizeof(crc32in));
+	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
 	break;
 
     case CHECKSUM_SHA:
 	sha_init(&shaExp);
 	sha_init(&shaIn);
 	memcpy(shaExp.digest, msg->tmp + size, sizeof(shaExp.digest));
-	sha_update(&shaIn, (SHA_BYTE *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	sha_update(&shaIn, (SHA_BYTE *)&msg->seed, sizeof(msg->seed));
 	sha_update(&shaIn, (SHA_BYTE *)&msg->tmp, size);
 	sha_final(&shaIn);
 	checksumOk = (memcmp(&shaIn.digest, &shaExp.digest, sizeof(shaIn.digest)) == 0);
-	memcpy(&(msg->checksumSeed), &shaIn.digest, sizeof(shaIn.digest));
-	message(6, 0, "expected checksum %08lx%08lx%08lx%08lx%08lx, calculated checksum %08lx%08lx%08lx%08lx%08lx",
+	memcpy(&(msg->seed), &shaIn.digest, sizeof(shaIn.digest));
+	message(5, 0, "expected checksum %08lx%08lx%08lx%08lx%08lx, calculated checksum %08lx%08lx%08lx%08lx%08lx",
 		(unsigned long)shaExp.digest[0],
 		(unsigned long)shaExp.digest[1],
 		(unsigned long)shaExp.digest[2],
@@ -1521,7 +1496,7 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 	break;
 
     default:
-	message(0, 0, "unknown internal checksum mode");
+	message(0, 0, "unknown internal checksum mode (%hu)", msg->checksumLevel);
 	return -1;
     }
 
@@ -1603,6 +1578,7 @@ int
 writeMessage(int fd, MsgBuf_t *msg)
 {
     unsigned short size = msg->size;
+    unsigned short extSize;
     unsigned short hdr;
     int num = 0;
     unsigned long cmpSize = MAX_BUF_SIZE + CMP_OVERHEAD;
@@ -1669,29 +1645,29 @@ writeMessage(int fd, MsgBuf_t *msg)
 	break;
 
     case CHECKSUM_ADLER:
-	crc = (unsigned long)adler32(0L, (unsigned char *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	crc = (unsigned long)adler32(0L, (unsigned char *)&msg->seed, sizeof(msg->seed));
 	crc = (unsigned long)adler32(crc, data, size);
 	memcpy(data + size, &crc, sizeof(crc));
-	memcpy(&msg->checksumSeed, &crc, sizeof(crc));
-	message(6, 0, "calculated checksum %#08lx", crc);
+	memcpy(&msg->seed, &crc, sizeof(crc));
+	message(5, 0, "calculated checksum %#08lx", crc);
 	break;
 
     case CHECKSUM_CRC32:
-	crc = (unsigned long)crc32(0L, (unsigned char *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	crc = (unsigned long)crc32(0L, (unsigned char *)&msg->seed, sizeof(msg->seed));
 	crc = (unsigned long)crc32(crc, data, size);
 	memcpy(data + size, &crc, sizeof(crc));
-	memcpy(&msg->checksumSeed, &crc, sizeof(crc));
-	message(6, 0, "calculated checksum %#08lx", crc);
+	memcpy(&msg->seed, &crc, sizeof(crc));
+	message(5, 0, "calculated checksum %#08lx", crc);
 	break;
 
     case CHECKSUM_SHA:
 	sha_init(&sha);
-	sha_update(&sha, (SHA_BYTE *)&msg->checksumSeed, sizeof(msg->checksumSeed));
+	sha_update(&sha, (SHA_BYTE *)&msg->seed, sizeof(msg->seed));
 	sha_update(&sha, (SHA_BYTE *)data, size);
 	sha_final(&sha);
 	memcpy(data + size, &sha.digest, sizeof(sha.digest));
-	memcpy(&msg->checksumSeed, &sha.digest, sizeof(sha.digest));
-	message(6, 0, "calculated checksum %08lx%08lx%08lx%08lx%08lx",
+	memcpy(&msg->seed, &sha.digest, sizeof(sha.digest));
+	message(5, 0, "calculated checksum %08lx%08lx%08lx%08lx%08lx",
 		(unsigned long)sha.digest[0],
 		(unsigned long)sha.digest[1],
 		(unsigned long)sha.digest[2],
@@ -1703,21 +1679,21 @@ writeMessage(int fd, MsgBuf_t *msg)
 	    message(0, 0, "unknown internal checksum mode");
 	    return -1;
     }
-    size += msg->checksumLen;
+    extSize = size + msg->checksumLen;
     
     /* Encrypt if required */
 
     if (msg->bfWrite)
     {
-	BF_cfb64_encrypt(data, msg->bfWrite->cryptBuf, size,
+	BF_cfb64_encrypt(data, msg->bfWrite->cryptBuf, extSize,
 			 &(msg->bfWrite->key), msg->bfWrite->iVec,
 			 &(msg->bfWrite->pos), BF_ENCRYPT);
-	memcpy(msg->tmp + 2, msg->bfWrite->cryptBuf, size);
+	memcpy(msg->tmp + 2, msg->bfWrite->cryptBuf, extSize);
 	flags |= FLAG_ENCRYPTED;
     }
     else
     {
-	memmove(msg->tmp + 2, data, size);
+	memmove(msg->tmp + 2, data, extSize);
     }
 
     /* Insert the header */
@@ -1733,10 +1709,10 @@ writeMessage(int fd, MsgBuf_t *msg)
 	    ((flags & FLAG_ENCRYPTED) ? "encrypted" : "unencrypted"),
 	    ((flags & FLAG_COMPRESSED) ? "compressed" : "uncompressed"));
 
-    if ((num = writeData(fd, msg->tmp, size + 2)) != (int)(size + 2)) return num;
+    if ((num = writeData(fd, msg->tmp, extSize + 2)) != (int)(extSize + 2)) return num;
 
     msg->writeCount++;
-    msg->bytesOut += size;
+    msg->bytesOut += extSize;
     msg->expBytesOut += msg->size;
     return msg->size;
 }
@@ -2730,10 +2706,16 @@ setupBlowfish(char *keyStr, unsigned short keyBits)
 ** you can call out to an external program. This needs to generate a
 ** single string of hexadecimal digits (at least MIN_KEY_BYTES long)
 ** which will be used as the key.
+**
+** The peer and target addresses and targe port are passed through in
+** order to allow them to be supplied to an external key generation
+** command, if required.
 */
 
 char *
-generateKey(struct sockaddr_in *addrP)
+generateKey(struct sockaddr_in *peerAddrP,
+	    struct sockaddr_in *targetAddrP,
+	    unsigned short targetPort)
 {
     SHA_INFO sha;
     time_t now = time(NULL);
@@ -2741,59 +2723,6 @@ generateKey(struct sockaddr_in *addrP)
     unsigned long tid = threadTid();
     char *result = NULL;
 
-#ifdef HL_KEYLIST
-    /* First look into the 'per-server' list then the default privatekey */
-
-    KeyList_t *lp;
-    struct in_addr *alp = NULL;
-    unsigned long mask = 0;
-
-
-    for (lp = PrivateKeyList; lp; lp = lp->next)
-    {
-	mask = lp->mask;
-
-	if ((addrP->sin_addr.s_addr & mask) != (lp->addr.sin_addr.s_addr & mask))
-	{
-	    /* Did not match primary address, check aliases */
-
-	    for (alp = lp->addrList; alp->s_addr != 0xffffffff; alp++)
-	    {
-		if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
-		{
-		    /* Found a matching address in the aliases */
-		    break;
-		}
-	    }
-
-	    if (alp->s_addr == 0xffffffff)
-	    {
-		/* Did not match at all, try next entry */
-
-		continue;
-	    }
-	    else
-	    {
-		break;
-	    }
-	}
-	else
-	{
-	    break;
-	}
-    }
-	
-    if (lp != NULL)
-    {
-	if ((result = (char *)malloc(strlen(lp->PrivateKey) + 1)) == NULL)
-	{
-	    return NULL;
-	}
-	strcpy(result, lp->PrivateKey);
-	return result;
-    }
-    else
-#endif
     /* If a private key has been supplied copy it and return it */
 
     if (PrivateKey)
@@ -2812,7 +2741,7 @@ generateKey(struct sockaddr_in *addrP)
     ** however, then we will fall back to the inline method.
     */
 
-    if (KeyGenCmd && (result = runKeyGenCommand(KeyGenCmd)) != NULL)
+    if (KeyGenCmd && (result = runKeyGenCommand(KeyGenCmd, peerAddrP, targetAddrP, targetPort)) != NULL)
     {
 	return result;
     }
@@ -3050,8 +2979,7 @@ generateKey(struct sockaddr_in *addrP)
 	sha.digest[2] == 0 && sha.digest[3] == 0 &&
 	(sha.digest[4] == 0 || sha.digest[4] == 1))
     {
-	/* We shouldn't be here if addrP was known */
-	return generateKey(NULL);
+	return generateKey(peerAddrP, targetAddrP, targetPort);
     }
 	
     if ((result = (char *)malloc(HASH_STR_SIZE)) == NULL)
@@ -3074,16 +3002,26 @@ generateKey(struct sockaddr_in *addrP)
 ** line from the command's standard output and extracts a hex string from
 ** it. The string must be at least MIN_KEY_BYTES * 2 bytes long.
 **
+** If the key generation command ends with a "+" then the peer address,
+** target address and target port will be appended to it before it is
+** executed.
+**
 ** If the routine succeeds it malloc's space for the string and returns
 ** it otherwise it returns NULL.
 */
 
 char *
-runKeyGenCommand(char *keyGenCmd)
+runKeyGenCommand(char *keyGenCmd,
+		 struct sockaddr_in *peerAddrP,
+		 struct sockaddr_in *targetAddrP,
+		 unsigned short targetPort)
 {
     FILE *fp;
     char buf[MAX_LINE_SIZE];
     char *result = NULL;
+    int len;
+    char ip1[IP_BUF_SIZE];
+    char ip2[IP_BUF_SIZE];
 
 
     if (keyGenCmd == NULL)
@@ -3092,7 +3030,24 @@ runKeyGenCommand(char *keyGenCmd)
 	return NULL;
     }
 
-    if ((fp = popen(keyGenCmd, "r")) == NULL)
+    /* Add addresses and ports if command end with + */
+
+    len = strlen(keyGenCmd);
+    if (peerAddrP && targetAddrP &&
+	len > 0 && keyGenCmd[len - 1] == '+' &&
+	len < (MAX_LINE_SIZE - 40))
+    {
+	ipString(peerAddrP->sin_addr, ip1);
+	ipString(targetAddrP->sin_addr, ip2);
+	sprintf(buf, "%.*s %s %s %hu", len - 1, keyGenCmd, ip1, ip2, targetPort);
+    }
+    else
+    {
+	strcpy(buf, keyGenCmd);
+    }
+    message(3, 0, "running key generation command: %s", buf);
+
+    if ((fp = popen(buf, "r")) == NULL)
     {
 	message(0, errno, "failed to spawn key generation command '%s'", keyGenCmd);
 	return NULL;
@@ -3589,7 +3544,11 @@ freeKeyInfo(KeyInfo_t *info)
 */
 
 char *
-findKeyByToken(KeyInfo_t *list, unsigned long token)
+findKeyByToken(KeyInfo_t *list,
+	       unsigned long token,
+	       struct sockaddr_in *peerAddrP,
+	       struct sockaddr_in *targetAddrP,
+	       unsigned short targetPort)
 {
     KeyInfo_t *ptr = NULL;
     char *found = NULL;
@@ -3615,7 +3574,7 @@ findKeyByToken(KeyInfo_t *list, unsigned long token)
     ** the key rather than doing it directly here.
     */
 
-    if (SharedKeyGenCmd && (result = runKeyGenCommand(SharedKeyGenCmd)) != NULL)
+    if (SharedKeyGenCmd && (result = runKeyGenCommand(SharedKeyGenCmd, peerAddrP, targetAddrP, targetPort)) != NULL)
     {
 	return result;
     }
@@ -3743,9 +3702,14 @@ generateToken(KeyInfo_t *list, unsigned long oldToken)
 	    continue;
 	}
 
-	/* Screen out ones we already have */
+	/*
+	** Screen out ones we already have. Note that peer and target
+	** information is NULL because if we are in generateToken
+	** they can't have been used by any shared key generation
+	** command.
+	*/
 
-	if ((key = findKeyByToken(list, nextToken)) != NULL)
+	if ((key = findKeyByToken(list, nextToken, NULL, NULL, 0)) != NULL)
 	{
 	    free(key);
 	    continue;
@@ -4417,7 +4381,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
 
 		if (port >= lp2->lo && port <= lp2->hi)
 		{
-		    if (lp2->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP))
+		    if (lp2->type & (udpMode ? ENDPTLIST_UDP : ENDPTLIST_TCP))
 		    {
 			*idFileP = lp1->idFile;
 			return 1;
@@ -4430,7 +4394,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
 
 	else if (port >= lp1->lo && port <= lp1->hi)
 	{
-	    if (lp1->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP))
+	    if (lp1->type & (udpMode ? ENDPTLIST_UDP : ENDPTLIST_TCP))
 	    {
 		*idFileP = lp1->idFile;
 		return 1;
@@ -5214,7 +5178,7 @@ makeClientListeners(EndPtList_t *ports, fd_set *listenSetP, int udpMode)
     {
 	for (localPort = ports->lo; localPort <= ports->hi; localPort++)
 	{
-	    if ((ports->type & (udpMode ? PORTLIST_UDP : PORTLIST_TCP)) == 0)
+	    if ((ports->type & (udpMode ? ENDPTLIST_UDP : ENDPTLIST_TCP)) == 0)
 	    {
 		/* Skip incompatible port types */
 		continue;
@@ -5560,6 +5524,10 @@ client(FnArgs_t *argP)
 	sha_update(&sha, hdrData, hdrSize);
 	sha_final(&sha);
     }
+    else
+    {
+	cksumLevel = CHECKSUM_NONE;
+    }
 
     /* Allocate message buffer */
 
@@ -5574,11 +5542,11 @@ client(FnArgs_t *argP)
     */
     if (protocol >= PROTOCOL_V202)
     {
-	memcpy(msg->checksumSeed, &sha.digest, sizeof(sha.digest));
+	memcpy(msg->seed, &sha.digest, sizeof(sha.digest));
     }
     else
     {
-	memset(msg->checksumSeed, 0, sizeof(msg->checksumSeed));
+	memset(msg->seed, 0, sizeof(msg->seed));
     }
 
     /*
@@ -5592,7 +5560,7 @@ client(FnArgs_t *argP)
     ** the result will be that the client connection is rejected.
     */
 
-    if ((secretKeyStr = findKeyByToken(&ClientKeyList, token)) != NULL)
+    if ((secretKeyStr = findKeyByToken(&ClientKeyList, token, &peerAddr, &targetAddr, redirectPort)) != NULL)
     {
 	sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
 					   serverNonce, keyBits);
@@ -5693,16 +5661,7 @@ client(FnArgs_t *argP)
 
 	message(3, 0, "generating private key");
     
-#ifdef HL_KEYLIST
-	memset(&addr, 0, sizeof(addr));
-	if (!getHostAddress(serverHost, &addr, NULL, NULL))
-	{
-	    message(0, 0, "can't resolve host or address '%s'", serverHost);
-	    goto fatal;
-	}
-#endif
-
-	if ((exponent = generateKey(&addr)) == NULL)
+	if ((exponent = generateKey(&peerAddr, &targetAddr, redirectPort)) == NULL)
 	{
 	    message(0, 0, "can't generate private key");
 	    goto fatal;
@@ -6306,7 +6265,7 @@ server(FnArgs_t *argP)
 	** a new one.
 	*/
 
-	if ((secretKeyStr = findKeyByToken(&ServerKeyList, token)) == NULL)
+	if ((secretKeyStr = findKeyByToken(&ServerKeyList, token, &peerAddr, &localAddr, port)) == NULL)
 	{
 	    token = generateToken(&ServerKeyList, token);
 	}
@@ -6334,6 +6293,10 @@ server(FnArgs_t *argP)
 	}
 	message(3, 0, "replying with checksum level %hu", cksumLevel);
 	headerSetUShort(hdrData, cksumLevel, HDR_OFFSET_CHECKSUM);
+    }
+    else
+    {
+	cksumLevel = CHECKSUM_NONE;
     }
 
     if (writeData(clientFd, hdrData, hdrSize) != hdrSize)
@@ -6364,7 +6327,7 @@ server(FnArgs_t *argP)
     {
 	sha_update(&sha, hdrData, hdrSize);
 	sha_final(&sha);
-	memcpy(msg->checksumSeed, &sha.digest, sizeof(sha.digest));
+	memcpy(msg->seed, &sha.digest, sizeof(sha.digest));
     }
 
     /*
@@ -6453,7 +6416,7 @@ server(FnArgs_t *argP)
 
 	message(3, 0, "generating private key");
 
-	if ((exponent = generateKey(NULL)) == NULL)
+	if ((exponent = generateKey(&peerAddr, &localAddr, port)) == NULL)
 	{
 	    message(0, errno, "can't generate private key");
 	    goto fatal;
@@ -6667,18 +6630,18 @@ scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP, unsigne
     unsigned short hiVal = 0;
     char portName[MAX_LINE_SIZE];
     char *slash = NULL;
-    unsigned short type = PORTLIST_ANY;
+    unsigned short type = ENDPTLIST_ANY;
 
 
     if ((slash = strchr(str, '/')) != NULL)
     {
 	if (!strcasecmp(slash, "/tcp"))
 	{
-	    type = PORTLIST_TCP;
+	    type = ENDPTLIST_TCP;
 	}
 	else if (!strcasecmp(slash, "/udp"))
 	{
-	    type = PORTLIST_UDP;
+	    type = ENDPTLIST_UDP;
 	}
 	else
 	{
@@ -6724,7 +6687,7 @@ scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP, unsigne
 	return 0;
     }
 
-    if ((entry = getservbyname(portName, (type == PORTLIST_UDP ? "udp" : "tcp"))) == NULL)
+    if ((entry = getservbyname(portName, (type == ENDPTLIST_UDP ? "udp" : "tcp"))) == NULL)
     {
 	message(0, errno, "can't find port name entry for '%s'", portName);
 	return 0;
@@ -6931,7 +6894,7 @@ setEndPtList(char *value,
     unsigned short lo = 0;
     unsigned short hi = 0;
     EndPtList_t *last = *listP;
-    unsigned short type = PORTLIST_ANY;
+    unsigned short type = ENDPTLIST_ANY;
 
 
     /* Set "last" to point to the last element of the list */
@@ -6991,9 +6954,10 @@ setEndPtList(char *value,
 ** setTarget
 **
 ** The target value is either of the form "hostname:portlist",
-** "hostname:portlist?idfile", or just a plain hostname.
-** In the latter case it will use the default port list
-** (held in AllowedDefault) and also become the default target. Note that
+** "hostname:portlist?idfile", "hostname:portlist@addresse" or
+** just a plain hostname. In the latter case it will use the
+** default port list (held in AllowedDefault) and also become
+** the default target. Note that
 ** the last named target becomes the default.
 */
 
@@ -7034,191 +6998,6 @@ setTarget(char *value)
 
     setString(target, &TargetHost);
 }
-
-#ifdef HL_KEYLIST
-/*
-** newPrivateKeyList
-**
-** Allocate a new KeyList_t structure.
-*/
-
-KeyList_t *
-newPrivateKeyList(char *host)
-{
-    KeyList_t *new = NULL;
-    struct sockaddr_in addr;
-    struct in_addr *addrList = NULL;
-    unsigned long mask = 0xffffffff;
-
-	
-    if (host && !getHostAddress(host, &addr, &addrList, &mask))
-    {
-	message(0, 0, "can't resolve host or address '%s'", host);
-	return NULL;
-    }
-
-    if (addrList)
-    {
-	new = allocPrivateKeyList(host, &(addr.sin_addr), addrList, mask);
-    }
-    else
-    {
-	new = allocPrivateKeyList(NULL, NULL, NULL, 0xffffffff);
-    }
-
-    return new;
-}
-
-/*
-** allocPrivateKeyList
-**
-** Allocate a new KeyList_t structure.
-** If host is not NULL then we populate the addr element with the supplied
-** address and save the hostname.
-*/
-
-KeyList_t *
-allocPrivateKeyList(char *host,
-		    struct in_addr *addrP,
-		    struct in_addr *addrList,
-		    unsigned long mask)
-{
-    KeyList_t *new = NULL; 
-
-
-    if ((new = (KeyList_t *)malloc(sizeof(KeyList_t))) == NULL)
-    {
-	return NULL;
-    }
-
-    new->PrivateKey = NULL;
-    memset(&(new->addr), 0, sizeof(struct in_addr));
-    new->host = NULL;
-    if (host && addrP)
-    {
-	memcpy(&(new->addr.sin_addr), addrP, sizeof(struct in_addr));
-	if ((new->host = (char *)malloc(strlen(host) + 1)) == NULL)
-	{
-	    message(0, errno, "out of memory");
-	    return NULL;
-	}
-	strcpy(new->host, host);
-    }
-    new->addrList = addrList;
-    new->mask = mask;
-
-    new->next = NULL;
-
-    return new;
-}
-
-/*
-** setPrivateKeyList
-**
-** Create a new entry to PrivateKeyList based on provided client/MASK.
-*/
-
-void setPrivateKeyList(char *host, KeyList_t **listP, char *key)
-{
-    KeyList_t *lp1;
-    struct in_addr *alp = NULL;
-    KeyList_t *last = *listP;
-    KeyList_t *new = NULL;
-    struct sockaddr_in addr;
-    struct in_addr *addrList = NULL;
-    unsigned long mask = 0xffffffff;
-
-    
-    if (host && !getHostAddress(host, &addr, &addrList, &mask))
-    {
-	message(0, 0, "can't resolve server or address '%s'", host);
-    }
-    else 
-    {
-	for (lp1 = PrivateKeyList; lp1; lp1 = lp1->next) {
-
-	    mask = lp1->mask;
-
-	    if ((addr.sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
-	    {
-		/* Did not match primary address, check aliases */
-
-		for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
-		{
-		    if ((addr.sin_addr.s_addr & mask) == (alp->s_addr & mask))
-		    {
-			new = lp1;
-			break;
-		    }
-		}
-
-		if (alp->s_addr == 0xffffffff)
-		{
-		    /* Did not match at all, try next entry */
-		    continue;
-		}
-	    }
-	    else
-	    {
-		new = lp1;
-		break;
-	    }
-	    if (new != NULL)
-	    {
-		break;
-	    }
-	}
-
-	if (new == NULL)
-	{
-	    if ((new = newPrivateKeyList(host)) == NULL)
-	    {
-		message(0, errno, "failed allocating memory for private key list");
-		exit(EXIT_FAILURE);
-	    }
-
-	    while (last && last->next)
-	    {
-		last = last->next;
-	    }
-
-	    if (*listP != NULL)
-	    {
-		last->next = new;
-	    }
-	    else 
-	    {
-		*listP = new;
-	    }
-	}
-	setString(key, &new->PrivateKey);
-    }
-}
-
-/*
-** setPrivateKey
-**
-** Set the private key. Allow specific keys for each server in the form of
-**   server:privatekey
-*/
-void
-setPrivateKey(char *value)
-{
-    char target[MAX_LINE_SIZE];
-    char key[MAX_LINE_SIZE];
-
-    if ((sscanf(value, "%[^:]:\"%[^\"]\"", target, key) == 2) ||
-	(sscanf(value, "%[^:]:\'%[^\']\'", target, key) == 2) ||
-	(sscanf(value, "%[^:]:%s", target, key) == 2))
-    {
-	setPrivateKeyList(target, &PrivateKeyList, key);
-    }
-    else
-    {
-	setString(value, &PrivateKey);
-    }
-}
-#endif
 
 /*
 ** setChecksum
@@ -7635,11 +7414,7 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "include")) readConfigFile(value, level+1);
     else if (!strcasecmp(key, "modulus")) setString(value, &Modulus);
     else if (!strcasecmp(key, "generator")) setString(value, &Generator);
-#ifdef HL_KEYLIST
-    else if (!strcasecmp(key, "privatekey")) setPrivateKey(value);
-#else
     else if (!strcasecmp(key, "privatekey")) setString(value, &PrivateKey);
-#endif
     else if (!strcasecmp(key, "checkidfile")) setString(value, &IdentityFile);
     else if (!strcasecmp(key, "checkaddress")) setAllowedPeer(value, AllowedPeers);
     else if (!strcasecmp(key, "redirect"))
@@ -7813,7 +7588,8 @@ usage(void)
 	    "    -f file     Read configuration file\n"
 	    "    -H          Generate hash of string values\n"
 	    "    -h          Generate hash of file contents\n"
-	    "    -k keybits  Specify key length in bits\n"
+	    "    -K level    Specify the checksum level (default 2)\n"
+	    "    -k keybits  Specify key length in bits (default 128)\n"
  	    "    -L          Lock protocol negotiation\n"
 	    "    -l          Client listens for server connection\n"
 	    "    -m          Client accepts multiple connections (default)\n"
@@ -8001,7 +7777,7 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
@@ -8054,6 +7830,10 @@ main(int argc, char **argv)
 
 	case 'k':
 	    setUShort(optarg, &KeyLength);
+	    break;
+
+	case 'K':
+	    setChecksum(optarg, &ChecksumLevel);
 	    break;
 
 	case 'l':
@@ -8336,7 +8116,7 @@ main(int argc, char **argv)
 
 	if (doPrivKey)
 	{
-	    PrivateKey = generateKey(NULL);
+	    PrivateKey = generateKey(NULL, NULL, 0);
 	    if (PrivateKey != NULL)
 	    {
 		printf("privatekey \"%s\"\n", PrivateKey);
@@ -8385,7 +8165,7 @@ main(int argc, char **argv)
 
 	if (AllowedTargets == NULL)
 	{
-	    AllowedTargets = newEndPtList(0, 0, "localhost", NULL, NULL, PORTLIST_ANY);
+	    AllowedTargets = newEndPtList(0, 0, "localhost", NULL, NULL, ENDPTLIST_ANY);
 	}
 
 #ifdef WIN32
@@ -8445,7 +8225,7 @@ main(int argc, char **argv)
 
 	if (ClientPorts == NULL)
 	{
-	    if ((ClientPorts = newEndPtList(0, 0, NULL, NULL, NULL, PORTLIST_ANY)) == NULL)
+	    if ((ClientPorts = newEndPtList(0, 0, NULL, NULL, NULL, ENDPTLIST_ANY)) == NULL)
 	    {
 		message(0, errno, "can't allocate space for port list");
 		exit(EXIT_FAILURE);
