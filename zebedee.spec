@@ -1,7 +1,7 @@
 Summary: Zebedee: a simple, free, secure TCP and UDP tunnel program
 %define name zebedee
 Name: %{name}
-%define version 2.3.2
+%define version 2.4.0
 %define myos linux # linux, freebsd, solaris, tru64, hpux, irix
 Version: %{version}
 Release: 1
@@ -51,6 +51,9 @@ make install OS=%{myos} "ROOTDIR=$RPM_BUILD_DIR/usr"
 %doc *.txt *.html
 
 %changelog
+* Tue Apr 23 2002 Neil Winton <neil@winton.org.uk>
+- Zebedee version 2.4.0
+
 * Fri Mar 22 2002 Neil Winton <neil@winton.org.uk>
 - Zebedee version 2.3.2
 
