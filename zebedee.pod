@@ -585,6 +585,18 @@ targets that the last target specified will be valid default address. In the
 case of a CIDR address the IP portion alone will be taken as the target. This
 may not be what you want or expect.
 
+=item B<transparent>
+
+This is a boolean value, which is B<false> by default. If set B<true> it
+causes the B<Zebedee> server to attempt to propagate the client's IP address
+to the target server --- for the existence of the server to become
+"transparent".
+
+This will probably only work, if at all, on Linux and then only on systems
+with kernel versions 2.0 and 2.2. B<Zebedee> will also have to be run as
+C<root>. It will not work on Linux 2.4, although there is some hope that it
+may work in future versions.
+
 =back
 
 =head3 Compression and Encryption Keywords
@@ -847,7 +859,7 @@ unintentional recursion.
 
 =item B<ipmode> (command-line B<-U> for "both" mode)
 
-As of version 2.3.0, a B<Zebedee> client or server can handle both TCP and UDP
+As of version 2.3, a B<Zebedee> client or server can handle both TCP and UDP
 traffic simultaneously. This is controlled by the B<ipmode> keyword. It can
 have a value of B<tcp>, B<udp> or B<both>.
 
@@ -1904,4 +1916,4 @@ covered by the following copyright:
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.5 2002-03-14 17:16:59 ndwinton Exp $
+ $Id: zebedee.pod,v 1.6 2002-03-15 10:47:07 ndwinton Exp $

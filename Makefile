@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.6 2002-03-14 17:16:17 ndwinton Exp $
+# $Id: Makefile,v 1.7 2002-03-15 10:47:06 ndwinton Exp $
 
 ZBD_VERSION = 2.3.1
 
@@ -45,8 +45,8 @@ BFLIB = ../blowfish-0.9.5a/libblowfish.a
 
 # Location of zlib include and library
 
-ZINC = -I../zlib-1.1.3
-ZLIB = ../zlib-1.1.3/libz.a
+ZINC = -I../zlib-1.1.4
+ZLIB = ../zlib-1.1.4/libz.a
 
 # Location of bzlib include and library
 # Set these empty if you don't want bzib2 support
@@ -86,9 +86,8 @@ INSTALL_hpux = install -c
 INSTALL = $(INSTALL_$(OS))
 
 # InnoSetup compiler for Win32 (see http://www.jordanr.dhs.org/)
-# (Well, actually Martin Laan's extended version, but I don't use any
-# of the extensions here).
-ISCOMP = "c:/Program Files/My Inno Setup Extensions/compil32.exe"
+
+ISCOMP = "c:/Program Files/Inno Setup 2/compil32.exe"
 
 ###
 ### OS-specific definitions
