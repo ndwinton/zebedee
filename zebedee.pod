@@ -1511,14 +1511,18 @@ command-line equivalents, validity for client, server or both and a
 brief description.
 
  checkidfile    filename       CS  Checks peer identities against this file
+ checksumlevel  level     -K   CS  Sets data integrity checksum level (0 to 3)
  clienthost     hostname  -c   S   Server initiates connection to client host
  command        string    -e   C   Specified command to run connected to tunnel
  compression    level     -z   CS  Requested maximum compression level
  connecttimeout seconds        CS  Timeout for connections to be accepted
  debug          boolean        CS  Run in single-threaded "debug" mode
  detached       boolean   -d   CS  Detach from the terminal/console
+ dropunknownprotocol
+                boolean        CS  Drop requests for incompatible protocol
  generator      string         CS  Hexadecimal Diffie-Hellman generator value
- httpproxy	host:port      CS  Make connections via the given HTTP proxy
+ httpproxy      host:port      CS  Make connections via the given HTTP proxy
+ httpproxyauth	user:pass      CS  SUpply HTTP proxy authorisation details
  idletimeout    seconds        CS  Inactivity timeout for all tunnels
  include        filename  -f   CS  Read in the named configuration file
  ipmode         type      -U   CS  Run in TCP, UDP or "both" mode (-U = both)
@@ -1529,15 +1533,19 @@ brief description.
  listenip       address   -b   CS  Listens only on the specified IP address
  listenmode     boolean   -l   C   Client listens for server connections
  localsource    boolean        C   Only accepts connections from local machine
+ lockprotocol   boolean        CS  Allow only current default protocol
  logfile        filename  -o   CS  Set the output log file
  maxbufsize     bytes          CS  Specify buffer size for data reads
  message        string         CS  Output the specified string
+ minchecksumlevel
+                level          CS  Acceptable minimum checksum level
  minkeylength   bits           CS  Acceptable minimum keylength in bits
  modulus        string         CS  Hexadecimal Diffie-Hellman modulus value
  multiuse       boolean   -m   C   Handle multiple connections
  name           string         CS  Specify the name of the program
  privatekey     string         CS  Hexadecimal private key string
  redirect       ports     -r   S   Ports to which server will redirect traffic
+ runasuser      user      -N   CS  Switch to if running as root (UNIX only)
  server         boolean   -s   CS  Selects server-mode or client-mode
  serverhost     hostname       C   Name of server host to which to connect
  serverport     port      -T   CS  Set the port on which the server listens
@@ -2434,4 +2442,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.22 2003-07-06 13:59:49 ndwinton Exp $
+ $Id: zebedee.pod,v 1.23 2003-09-03 06:17:15 ndwinton Exp $

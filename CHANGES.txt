@@ -1,3 +1,13 @@
+* Release
+
+Upgrade to Inno Setup 4.
+
+More documentation fixes.
+
+Added "threadstacksize" from debug/test purposes.
+
+Fix handling of HTTP/1.1 responses from proxies.
+
 * Release 2.5.1 (2003/07/05)
 
 Critical fix to the checksumming code, which wouldn't work if messages
