@@ -1,11 +1,11 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.19 2003-09-16 16:47:01 ndwinton Exp $
+# $Id: Makefile,v 1.20 2003-09-16 20:38:29 ndwinton Exp $
 
 ZBD_VERSION = 2.5.2
 
-OS = win32
+OS = 
 
 ###
 ### Locations of tools, libraries and installation directories.

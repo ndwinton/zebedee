@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.35 2003-09-16 16:47:01 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.36 2003-09-16 20:38:29 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -117,6 +117,7 @@ typedef Huge *mpz_t;
 #define vsnprintf	_vsnprintf
 #define strcasecmp	_stricmp
 #define ETIMEDOUT	WSAETIMEDOUT
+#define ioctl(fd, cmd, arg)	ioctl(fd, cmd, arg)
 
 /*
 ** Winsock state data
@@ -165,7 +166,6 @@ extern int svcRemove(char *name);
 #define FILE_SEP_CHAR	'/'
 
 #define closesocket(fd)	    close((fd))
-#define ioctlsocket(fd, cmd, arg)   ioctl(fd, cmd, arg)
 
 #ifdef HAVE_PTHREADS
 #include <pthread.h>
@@ -203,9 +203,9 @@ pthread_attr_t ThreadAttr;
 #define NONCE_SIZE	8	/* Size of nonce data */
 
 #ifndef THREAD_STACK_SIZE
-#define THREAD_STACK_SIZE   32768   /* Minimum stack for threads */
+#define THREAD_STACK_SIZE   65536   /* Stack size for threads */
 #endif
-
+#define MIN_THREAD_STACK_KB 16	/* Minimum allowable thread stack in kb */
 #define	CMP_OVERHEAD	250	/* Maximum overhead on 16k message */
 #define	CMP_MINIMUM	32	/* Minimum message size to attempt compression */
 
@@ -266,7 +266,7 @@ pthread_attr_t ThreadAttr;
 #define DFLT_KEY_LIFETIME   3600    /* Reuseable keys last an hour */
 #define DFLT_TCP_TIMEOUT    0	    /* Default never close idle TCP tunnels */
 #define DFLT_UDP_TIMEOUT    300	    /* Close UDP tunnels after 5 mins */
-#define DFLT_ACCEPT_TIMEOUT	300 /* Timeout for client accepting server connection */
+#define DFLT_CONNECT_TIMEOUT	300 /* Timeout for making/accepting connection */
 
 #define PROTOCOL_V100	    0x0100  /* The original and base */
 #define PROTOCOL_V101	    0x0101  /* Extended buffer size */
@@ -496,9 +496,9 @@ char *ListenIp = NULL;		/* IP address on which to listen */
 int ListenMode = 0;		/* True if client waits for server connection */
 char *ClientHost = NULL;	/* Server initiates connection to client */
 int ListenSock = -1;		/* Socket on which to listen for server */
-unsigned short ServerConnectTimeout = 0;  /* Timeout for server connections */
-unsigned short AcceptConnectTimeout = DFLT_ACCEPT_TIMEOUT;  /* Timeout for client to accept connections */
-unsigned short TargetConnectTimeout = 0;    /* Timout for connection to target */
+unsigned short ServerConnectTimeout = DFLT_CONNECT_TIMEOUT; /* Timeout for server connections */
+unsigned short AcceptConnectTimeout = DFLT_CONNECT_TIMEOUT; /* Timeout for client to accept connections */
+unsigned short TargetConnectTimeout = DFLT_CONNECT_TIMEOUT; /* Timeout for connection to target */
 unsigned short ConnectAttempts = 1; /* Number of server-initiated connection attempts */
 unsigned short ReadTimeout = 0; /* Timeout for remote data reads */
 int ActiveCount = 0;		/* Count of active handlers */
@@ -651,6 +651,7 @@ void setAllowedPeer(char *value, EndPtList_t *peerList);
 void setString(char *value, char **resultP);
 void setLogFile(char *newFile);
 void setCmpInfo(char *value, unsigned short *resultP);
+void setStackSize(char *value);
 void readConfigFile(const char *fileName, int level);
 int parseConfigLine(const char *lineBuf, int level);
 
@@ -2473,7 +2474,7 @@ setKeepAlive(int fd)
 void
 setNonBlocking(int fd, unsigned long nonBlock)
 {
-    ioctlsocket(fd, FIONBIO, &nonBlock);
+    ioctl(fd, FIONBIO, &nonBlock);
 }
 
 /*
@@ -2493,7 +2494,8 @@ setNonBlocking(int fd, unsigned long nonBlock)
 */
 
 int
-acceptConnection(int listenFd, const char *host, int loop, unsigned short timeout)
+acceptConnection(int listenFd, const char *host,
+		 int loop, unsigned short timeout)
 {
     struct sockaddr_in fromAddr;
     struct sockaddr_in hostAddr;
@@ -2571,8 +2573,9 @@ acceptConnection(int listenFd, const char *host, int loop, unsigned short timeou
 	}
 
 	/*
-	** Check if the connection is writable, in case it has
-	** already been closed at the far end.
+	** Check if the connection is usable, in case it has
+	** already been closed at the far end. If it isn't usable
+	** the silently discard it.
 	*/
 
 	if (!socketIsUsable(serverFd))
@@ -5438,7 +5441,7 @@ client(FnArgs_t *argP)
 	message(3, 0, "waiting for connection from server");
 
 	if ((serverFd = acceptConnection(ListenSock, serverHost,
-					 1, ServerConnectTimeout)) == -1)
+					 1, AcceptConnectTimeout)) == -1)
 	{
 	    message(0, errno, "failed to accept a connection from %s", serverHost);
 	    goto fatal;
@@ -6048,6 +6051,7 @@ serverInitiator(unsigned short *portPtr)
     unsigned short tries = ConnectAttempts;
     int forever = (ConnectAttempts == 0);
 
+
     while (forever || tries > 0)
     {
 	tries--;
@@ -6072,13 +6076,13 @@ serverInitiator(unsigned short *portPtr)
 
 		/* We need to pause here to avoid continuous connection attempts */
 
-		message(4, 0, "sleeping for %hu seconds", AcceptConnectTimeout);
+		message(4, 0, "sleeping for %hu seconds", ServerConnectTimeout);
 #ifdef WIN32
 		/* Sleeps are shorter on Windows! */
 
-		Sleep((unsigned long)AcceptConnectTimeout * 1000);
+		Sleep((unsigned long)ServerConnectTimeout * 1000);
 #else
-		sleep(AcceptConnectTimeout);
+		sleep(ServerConnectTimeout);
 #endif
 		continue;
 	    }
@@ -7410,6 +7414,27 @@ setCmpInfo(char *value, unsigned short *resultP)
 }
 
 /*
+** setStackSize
+**
+** Set the thread stack size
+*/
+
+void setStackSize(char *value)
+{
+    unsigned short size;
+
+    setUShort(value, &size);
+    if (size < MIN_THREAD_STACK_KB)
+    {
+	message(0, 0, "threadstacksize must be at least %hu kbytes", MIN_THREAD_STACK_KB);
+    }
+    else
+    {
+	ThreadStackSize = size * 1024;
+    }
+}
+
+/*
 ** readConfigFile
 **
 ** Read a configuration file. If the level is greater than MAX_LEVEL the
@@ -7696,12 +7721,7 @@ parseConfigLine(const char *lineBuf, int level)
 #ifndef WIN32
     else if (!strcasecmp(key, "runasuser")) setRunAsUser(value);
 #endif
-    else if (!strcasecmp(key, "threadstacksize"))
-    {
-	unsigned short tmp;
-	setUShort(value, &tmp);
-	ThreadStackSize = tmp * 1024;
-    }
+    else if (!strcasecmp(key, "threadstacksize")) setStackSize(value);
     else
     {
 	return 0;
@@ -7795,6 +7815,7 @@ usage(void)
 	    "    -p          Generate private key\n"
 	    "    -P          Generate public key \"fingerprint\"\n"
 	    "    -r ports    Specify allowed port redirection list (server only)\n"
+	    "    -R num      Set the number of attempts to connect back to client (default 1)\n"
 	    "    -s          Run as a server\n"
 #ifdef WIN32
 	    "    -S option   Install/remove/run service\n"
@@ -7971,7 +7992,7 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "b:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:R:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
@@ -8076,6 +8097,10 @@ main(int argc, char **argv)
 
 	case 'r':
 	    setEndPtList(optarg, &AllowedDefault, NULL, NULL, NULL, 0);
+	    break;
+
+	case 'R':
+	    setUShort(optarg, &ConnectAttempts);
 	    break;
 
 	case 's':

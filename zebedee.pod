@@ -446,11 +446,11 @@ accepted from any server address. Use of the L<identity checking|Identity
 Checking> features is also recommended to ensure that the correct server
 connects.
 
-If a connection from a server is not received within a certain period
-then the connection back to the source system will be closed and the
-process abandoned. This timeout is controlled by the
-B<L<connecttimeout|/item_connecttimeout>> keyword. The default is 300
-seconds.
+If a connection from a server is not received within a certain period then the
+connection back to the source system will be closed and the process abandoned.
+This timeout is controlled by the
+B<L<acceptconnecttimeout|/item_acceptconnecttimeout>> keyword. The default is
+300 seconds.
 
 See the B<L<clienthost|/item_clienthost>> keyword for the description of the
 server side of this process.
@@ -1349,6 +1349,11 @@ This is the port or list of ports on which the B<Zebedee> client will listen
 for connections. It is equivalent to the first part of a
 B<L<tunnel|/item_tunnel>> specification.
 
+=item B<connecttimeout>
+
+This has been replaced by the
+B<L<acceptconnecttimeout|item_acceptconnecttimeout>> keyword.
+
 =item B<localport>
 
 This was the name of the B<L<clientport|/item_clientport>> keyword prior to
@@ -1510,12 +1515,15 @@ The following table lists the recognised keywords, their argument types,
 command-line equivalents, validity for client, server or both and a
 brief description.
 
+ acceptconnecttimeout
+                seconds        CS  Timeout for connections to be accepted
  checkidfile    filename       CS  Checks peer identities against this file
  checksumlevel  level     -K   CS  Sets data integrity checksum level (0 to 3)
  clienthost     hostname  -c   S   Server initiates connection to client host
  command        string    -e   C   Specified command to run connected to tunnel
  compression    level     -z   CS  Requested maximum compression level
- connecttimeout seconds        CS  Timeout for connections to be accepted
+ connectattempts
+                number    -R   S   Number of attempts to connect to client
  debug          boolean        CS  Run in single-threaded "debug" mode
  detached       boolean   -d   CS  Detach from the terminal/console
  dropunknownprotocol
@@ -1547,12 +1555,16 @@ brief description.
  redirect       ports     -r   S   Ports to which server will redirect traffic
  runasuser      user      -N   CS  Switch to if running as root (UNIX only)
  server         boolean   -s   CS  Selects server-mode or client-mode
+ serverconnecttimeout
+                seconds        CS  Timeout for connection to server
  serverhost     hostname       C   Name of server host to which to connect
  serverport     port      -T   CS  Set the port on which the server listens
  sharedkey      string         CS  Hexadecimal shared secret key string
  sharedkeygencommand
                 string         CS  Command to run to generate shared key
  target         spec           S   Specifies allowed target host and ports
+ targetconnecttimeout
+                seconds        S   Timeout for connection to target
  tcptimeout     seconds        CS  Inactivity timeout for TCP tunnels
  timestamplog   boolean   -t   CS  Add timestamps to the log file
  tunnel         spec           C   Specifies client ports and matching targets
@@ -2176,14 +2188,21 @@ key generation commands (add a "C<+>" to the end of the command to get three
 extra arguments provided). See B<L<keygencommand|/item_keygencommand>> and
 B<L<sharedkeygencommand|/item_keygencommand>> for further details.
 
-Added "httpproxyauth" -- thanks to James CE Johnson.
+Added B<L<httpproxyauth|item_httpproxyauth>>" -- thanks to James CE Johnson.
 
-Added "runasuser/-N" -- thanks to Thomas Melzer.
+Added B<runasuser|item_runasuser>> (and the B<-N> option) -- thanks to Thomas
+Melzer.
 
 The B<L<target|/item_target>> specification has been extended to allow
 per-target client identity and address checking. The identity checking was
 originally submitted by Alain Turbide and address checking by Henrik Lund
 (again!)
+
+The B<L<acceptconnecttimeout|item_acceptconnecttimeout>>
+B<L<connectattempts|item_connectattempts>>,
+B<L<serverconnecttimeout|item_serverconnecttimeout>>
+and B<L<targetconnecttimeout|item_targetconnecttimeout>> keywords have been
+added to significantly improve the "reverse-mode" operation.
 
 =head1 CREDITS AND LEGALITIES
 
@@ -2442,4 +2461,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.23 2003-09-03 06:17:15 ndwinton Exp $
+ $Id: zebedee.pod,v 1.24 2003-09-16 20:38:29 ndwinton Exp $
