@@ -45,7 +45,7 @@
 # For further details on "zebedee" see http://www.winton.org.uk/zebedee/
 #
 #
-# $Id: ftpgw.tcl,v 1.1.1.1 2001-04-12 18:07:51 ndwinton Exp $
+# $Id: ftpgw.tcl,v 1.2 2001-04-13 17:42:30 ndwinton Exp $
 #
 # Restart using tclsh. Do not delete this backslash -> \
     exec tclsh $0 ${1+"$@"}
@@ -135,7 +135,7 @@ proc handleCtrl {fromSock toSock} {
 
 	    set clientAddr "$a1.$a2.$a3.$a4"
 	    set clientPort [expr {$p1 * 256 + $p2}]
-	    set handler [list acceptDataConn [list $FtpdAddr 127.0.0.1] $clientAddr $clientPort 0]
+	    set handler [list acceptDataConn [list $FtpdAddr 127.0.0.1] $clientAddr $clientPort]
 
 	    if {[catch {createDataConn $handler 1024 65535} connInfo]} {
 		close $fromSock
@@ -185,7 +185,7 @@ proc handleCtrl {fromSock toSock} {
 	    } {
 		set allowed {}
 	    }
-	    set handler [list acceptDataConn $allowed $serverAddr $serverPort 1]
+	    set handler [list acceptDataConn $allowed $serverAddr $serverPort]
 
 	    if {[catch {createDataConn $handler $MinPasvPort $MaxPasvPort} connInfo]} {
 		close $fromSock
@@ -274,7 +274,7 @@ proc createDataConn {cmd loPort hiPort} {
 # connection will be rejected unless it comes from an address named in
 # allowFrom, if set, to avoid port "theft".
 
-proc acceptDataConn {allowFrom toAddr toPort reversed mySock ipAddr port} {
+proc acceptDataConn {allowFrom toAddr toPort mySock ipAddr port} {
     global DataSock
 
     log "$mySock: new data connection from $ipAddr/$port"
@@ -307,15 +307,24 @@ proc acceptDataConn {allowFrom toAddr toPort reversed mySock ipAddr port} {
     fconfigure $toSock -translation binary
     fconfigure $mySock -translation binary
 
-    # Now set up fcopy to handle copying the data in the background
+    # Set up data transfer based on which end of the pipe becomes readable
 
-    if {$reversed} {
-	log "$toSock -> $mySock: starting data copy"
-	fcopy $toSock $mySock -command [list finishCopy $toSock $mySock]
-    } {
-	log "$mySock -> $toSock: starting data copy"
-	fcopy $mySock $toSock -command [list finishCopy $mySock $toSock]
-    }
+    fileevent $mySock readable [list startCopy $mySock $toSock]
+    fileevent $toSock readable [list startCopy $toSock $mySock]
+}
+
+# startCopy
+#
+# Set up fcopy to handle copying the data in the background from fromSock to
+# toSock.
+
+proc startCopy {fromSock toSock} {
+
+    fileevent $toSock readable {}
+    fileevent $fromSock readable {}
+
+    log "$fromSock -> $toSock: starting data copy"
+    fcopy $fromSock $toSock -command [list finishCopy $fromSock $toSock]
 }
 
 # finishCopy
