@@ -1,4 +1,4 @@
-* Release 2.4.0 (2002/05/07)
+* Release 2.4.0 (2002/05/09)
 
 Added support for building on MacOS X (sorry, no support for "classic" MacOS
 yet). This required a larger initial thread stack size, which can now be
