@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.46 2003-09-22 16:34:26 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.47 2003-10-14 08:09:12 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -2016,6 +2016,7 @@ makeConnection(const char *host, const unsigned short port,
     if (!getHostAddress(host, &addr, NULL, NULL))
     {
 	message(0, 0, "can't resolve host or address '%s'", host);
+	closesocket(sfd);
 	return -1;
     }
     addr.sin_family = AF_INET;
@@ -2057,7 +2058,7 @@ makeConnection(const char *host, const unsigned short port,
 	    if (errno != 0 && errno != EWOULDBLOCK
 		&& errno != EINPROGRESS && errno != EINTR)
 	    {
-		closesocket(0);
+		closesocket(sfd);
 		return -1;
 	    }
 
