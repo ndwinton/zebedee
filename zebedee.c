@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.6 2002-03-07 10:29:49 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.7 2002-03-07 13:51:57 ndwinton Exp $";
 #define RELEASE_STR "2.3.0"
 
 #include <stdio.h>
@@ -4142,7 +4142,7 @@ clientListener(PortList_t *ports)
 */
 
 int
-makeClientListeners(PortList_t *ports, FD_SET *listenSetP, int udpMode)
+makeClientListeners(PortList_t *ports, fd_set *listenSetP, int udpMode)
 {
     int listenFd = -1;
     unsigned short localPort = 0;
