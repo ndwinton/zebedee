@@ -1,4 +1,4 @@
-* Release 2.3.2 (2002/04/16)
+* Release 2.3.2 (2002/04/18)
 
 Tunnel and target ports can now be suffixed with "/tcp" or "/udp" in order to
 restrict the protocol used. This is useful when "ipmode both" is in effect.
