@@ -1,12 +1,16 @@
-* Release
+* Release 2.5.2
 
 Upgrade to Inno Setup 4.
 
 More documentation fixes.
 
-Added "threadstacksize" from debug/test purposes.
+Increased the default thread stack size to 64k and added "threadstacksize" for
+debug/test purposes.
 
 Fix handling of HTTP/1.1 responses from proxies.
+
+Added acceptconnecttimeout (supersedes "connecttimeout") along with
+connectattempts, serverconnecttimeout and targetconnecttimeout.
 
 * Release 2.5.1 (2003/07/05)
 
