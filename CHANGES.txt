@@ -9,6 +9,13 @@ Allowed CIDR address specifications for target (and server name in listenmode).
 
 Added IP address checking with the "checkaddress" keyword.
 
+Finally caved in and added "httpproxy" to allow connection via a web proxy
+server using "CONNECT".
+
+Added "transparent" keyword to attempt to act as a transparent proxy and
+forward on the client IP address. It may work on Linux 2.0/2.2. But then
+again, it might not ...
+
 * Release 2.3.0 (2002/03/07)
 
 New functionality (at last!).

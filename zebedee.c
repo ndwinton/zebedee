@@ -1,7 +1,7 @@
 /*
 ** This file is part of "zebedee".
 **
-** Copyright 1999, 2000, 2001 by Neil Winton. All rights reserved.
+** Copyright 1999, 2000, 2001, 2002 by Neil Winton. All rights reserved.
 ** 
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.10 2002-03-12 15:12:30 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.11 2002-03-14 17:16:28 ndwinton Exp $";
 #define RELEASE_STR "2.3.1"
 
 #include <stdio.h>
@@ -437,6 +437,7 @@ unsigned short ConnectTimeout = DFLT_CONN_TIMEOUT;  /* Timeout for server connec
 int ActiveCount = 0;		/* Count of active handlers */
 char *ProxyHost = NULL;		/* HTTP proxy host, if used */
 unsigned short ProxyPort = 0;	/* HTTP proxy port, if used */
+int Transparent = 0;		/* Try to propagate the client IP address */
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -494,7 +495,7 @@ int writeMessage(int fd, MsgBuf_t *msg);
 int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 
 int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr **addrList, unsigned long *maskP);
-int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *localAddrP);
+int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP);
 int proxyConnection(const char *host, const unsigned short port, struct sockaddr_in *localAddrP);
 int makeListener(unsigned short *portP, char *listenIp, int udpMode);
 int acceptConnection(int listenFd, const char *host, int loop, unsigned short timeout);
@@ -1573,13 +1574,15 @@ getHostAddress(const char *host,
 ** is true and a TCP connection is requested then we will try to connect
 ** via a HTTP proxy.
 **
-** If toAddrP is not NULL then the address of the destination
-** endpoint is returned.
+** If fromAddrP is not NULL then we will try to set the source address for
+** the connection (not fatal if we faile). If toAddrP is not NULL then the
+** address of the destination endpoint is returned.
 */
 
 int
 makeConnection(const char *host, const unsigned short port,
-	       int udpMode, int useProxy, struct sockaddr_in *toAddrP)
+	       int udpMode, int useProxy,
+	       struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP)
 {
     int sfd = -1;
     struct sockaddr_in addr;
@@ -1605,6 +1608,40 @@ makeConnection(const char *host, const unsigned short port,
 	}
     }
 
+    /* Create the socket */
+
+    if ((sfd = socket(AF_INET, (udpMode ? SOCK_DGRAM : SOCK_STREAM), 0)) < 0)
+    {
+	message(0, errno, "socket creation failed");
+	errno = 0;
+	return -1;
+    }
+
+    /*
+    ** If a source address was specified, try to set it. This is not
+    ** fatal if it fails -- not all platforms support it.
+    */
+
+#ifdef TCP_TPROXY_SRCADDR
+    /*
+    ** Transparent proxy functionality should probably work in Linux 2.0/2.2
+    ** but will not work in 2.4 when things were changed. You can hack the
+    ** kernel if you really want but TCP_TPROXY_SRCADDR should be the way to
+    ** go in Linux post 2.4. From what I gather anyway ...
+    */
+#error "Time to implement transparent proxy using setsockopt(fd, SOL_TCP, TCP_TPROXY_SRCADDR, ...) now!"
+#else
+    if (fromAddrP && fromAddrP->sin_addr.s_addr)
+    {
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_addr.s_addr = fromAddrP->sin_addr.s_addr;
+	if (bind(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+	{
+	    message(1, errno, "WARNING: failed to set connection source address -- ignored");
+	}
+    }
+#endif
+
     /* Translate hostname from DNS or IP-address form */
 
     memset(&addr, 0, sizeof(addr));
@@ -1614,14 +1651,7 @@ makeConnection(const char *host, const unsigned short port,
 	return -1;
     }
     addr.sin_family = AF_INET;
-    addr.sin_port = ntohs(port);
-
-    if ((sfd = socket(AF_INET, (udpMode ? SOCK_DGRAM : SOCK_STREAM), 0)) < 0)
-    {
-	message(0, errno, "socket creation failed");
-	errno = 0;
-	return -1;
-    }
+    addr.sin_port = htons(port);
 
     if (!udpMode)
     {
@@ -1671,7 +1701,7 @@ proxyConnection(const char *host, const unsigned short port,
 
     message(4, 0, "connecting to %s:%hu via proxy %s:%hu", host, port, ProxyHost, ProxyPort);
 
-    if ((fd = makeConnection(ProxyHost, ProxyPort, 0, 0, toAddrP)) == -1)
+    if ((fd = makeConnection(ProxyHost, ProxyPort, 0, 0, NULL, toAddrP)) == -1)
     {
 	message(0, errno, "can't connect to proxy server at %s:%hu", ProxyHost, ProxyPort);
 	return -1;
@@ -3116,7 +3146,7 @@ spawnCommand(unsigned short port, char *cmdFormat)
     char *shell = DFLT_SHELL;
     char cmdBuf[MAX_LINE_SIZE];
 
-    snprintf(cmdBuf, cmdFormat, (int)port);
+    snprintf(cmdBuf, sizeof(cmdBuf), cmdFormat, (int)port);
 
     if (((shell = getenv("SHELL")) == NULL) || *shell == '\0')
     {
@@ -3651,7 +3681,10 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP, char **hostP)
 ** checkPeerAddress
 **
 ** Check the address of the peer of the supplied socket against the
-** list of allowed addresses, if any.
+** list of allowed addresses, if any. Returns a true/false result.
+**
+** As a side effect, if addrP is not NULL the routine will also return
+** the peer address information.
 */
 
 int
@@ -3665,7 +3698,12 @@ checkPeerAddress(int fd, struct sockaddr_in *addrP)
     unsigned long mask = 0xffffffff;
 
 
-    if (!AllowedPeers) return 1;
+    /*
+    ** If there is nothing to check and we do not need to return the peer
+    ** address we can bail out quickly.
+    */
+
+    if (AllowedPeers == NULL && addrP == NULL) return 1;
 
     if (addrP == NULL) addrP = &addr;
 
@@ -3675,6 +3713,12 @@ checkPeerAddress(int fd, struct sockaddr_in *addrP)
 	return 0;
     }
     message(4, 0, "peer address from connection is %s", inet_ntoa(addrP->sin_addr));
+
+    /* Now return if there is nothing more to do */
+
+    if (AllowedPeers == NULL) return 1;
+
+    /* Otherwise, search for a match ... */
 
     port = ntohs(addrP->sin_port);
 
@@ -4480,7 +4524,7 @@ client(FnArgs_t *argP)
     {
 	message(3, 0, "making connection to %s:%hu", serverHost, serverPort);
 
-	if ((serverFd = makeConnection(serverHost, serverPort, 0, 1, NULL)) == -1)
+	if ((serverFd = makeConnection(serverHost, serverPort, 0, 1, NULL, NULL)) == -1)
 	{
 	    message(0, errno, "can't connect to %s port %hu", serverHost, serverPort);
 	    goto fatal;
@@ -5089,7 +5133,7 @@ serverInitiator(char *clientHost, unsigned short port, unsigned short timeout)
     {
 	message(2, 0, "initiating connection back to client at %s:%hu", clientHost, port);
 
-	if ((clientFd = makeConnection(clientHost, port, 0, 1, NULL)) == -1)
+	if ((clientFd = makeConnection(clientHost, port, 0, 1, NULL, NULL)) == -1)
 	{
 	    message(0, errno, "failed to connect back to client at %s:%hu", clientHost, port);
 	    exit(EXIT_FAILURE);
@@ -5168,6 +5212,7 @@ server(FnArgs_t *argP)
     unsigned char hdrData[HDR_SIZE_MAX];
     unsigned short hdrSize;
     struct sockaddr_in localAddr;
+    struct sockaddr_in peerAddr;
     unsigned char clientNonce[NONCE_SIZE];
     unsigned char serverNonce[NONCE_SIZE];
     char *targetHost = TargetHost;
@@ -5178,12 +5223,15 @@ server(FnArgs_t *argP)
     incrActiveCount(1);
     message(3, 0, "server routine entered");
 
-    /* Validate the client IP address, if required. */
+    /*
+    ** Validate the client IP address, if required. Note that this also
+    ** retrieves the client address information, which we may need later.
+    */
 
     message(3, 0, "validating client IP address");
-    if (!checkPeerAddress(clientFd, &localAddr))
+    if (!checkPeerAddress(clientFd, &peerAddr))
     {
-	message(0, 0, "client connection from %s disallowed", inet_ntoa(localAddr.sin_addr));
+	message(0, 0, "client connection from %s disallowed", inet_ntoa(peerAddr.sin_addr));
 	goto fatal;
     }
 
@@ -5334,7 +5382,9 @@ server(FnArgs_t *argP)
 	    message(3, 0, "opening connection to port %hu on %s", request, targetHost);
 
 	    memset(&localAddr, 0, sizeof(localAddr));
-	    if ((localFd = makeConnection(targetHost, request, udpMode, 0, &localAddr)) == -1)
+	    if ((localFd = makeConnection(targetHost, request, udpMode, 0,
+					  (Transparent ? &peerAddr : NULL),
+					  &localAddr)) == -1)
 	    {
 		port = 0;
 		message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
@@ -5500,7 +5550,9 @@ server(FnArgs_t *argP)
 	message(3, 0, "opening connection to port %hu on %s", request, targetHost);
 
 	memset(&localAddr, 0, sizeof(localAddr));
-	if ((localFd = makeConnection(targetHost, request, udpMode, 0, &localAddr)) == -1)
+	if ((localFd = makeConnection(targetHost, request, udpMode, 0,
+				      (Transparent ? &peerAddr : NULL),
+				      &localAddr)) == -1)
 	{
 	    message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
 	    writeUShort(clientFd, 0);
@@ -6584,6 +6636,7 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "connecttimeout")) setUShort(value, &ConnectTimeout);
     else if (!strcasecmp(key, "target")) setTarget(value);
     else if (!strcasecmp(key, "tunnel")) setTunnel(value);
+    else if (!strcasecmp(key, "transparent")) setBoolean(value, &Transparent);
     else if (!strcasecmp(key, "httpproxy"))
     {
 	setString(value, &ProxyHost);
