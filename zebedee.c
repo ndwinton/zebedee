@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.39 2003-09-18 08:21:07 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.40 2003-09-18 08:28:12 ndwinton Exp $";
 #define RELEASE_STR "2.5.2"
 
 #include <stdio.h>
@@ -2507,7 +2507,7 @@ setNonBlocking(int fd, unsigned long nonBlock)
 #ifdef WIN32
     ioctlsocket(fd, FIONBIO, &nonBlock);
 #else
-    fcntl(fd, F_SETFL, (nonBlock ? O_NONBLOCK | 0));
+    fcntl(fd, F_SETFL, (nonBlock ? O_NONBLOCK : 0));
 #endif
 }
 
