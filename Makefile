@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.13 2002-05-29 17:42:08 ndwinton Exp $
+# $Id: Makefile,v 1.14 2003-02-04 07:34:05 ndwinton Exp $
 
 ZBD_VERSION = 2.4.1
 
@@ -16,7 +16,7 @@ OS =
 
 CC_$(OS) = gcc
 
-CC_win32 = c:/msys/1.0/mingw/bin/gcc
+CC_win32 = gcc -mno-cygwin
 CC_linux = gcc -pthread
 CC_solaris = gcc
 CC_freebsd = gcc -pthread
