@@ -1,9 +1,11 @@
-* Release 2.3.1
+* Release 2.3.1 (2002/03/15)
 
 Changed any potentially unsafe sprintf/vsprintf instances to
 snprintf/vsnprintf. There should never have been a remote exploit possible,
 this just eliminates any theoretical local ones in case someone has a reason
-to run this as root ...
+to run this as root ... (Note that use of these functions may be an issue
+on some platforms although they do appear in the UNIX98 spec and exist
+on Windows).
 
 Allowed CIDR address specifications for target (and server name in listenmode).
 
