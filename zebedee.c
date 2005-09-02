@@ -1,7 +1,7 @@
 /*
 ** This file is part of "zebedee".
 **
-** Copyright 1999-2003 by Neil Winton. All rights reserved.
+** Copyright 1999-2005 by Neil Winton. All rights reserved.
 ** 
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.48 2005-09-02 22:10:41 ndwinton Exp $";
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.49 2005-09-02 22:20:23 ndwinton Exp $";
 #define RELEASE_STR "2.5.3"
 
 #include <stdio.h>
@@ -7876,7 +7876,7 @@ void
 usage(void)
 {
     fprintf(stderr, "Zebedee -- A Secure Tunnel Program: Release %s\n", RELEASE_STR);
-    fprintf(stderr, "Copyright (c) 1999, 2000, 2001, 2002 by Neil Winton. All Rights Reserved.\n");
+    fprintf(stderr, "Copyright (c) 1999-2005 by Neil Winton. All Rights Reserved.\n");
     fprintf(stderr,
 	    "This program is free software and may be distributed under the terms of the\n"
 	    "GNU General Public License, Version 2.\n");
