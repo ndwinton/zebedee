@@ -21,8 +21,8 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.47 2003-10-14 08:09:12 ndwinton Exp $";
-#define RELEASE_STR "2.5.2"
+char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.48 2005-09-02 22:10:41 ndwinton Exp $";
+#define RELEASE_STR "2.5.3"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -521,6 +521,7 @@ gid_t ProcessGID = -1;          /* Group id to run zebedee process if started as
 #endif
 long ThreadStackSize = THREAD_STACK_SIZE; /* As it says */
 unsigned short BugCompatibility = 0;	/* Be nice to development users */
+unsigned short MaxConnections = 0;      /* Maximum number of simultaneous connections */
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -555,7 +556,7 @@ void conditionSignal(int num);
 void conditionWait(int condNum, int mutexNum);
 unsigned long threadPid(void);
 unsigned long threadTid(void);
-void incrActiveCount(int num);
+int incrActiveCount(int num);
 void waitForInactivity(void);
 
 void logToSystemLog(unsigned short level, char *msg);
@@ -871,7 +872,7 @@ threadTid(void)
 ** variable.
 */
 
-void
+int
 incrActiveCount(int num)
 {
     mutexLock(MUTEX_ACTIVE);
@@ -881,6 +882,7 @@ incrActiveCount(int num)
 	conditionSignal(COND_ACTIVE);
     }
     mutexUnlock(MUTEX_ACTIVE);
+    return ActiveCount;
 }
 
 /*
@@ -1417,10 +1419,11 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
     unsigned short flags;
     int num = 0;
     unsigned long uncmpSize = MAX_BUF_SIZE;
+    unsigned int iUncmpSize = MAX_BUF_SIZE;
     SHA_INFO shaExp;
     SHA_INFO shaIn;
-    unsigned long crc32in = 0;
-    unsigned long crc32exp = 0;
+    uint32_t crc32in = 0;
+    uint32_t crc32exp = 0;
     int checksumOk = 0;
 
 
@@ -1480,8 +1483,8 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
     case CHECKSUM_ADLER:
 	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
 	crc32exp = BUGNTOHL(crc32exp);
-	crc32in = (unsigned long)adler32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
-	crc32in = (unsigned long)adler32(crc32in, (unsigned char *)&msg->tmp, size);
+	crc32in = (uint32_t)adler32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
+	crc32in = (uint32_t)adler32(crc32in, (unsigned char *)&msg->tmp, size);
 	checksumOk = (crc32exp == crc32in);
 	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
 	crc32in = BUGHTONL(crc32in);
@@ -1491,8 +1494,8 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
     case CHECKSUM_CRC32:
 	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
 	crc32exp = BUGNTOHL(crc32exp);
-	crc32in = (unsigned long)crc32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
-	crc32in = (unsigned long)crc32(crc32in, (unsigned char *)&msg->tmp, size);
+	crc32in = (uint32_t)crc32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
+	crc32in = (uint32_t)crc32(crc32in, (unsigned char *)&msg->tmp, size);
 	checksumOk = (crc32exp == crc32in);
 	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
 	crc32in = BUGHTONL(crc32in);
@@ -1561,7 +1564,7 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 	case CMPTYPE_BZIP2:
 #ifndef DONT_HAVE_BZIP2
 	    if ((num = BZ2_bzBuffToBuffDecompress((char *)(msg->data),
-						  (unsigned int *)&uncmpSize,
+						  &iUncmpSize,
 						  (char *)(msg->tmp),
 						  (unsigned int)size,
 						  0, 0)) != BZ_OK)
@@ -1570,6 +1573,7 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 		errno = 0;
 		return -1;
 	    }
+	    uncmpSize = (unsigned long)iUncmpSize;
 	    break;
 #else
 	    message(0, 0, "received unsupported bzip2 compressed message -- should never happen!");
@@ -1621,7 +1625,7 @@ writeMessage(int fd, MsgBuf_t *msg)
     unsigned short flags = 0;
     unsigned char *data = msg->data;
     SHA_INFO sha;
-    unsigned long crc;
+    uint32_t crc;
 
 
 
@@ -1681,16 +1685,16 @@ writeMessage(int fd, MsgBuf_t *msg)
 	break;
 
     case CHECKSUM_ADLER:
-	crc = (unsigned long)adler32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
-	crc = BUGHTONL((unsigned long)adler32(crc, data, size));
+	crc = (uint32_t)adler32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
+	crc = BUGHTONL((uint32_t)adler32(crc, data, size));
 	memcpy(data + size, &crc, sizeof(crc));
 	memcpy(&msg->outSeed, &crc, sizeof(crc));
 	message(5, 0, "calculated checksum %#08lx", BUGNTOHL(crc));
 	break;
 
     case CHECKSUM_CRC32:
-	crc = (unsigned long)crc32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
-	crc = BUGHTONL((unsigned long)crc32(crc, data, size));
+	crc = (uint32_t)crc32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
+	crc = BUGHTONL((uint32_t)crc32(crc, data, size));
 	memcpy(data + size, &crc, sizeof(crc));
 	memcpy(&msg->outSeed, &crc, sizeof(crc));
 	message(5, 0, "calculated checksum %#08lx", crc);
@@ -4178,7 +4182,9 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 		    status = -1;
 		    break;
 		}
-		message(5, 0, "sent %d bytes to local socket %d", num, localFd);
+		message(5, 0, "sent %d bytes to %s socket %d", num,
+                        (udpMode ? "reply" : "local"),
+                        (udpMode ? replyFd : localFd));
 		if (DumpData) dumpData(">", msgBuf->data, msgBuf->size);
 	    }
 	    else
@@ -4451,11 +4457,19 @@ makeDetached(void)
     setsid();
 #endif
 
-    /* Close stdio streams because they now have nowhere to go! */
-
+    /*
+    ** Close stdio streams because they now have nowhere to go!
+    ** Note that we would close them on Windows is ... except that
+    ** doing so causes detaching when the server is running in reverse
+    ** mode to fail. This seems to be some interaction between a socket
+    ** connection being made in the same thread that calls makeDetached.
+    ** Bizarre, but that's Windows for you ...
+    */
+#ifndef WIN32
     fclose(stdin);
     fclose(stdout);
     fclose(stderr);
+#endif
 
     /* Set IsDetached to -1 to indicate that we have now detached */
 
@@ -4489,6 +4503,15 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
 
     assert(AllowedTargets != NULL && addrP != NULL && peerAddrP != NULL);
 
+    /*
+    ** Port 0 is invalid data in the request packet, never allowed
+    */
+    if (port == 0)
+    {
+        message(0, 0, "request for target port 0 disallowed");
+        return 0;
+    }
+    
     *hostP = NULL;
     *idFileP = NULL;
 
@@ -4944,7 +4967,7 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
 /*
 ** findHandler
 **
-** Find the socket descriptor for associated with the handler for requests
+** Find the socket descriptor associated with the handler for requests
 ** from the address "fromAddr", if there is one. Returns the socket id
 ** and local "loopback" socket address via localAddrP or -1 if not found.
 */
@@ -5474,9 +5497,15 @@ client(FnArgs_t *argP)
     char ipBuf[IP_BUF_SIZE];
     unsigned short cksumLevel = CHECKSUM_NONE;
     SHA_INFO sha;
+    int active = 0;
+    
 
-
-    incrActiveCount(1);
+    active = incrActiveCount(1);
+    if (MaxConnections > 0 && MaxConnections < active)
+    {
+        message(0, 0, "maximum number of concurrent connections exceeded");
+        goto fatal;
+    }
     message(3, 0, "client routine entered");
 
     /*
@@ -6111,9 +6140,23 @@ serverInitiator(unsigned short *portPtr)
     struct timeval delay;
     fd_set testSet;
     int ready;
-    int firstTime = 1;
     unsigned short tries = ConnectAttempts;
     int forever = (ConnectAttempts == 0);
+
+
+    /*
+    ** Now is the time to detach, if we are going to do so.
+    */
+
+    if (IsDetached)
+    {
+	message(3, 0, "detaching from terminal");
+	makeDetached();
+    }
+
+    /* Change user ID, if required */
+
+    switchUser();
 
 
     while (forever || tries > 0)
@@ -6154,24 +6197,6 @@ serverInitiator(unsigned short *portPtr)
 
 	message(2, 0, "connected to client");
 
-	if (firstTime)
-	{
-	    /*
-	    ** Now is the time to detach, if we are going to do so.
-	    */
-
-	    if (IsDetached)
-	    {
-		message(3, 0, "detaching from terminal");
-		makeDetached();
-	    }
-
-	    /* Change user ID, if required */
-
-	    switchUser();
-
-	    firstTime = 0;
-	}
 
 	/*
 	** Now we will wait until either there is data ready to
@@ -6269,9 +6294,15 @@ server(FnArgs_t *argP)
     char ipBuf[IP_BUF_SIZE];
     unsigned short cksumLevel = CHECKSUM_NONE;
     SHA_INFO sha;
+    int active = 0;
+    
 
-
-    incrActiveCount(1);
+    active = incrActiveCount(1);
+    if (MaxConnections > 0 && MaxConnections < active)
+    {
+        message(0, 0, "maximum number of concurrent connections exceeded");
+        goto fatal;
+    }
     message(3, 0, "server routine entered");
 
     /*
@@ -7791,6 +7822,7 @@ parseConfigLine(const char *lineBuf, int level)
 #endif
     else if (!strcasecmp(key, "threadstacksize")) setStackSize(value);
     else if (!strcasecmp(key, "bugcompatibility")) setUShort(value, &BugCompatibility);
+    else if (!strcasecmp(key, "maxconnections")) setUShort(value, &MaxConnections);
     else
     {
 	return 0;
