@@ -1,9 +1,9 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.23 2003-09-23 12:37:56 ndwinton Exp $
+# $Id: Makefile,v 1.24 2005-09-02 22:10:41 ndwinton Exp $
 
-ZBD_VERSION = 2.5.2
+ZBD_VERSION = 2.5.3
 
 OS = 
 
@@ -18,6 +18,7 @@ CC_$(OS) = gcc
 
 CC_win32 = gcc -mno-cygwin
 CC_linux = gcc -pthread
+CC_linux64 = $(CC_linux) -m64
 CC_solaris = gcc
 CC_freebsd = gcc -pthread
 CC_tru64 = cc
@@ -50,14 +51,14 @@ BFLIB = ../blowfish-0.9.5a/libblowfish.a
 
 # Location of zlib include and library
 
-ZINC = -I../zlib-1.1.4
-ZLIB = ../zlib-1.1.4/libz.a
+ZINC = -I../zlib-1.2.3
+ZLIB = ../zlib-1.2.3/libz.a
 
 # Location of bzlib include and library
 # Set these empty if you don't want bzib2 support
 
-BZINC = -I../bzip2-1.0.1
-BZLIB = ../bzip2-1.0.1/libbz2.a
+BZINC = -I../bzip2-1.0.3
+BZLIB = ../bzip2-1.0.3/libbz2.a
 
 #
 # Tools needed for Perl "POD"-format documentation conversion.
@@ -83,6 +84,7 @@ MANDIR = $(ROOTDIR)/man/man1
 INSTALL_$(OS) = install -c
 
 INSTALL_linux = install -c
+INSTALL_linux64 = $(INSTALL_linux)
 INSTALL_solaris = /usr/ucb/install -c
 INSTALL_freebsd = install -c
 INSTALL_tru64 = installbsd -c
@@ -143,6 +145,7 @@ ISCOMP = "c:/Program Files/Inno Setup 4/compil32.exe"
 
 DEFINES_win32 = -DFD_SETSIZE=512
 DEFINES_linux = -DHAVE_PTHREADS
+DEFINES_linux64 = $(DEFINES_linux)
 DEFINES_solaris = -D_REENTRANT -DHAVE_PTHREADS
 DEFINES_freebsd = -DHAVE_PTHREADS -DBUGGY_FORK_WITH_THREADS
 DEFINES_tru64 = -D_REENTRANT -DHAVE_PTHREADS
@@ -161,6 +164,7 @@ EXE = $(EXE_$(OS))
 
 OSLIBS_win32 = -lwsock32 -lwinmm
 OSLIBS_linux = -lpthread
+OSLIBS_linux64 = $(OSLIBS_linux)
 OSLIBS_solaris = -lsocket -lnsl -lthread
 OSLIBS_freebsd =
 OSLIBS_tru64 = -lpthread
@@ -199,7 +203,7 @@ EXTRAFILES = $(ZBDFILES) $(TXTFILES)
 all : precheck zebedee$(EXE) zebedee.1 zebedee.html ftpgw.tcl.1 ftpgw.tcl.html zebedee.ja_JP.html
 
 precheck :
-	@ if test -z "$(OS)"; then echo "Use '$(MAKE) OS=xxx' where xxx is win32, linux, solaris, freebsd, tru64, irix, hpux, macosx or bsdi"; exit 1; fi
+	@ if test -z "$(OS)"; then echo "Use '$(MAKE) OS=xxx' where xxx is win32, linux, linux64, solaris, freebsd, tru64, irix, hpux, macosx or bsdi"; exit 1; fi
 
 zebedee$(EXE) : $(OBJS)
 	$(CC) $(CFLAGS) -o zebedee$(EXE) $(OBJS) $(LIBS)

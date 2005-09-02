@@ -53,7 +53,7 @@ example, B<telnet>, B<ftp> and B<X> sessions to be protected from snooping.
 You can also use compression, either with or without data encryption, to gain
 performance over low-bandwidth networks.
 
-This document describes the features of B<Zebedee> as at release 2.5.0. For
+This document describes the features of B<Zebedee> as at release 2.5.3. For
 details of the new features in this release see L<CHANGES|/changes>.
 
 The main goals for B<Zebedee> are to:
@@ -1196,6 +1196,12 @@ size will be fragmented, which will likely cause whatever application is
 consuming them to fail. Datagrams larger than 16383 bytes can not be handled
 at all.
 
+=item B<maxconnections>
+
+This specifies that maximum number of concurrent connections (tunnels) that
+the B<Zebedee> instance will handle.
+
+The default value is zero, which means that no limit is applied.
 =item B<message>
 
 The specifies a string that will be logged at verbosity level 1 when it is
@@ -1591,6 +1597,7 @@ brief description.
  lockprotocol   boolean        CS  Allow only current default protocol
  logfile        filename  -o   CS  Set the output log file
  maxbufsize     bytes          CS  Specify buffer size for data reads
+ maxconnections num            CS  Specify maximum number of active connections
  message        string         CS  Output the specified string
  minchecksumlevel
                 level          CS  Acceptable minimum checksum level
@@ -2251,6 +2258,9 @@ B<L<serverconnecttimeout|/item_serverconnecttimeout>>
 and B<L<targetconnecttimeout|/item_targetconnecttimeout>> keywords have been
 added to significantly improve the "reverse-mode" operation.
 
+Add B<L<maxconnections|item_maxconnections>> to alleviate potential
+denial of service attacks.
+
 =head1 CREDITS AND LEGALITIES
 
 The following information can also be found in the file F<LICENCE.txt> in the
@@ -2508,4 +2518,4 @@ California, Berkeley and its contributors.
 Special thanks go to those people who have taken the trouble to give me
 feedback and suggestions for improvement!
 
- $Id: zebedee.pod,v 1.30 2003-09-23 12:35:13 ndwinton Exp $
+ $Id: zebedee.pod,v 1.31 2005-09-02 22:10:41 ndwinton Exp $

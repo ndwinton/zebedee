@@ -2,6 +2,18 @@
 
 Fix file descriptor leak when IP address lookup fails.
 
+Fix problem with running a server in "reverse" mode and detached -- only
+apparent on Windows.
+
+Add "maxconnections" to alleviate DoS attack.
+
+Check for target port 0 to avoid DoS.
+
+Linux 64-bit port (a result of the "Linux on POWER" contest) courtesy of
+Stew Benedict <stewb@linuxcontrol.net>. Use the "linux64" OS target.
+
+Upgraded version of bzip2 and zlib.
+
 * Release 2.5.2
 
 Cross-platform fix for checksumming code. This is *incompatible* with version
