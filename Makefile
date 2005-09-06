@@ -1,7 +1,7 @@
 #
 # Makefile for Zebedee
 #
-# $Id: Makefile,v 1.24 2005-09-02 22:10:41 ndwinton Exp $
+# $Id: Makefile,v 1.25 2005-09-06 05:59:53 ndwinton Exp $
 
 ZBD_VERSION = 2.5.3
 
@@ -251,6 +251,6 @@ clean :
 
 zbdsetup.exe : zebedee$(EXE) zebedee.html zebedee.ico vncloopback.reg \
 		$(ZBDFILES) $(TXTFILES)
-	$(PERL) -ni.bak -e print $(ZBDFILES) $(TXTFILES) vncloopback.reg
+	$(PERL_win32) -ni.bak -e print $(ZBDFILES) $(TXTFILES) vncloopback.reg
 	$(ISCOMP) /cc zebedee.iss
 	mv -f Output/setup.exe zbdsetup.exe
