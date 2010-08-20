@@ -214,7 +214,11 @@ pthread_attr_t ThreadAttr;
 #define	CMP_OVERHEAD	250	/* Maximum overhead on 16k message */
 #define	CMP_MINIMUM	32	/* Minimum message size to attempt compression */
 
+#if defined(USE_IPv6)
+#define IP_BUF_SIZE	INET6_ADDRSTRLEN	/* Size of buffer for IP address string */
+#else
 #define IP_BUF_SIZE	16	/* Size of buffer for IP address string */
+#endif
 
 /*
 ** Information about the compression algorithm and level is encoded in
@@ -313,6 +317,18 @@ pthread_attr_t ThreadAttr;
 \***************************/
 
 /*
+** This puts different kinds of IP addresses in one place.
+** Here we can put IPv4 and IPv6 addresses.
+*/
+typedef union sockaddr_union {
+    struct sockaddr sa;
+    struct sockaddr_in in;
+#if defined(USE_IPV6)
+    struct sockaddr_in6 in6;
+#endif
+} SOCKADDR_UNION;
+
+/*
 ** The BFState_t structure holds all the state information necessary
 ** to encrypt one data-stream (unidirectional).
 */
@@ -347,7 +363,7 @@ typedef struct EndPtList_s
     unsigned short lo;
     unsigned short hi;
     char *host;
-    struct sockaddr_in addr;
+    SOCKADDR_UNION addr;
     struct in_addr *addrList;
     struct EndPtList_s *next;
     unsigned long mask;
@@ -424,7 +440,7 @@ typedef struct FnArgs_s
 {
     int fd;
     unsigned short port;
-    struct sockaddr_in addr;
+    SOCKADDR_UNION addr;
     int listenFd;
     int inLine;
     int udpMode;
@@ -440,8 +456,8 @@ typedef struct HndInfo_s
 {
     unsigned long id;
     int fd;
-    struct sockaddr_in fromAddr;
-    struct sockaddr_in localAddr;
+    SOCKADDR_UNION fromAddr;
+    SOCKADDR_UNION localAddr;
     struct HndInfo_s *prev;
     struct HndInfo_s *next;
 }
@@ -579,11 +595,11 @@ int writeMessage(int fd, MsgBuf_t *msg);
 
 int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 
-int getHostAddress(const char *host, struct sockaddr_in *addrP, struct in_addr **addrList, unsigned long *maskP);
+int getHostAddress(const char *host, SOCKADDR_UNION *addrP, struct in_addr **addrList, unsigned long *maskP);
 char *ipString(struct in_addr addr, char *buf);
-int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP, unsigned short timeout);
-int proxyConnection(const char *host, const unsigned short port, struct sockaddr_in *localAddrP, unsigned short timeout);
-int sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP);
+int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, SOCKADDR_UNION *fromAddrP, SOCKADDR_UNION *toAddrP, unsigned short timeout);
+int proxyConnection(const char *host, const unsigned short port, SOCKADDR_UNION *localAddrP, unsigned short timeout);
+int sendSpoofed(int fd, char *buf, int len, SOCKADDR_UNION *toAddrP, SOCKADDR_UNION *fromAddrP);
 int makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue);
 void setNoLinger(int fd);
 void setKeepAlive(int fd);
@@ -597,8 +613,8 @@ unsigned short headerGetUShort(unsigned char *hdrBuf, int offset);
 unsigned long headerGetULong(unsigned char *hdrBuf, int offset);
 
 BFState_t *setupBlowfish(char *keyStr, unsigned short keyBits);
-char *generateKey(struct sockaddr_in *peerAddrP, struct sockaddr_in *targetAddrP, unsigned short targetPort);
-char *runKeyGenCommand(char *keyGenCmd, struct sockaddr_in *peerAddrP, struct sockaddr_in *targetAddrP, unsigned short targetPort);
+char *generateKey(SOCKADDR_UNION *peerAddrP, SOCKADDR_UNION *targetAddrP, unsigned short targetPort);
+char *runKeyGenCommand(char *keyGenCmd, SOCKADDR_UNION *peerAddrP, SOCKADDR_UNION *targetAddrP, unsigned short targetPort);
 void generateNonce(unsigned char *);
 char *generateSessionKey(char *secretKey, unsigned char *cNonce, unsigned char *sNonce, unsigned short bits);
 unsigned short hexStrToBits(char *hexStr, unsigned short bits, unsigned char *bitVec);
@@ -609,14 +625,14 @@ int clientPerformChallenge(int serverFd, MsgBuf_t *msg);
 int serverPerformChallenge(int clientFd, MsgBuf_t *msg);
 
 void freeKeyInfo(KeyInfo_t *info);
-char *findKeyByToken(KeyInfo_t *list, unsigned long token, struct sockaddr_in *peerAddrP, struct sockaddr_in *targetAddrP, unsigned short targetPort);
+char *findKeyByToken(KeyInfo_t *list, unsigned long token, SOCKADDR_UNION *peerAddrP, SOCKADDR_UNION *targetAddrP, unsigned short targetPort);
 void addKeyInfoToList(KeyInfo_t *list, unsigned long token, char *key);
 unsigned long generateToken(KeyInfo_t *list, unsigned long oldToken);
 unsigned long getCurrentToken(void);
 
 int spawnCommand(unsigned short port, char *cmdFormat);
 int filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
-	       struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP,
+	       SOCKADDR_UNION *toAddrP, SOCKADDR_UNION *fromAddrP,
 	       int replyFd, int udpMode);
 
 void hashStrings(char *hashBuf, ...);
@@ -624,10 +640,10 @@ void hashFile(char *hashBuf, char *fileName);
 int checkIdentity(char *idFile, char *generator, char *modulus, char *key);
 char *generateIdentity(char *generator, char *modulus, char *exponent);
 
-unsigned long spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd, int inLine, struct sockaddr_in *addrP, int udpMode);
-int findHandler(struct sockaddr_in *fromAddrP, struct sockaddr_in *localAddrP);
-void addHandler(struct sockaddr_in *fromAddrP, unsigned long id, int fd, struct sockaddr_in *localAddrP);
-void removeHandler(struct sockaddr_in *addrP);
+unsigned long spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd, int inLine, SOCKADDR_UNION *addrP, int udpMode);
+int findHandler(SOCKADDR_UNION *fromAddrP, SOCKADDR_UNION *localAddrP);
+void addHandler(SOCKADDR_UNION *fromAddrP, unsigned long id, int fd, SOCKADDR_UNION *localAddrP);
+void removeHandler(SOCKADDR_UNION *addrP);
 
 void clientListener(EndPtList_t *localPorts);
 int makeClientListeners(EndPtList_t *ports, fd_set *listenSetP, int udpMode);
@@ -636,11 +652,11 @@ void prepareToDetach(void);
 void makeDetached(void);
 void serverListener(unsigned short *portPtr);
 void serverInitiator(unsigned short *portPtr);
-int allowRedirect(unsigned short port, struct sockaddr_in *addrP, struct sockaddr_in *peerAddrP, int udpMode, char **hostP, char **idFileP);
-int checkPeerForSocket(int fd, struct sockaddr_in *addrP);
-int checkPeerAddress(struct sockaddr_in *addrP, EndPtList_t *peerList);
+int allowRedirect(unsigned short port, SOCKADDR_UNION *addrP, SOCKADDR_UNION *peerAddrP, int udpMode, char **hostP, char **idFileP);
+int checkPeerForSocket(int fd, SOCKADDR_UNION *addrP);
+int checkPeerAddress(SOCKADDR_UNION *addrP, EndPtList_t *peerList);
 int countPorts(EndPtList_t *list);
-unsigned short mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP);
+unsigned short mapPort(unsigned short localPort, char **hostP, SOCKADDR_UNION *addrP);
 void server(FnArgs_t *argP);
 
 unsigned short scanPortRange(const char *str, unsigned short *loP,
@@ -1805,7 +1821,8 @@ requestResponse(int fd, unsigned short request, unsigned short *responseP)
 
 int
 getHostAddress(const char *host,
-	       struct sockaddr_in *addrP,
+	       SOCKADDR_UNION *addrP,
+// TODO use SOCKADDR_UNION for addrList
 	       struct in_addr **addrList,
 	       unsigned long *maskP)
 {
@@ -1846,7 +1863,7 @@ getHostAddress(const char *host,
     ** an unnecessary name-service lookup.
     */
 
-    if ((addrP->sin_addr.s_addr = inet_addr(host)) == INADDR_NONE)
+    if ((addrP->in.sin_addr.s_addr = inet_addr(host)) == INADDR_NONE)
     {
 	if ((entry = gethostbyname(host)) == NULL)
 	{
@@ -1855,7 +1872,7 @@ getHostAddress(const char *host,
 	}
 	else
 	{
-	    memcpy(&(addrP->sin_addr), entry->h_addr, entry->h_length);
+	    memcpy(&(addrP->in.sin_addr), entry->h_addr, entry->h_length);
 	}
     }
 
@@ -1886,7 +1903,7 @@ getHostAddress(const char *host,
 	else
 	{
 	    *addrList = (struct in_addr *)calloc(2, sizeof(struct in_addr));
-	    memcpy(&((*addrList)[0]), &(addrP->sin_addr), sizeof(struct in_addr));
+	    memcpy(&((*addrList)[0]), &(addrP->in.sin_addr), sizeof(struct in_addr));
 	    memset(&((*addrList)[1]), 0xff, sizeof(struct in_addr));
 	}
     }
@@ -1908,6 +1925,7 @@ getHostAddress(const char *host,
 ** reentrant version of inet_ntoa.
 */
 
+// TODO use SOCKADDR_UNION
 char *
 ipString(struct in_addr addr, char *buf)
 {
@@ -1941,11 +1959,11 @@ ipString(struct in_addr addr, char *buf)
 int
 makeConnection(const char *host, const unsigned short port,
 	       int udpMode, int useProxy,
-	       struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP,
+	       SOCKADDR_UNION *fromAddrP, SOCKADDR_UNION *toAddrP,
 	       unsigned short timeout)
 {
     int sfd = -1;
-    struct sockaddr_in addr;
+    SOCKADDR_UNION addr;
     fd_set testSet;
     struct timeval delay;
     int ready = -1;
@@ -1993,7 +2011,7 @@ makeConnection(const char *host, const unsigned short port,
     */
 #error "Time to implement transparent proxy using setsockopt(fd, SOL_TCP, TCP_TPROXY_SRCADDR, ...) now!"
 #else
-    if (fromAddrP && fromAddrP->sin_addr.s_addr)
+    if (fromAddrP && fromAddrP->in.sin_addr.s_addr)
     {
 #ifdef USE_UDP_SPOOFING
 	closesocket(sfd);
@@ -2005,8 +2023,9 @@ makeConnection(const char *host, const unsigned short port,
 	}
 #else
 	memset(&addr, 0, sizeof(addr));
-	addr.sin_addr.s_addr = fromAddrP->sin_addr.s_addr;
-	if (bind(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+	addr.in.sin_addr.s_addr = fromAddrP->in.sin_addr.s_addr;
+// TODO not sure if sizeof(addr) or sizeof(addr.in) is correct
+	if (bind(sfd, &addr.sa, sizeof(addr)) < 0)
 	{
 	    message(1, errno, "WARNING: failed to set connection source address -- ignored");
 	}
@@ -2023,8 +2042,8 @@ makeConnection(const char *host, const unsigned short port,
 	closesocket(sfd);
 	return -1;
     }
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
+    addr.in.sin_family = AF_INET;
+    addr.in.sin_port = htons(port);
 
     if (!udpMode)
     {
@@ -2040,7 +2059,8 @@ makeConnection(const char *host, const unsigned short port,
 
 	if (timeout == 0)
 	{
-	    if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+// TODO not sure if sizeof(addr) or sizeof(addr.in) is correct
+	    if (connect(sfd, &addr.sa, sizeof(addr)) < 0)
 	    {
 		closesocket(sfd);
 		return -1;
@@ -2058,7 +2078,8 @@ makeConnection(const char *host, const unsigned short port,
 	    ** EWOULDBLOCK or EINPROGRESS. EINTR is also possible
 	    */
 
-	    connect(sfd, (struct sockaddr *)&addr, sizeof(addr));
+// TODO not sure if sizeof(addr) or sizeof(addr.in) is correct
+	    connect(sfd, &addr.sa, sizeof(addr));
 	    if (errno != 0 && errno != EWOULDBLOCK
 		&& errno != EINPROGRESS && errno != EINTR)
 	    {
@@ -2221,7 +2242,7 @@ base64Encode(char *str)
 
 int
 proxyConnection(const char *host, const unsigned short port,
-		struct sockaddr_in *toAddrP, unsigned short timeout)
+		SOCKADDR_UNION *toAddrP, unsigned short timeout)
 {
     int fd = -1;
     char buf[MAX_LINE_SIZE + 1];
@@ -2321,7 +2342,7 @@ proxyConnection(const char *host, const unsigned short port,
 */
 
 int
-sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP)
+sendSpoofed(int fd, char *buf, int len, SOCKADDR_UNION *toAddrP, SOCKADDR_UNION *fromAddrP)
 {
 #ifdef USE_UDP_SPOOFING
     u_char *packet = NULL;
@@ -2346,16 +2367,16 @@ sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sock
 		    0,			/* Frag */
 		    64,			/* TTL */
 		    IPPROTO_UDP,	/* Transport protocol */
-		    fromAddrP->sin_addr.s_addr,	/* Source address */
-		    toAddrP->sin_addr.s_addr,	/* Destination address */
+		    fromAddrP->in.sin_addr.s_addr,	/* Source address */
+		    toAddrP->in.sin_addr.s_addr,	/* Destination address */
 		    NULL,		/* Pointer to payload */
 		    0,			/* Size */
 		    packet);		/* Packet buffer */
 
     /* Add UDP packet header and payload */
 
-    libnet_build_udp(ntohs(fromAddrP->sin_port),    /* Source port */
-		     ntohs(toAddrP->sin_port),	    /* Dest port */
+    libnet_build_udp(ntohs(fromAddrP->in.sin_port),    /* Source port */
+		     ntohs(toAddrP->in.sin_port),	    /* Dest port */
 		     buf,		/* Payload */
 		     len,		/* Payload size */
 		     packet + LIBNET_IP_H);
@@ -2402,7 +2423,7 @@ int
 makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue)
 {
     int sfd = -1;
-    struct sockaddr_in addr;
+    SOCKADDR_UNION addr;
     int addrLen = sizeof(addr);
     int trueVal = 1;
     char ipBuf[IP_BUF_SIZE];
@@ -2410,6 +2431,7 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 
     /* Create the socket */
 
+// TODO use AF_INET6 (move host DNS lookup from below before socke())
     if ((sfd = socket(AF_INET, (udpMode ? SOCK_DGRAM: SOCK_STREAM), 0)) < 0)
     {
 	message(0, errno, "can't create listener socket");
@@ -2427,7 +2449,7 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
     }
 
     memset(&addr, 0, sizeof(addr));
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.in.sin_addr.s_addr = htonl(INADDR_ANY);
     if (listenIp != NULL)
     {
 	if (!getHostAddress(listenIp, &addr, NULL, NULL))
@@ -2435,11 +2457,12 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 	    message(0, 0, "can't resolve listen address '%s'", listenIp);
 	}
     }
-    addr.sin_family = AF_INET;
-    addr.sin_port = (portP ? htons(*portP) : 0);
-    message(5, 0, "listening on %s", ipString(addr.sin_addr, ipBuf));
+    addr.in.sin_family = AF_INET;
+    addr.in.sin_port = (portP ? htons(*portP) : 0);
+    message(5, 0, "listening on %s", ipString(addr.in.sin_addr, ipBuf));
 
-    if (bind(sfd, (struct sockaddr *)&addr, addrLen) < 0)
+// TODO not sure if addrLen must be adapted in case USE_IPv6 is defined and we have a IPv4 address
+    if (bind(sfd, &addr.sa, addrLen) < 0)
     {
 	message(0, errno, "listener bind failed");
 	goto failure;
@@ -2459,12 +2482,12 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 	/* Retrieve the port actually being used to return via portP */
 
 	memset(&addr, 0, sizeof(addr));
-	if (getsockname(sfd, (struct sockaddr *)&addr, &addrLen))
+	if (getsockname(sfd, &addr.sa, &addrLen))
 	{
 	    message(0, errno, "can't get local port number");
 	    goto failure;
 	}
-	*portP = ntohs(addr.sin_port);
+	*portP = ntohs(addr.in.sin_port);
     }
 
     return sfd;
@@ -2552,13 +2575,14 @@ int
 acceptConnection(int listenFd, const char *host,
 		 int loop, unsigned short timeout)
 {
-    struct sockaddr_in fromAddr;
-    struct sockaddr_in hostAddr;
+    SOCKADDR_UNION fromAddr;
+    SOCKADDR_UNION hostAddr;
     int addrLen;
     int serverFd = -1;
     struct timeval delay;
     fd_set testSet;
     int ready;
+// TODO use SOCKADDR_UNION
     struct in_addr *addrList = NULL;
     struct in_addr *addrPtr = NULL;
     unsigned long mask = 0xffffffff;
@@ -2569,7 +2593,7 @@ acceptConnection(int listenFd, const char *host,
     if (strcmp(host, "*") == 0)
     {
 	mask = 0;
-	hostAddr.sin_addr.s_addr = 0;
+	hostAddr.in.sin_addr.s_addr = 0;
     }
     else
     {
@@ -2617,10 +2641,10 @@ acceptConnection(int listenFd, const char *host,
 
 	/* Attempt to accept the connection */
 
-	addrLen = sizeof(struct sockaddr_in);
+	addrLen = sizeof(SOCKADDR_UNION);
 	memset(&fromAddr, 0, sizeof(fromAddr));
 	if ((serverFd = accept(listenFd,
-			       (struct sockaddr *)&fromAddr,
+			       &fromAddr.sa,
 			       &addrLen)) < 0)
 	{
 	    /* This is always an error, looping or not */
@@ -2652,8 +2676,8 @@ acceptConnection(int listenFd, const char *host,
 	** server host name (applying a network mask as appropriate).
 	*/
 
-	if ((fromAddr.sin_addr.s_addr & mask) ==
-	    (hostAddr.sin_addr.s_addr & mask))
+	if ((fromAddr.in.sin_addr.s_addr & mask) ==
+	    (hostAddr.in.sin_addr.s_addr & mask))
 	{
 	    /* We've got a straight match */
 	    break;
@@ -2664,7 +2688,7 @@ acceptConnection(int listenFd, const char *host,
 
 	    for (addrPtr = addrList; addrPtr->s_addr != 0xffffffff; addrPtr++)
 	    {
-		if ((fromAddr.sin_addr.s_addr & mask) ==
+		if ((fromAddr.in.sin_addr.s_addr & mask) ==
 		    (addrPtr->s_addr & mask))
 		{
 		    break;
@@ -2679,7 +2703,7 @@ acceptConnection(int listenFd, const char *host,
 	}
 
 	message(1, 0, "Warning: connection from %s rejected, does not match server host %s",
-		ipString(fromAddr.sin_addr, ipBuf), host);
+		ipString(fromAddr.in.sin_addr, ipBuf), host);
 	closesocket(serverFd);
 	errno = 0;
 	if (!loop)
@@ -2695,7 +2719,7 @@ acceptConnection(int listenFd, const char *host,
 	free(addrList);
     }
 
-    message(3, 0, "accepted connection from %s", ipString(fromAddr.sin_addr, ipBuf));
+    message(3, 0, "accepted connection from %s", ipString(fromAddr.in.sin_addr, ipBuf));
 
     /*
     ** Set the "don't linger on close" and "keep alive" options. The latter
@@ -2725,13 +2749,13 @@ socketIsUsable(int sock)
     fd_set testSet;
     struct timeval delay;
     unsigned char buf[1];
-    struct sockaddr_in addr;
+    SOCKADDR_UNION addr;
     int addrLen = sizeof(addr);
 
 
     /* Get the peer name -- will fail if never connected */
 
-    if (getpeername(sock, (struct sockaddr *)&addr, &addrLen))
+    if (getpeername(sock, &addr.sa, &addrLen))
     {
 	message(4, errno, "socket %d has no peer address", sock);
 	return 0;
@@ -2926,8 +2950,8 @@ setupBlowfish(char *keyStr, unsigned short keyBits)
 */
 
 char *
-generateKey(struct sockaddr_in *peerAddrP,
-	    struct sockaddr_in *targetAddrP,
+generateKey(SOCKADDR_UNION *peerAddrP,
+	    SOCKADDR_UNION *targetAddrP,
 	    unsigned short targetPort)
 {
     SHA_INFO sha;
@@ -3225,8 +3249,8 @@ generateKey(struct sockaddr_in *peerAddrP,
 
 char *
 runKeyGenCommand(char *keyGenCmd,
-		 struct sockaddr_in *peerAddrP,
-		 struct sockaddr_in *targetAddrP,
+		 SOCKADDR_UNION *peerAddrP,
+		 SOCKADDR_UNION *targetAddrP,
 		 unsigned short targetPort)
 {
     FILE *fp;
@@ -3250,8 +3274,8 @@ runKeyGenCommand(char *keyGenCmd,
 	len > 0 && keyGenCmd[len - 1] == '+' &&
 	len < (MAX_LINE_SIZE - 40))
     {
-	ipString(peerAddrP->sin_addr, ip1);
-	ipString(targetAddrP->sin_addr, ip2);
+	ipString(peerAddrP->in.sin_addr, ip1);
+	ipString(targetAddrP->in.sin_addr, ip2);
 	sprintf(buf, "%.*s %s %s %hu", len - 1, keyGenCmd, ip1, ip2, targetPort);
     }
     else
@@ -3759,8 +3783,8 @@ freeKeyInfo(KeyInfo_t *info)
 char *
 findKeyByToken(KeyInfo_t *list,
 	       unsigned long token,
-	       struct sockaddr_in *peerAddrP,
-	       struct sockaddr_in *targetAddrP,
+	       SOCKADDR_UNION *peerAddrP,
+	       SOCKADDR_UNION *targetAddrP,
 	       unsigned short targetPort)
 {
     KeyInfo_t *ptr = NULL;
@@ -4070,7 +4094,7 @@ spawnCommand(unsigned short port, char *cmdFormat)
 
 int
 filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
-	   struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP,
+	   SOCKADDR_UNION *toAddrP, SOCKADDR_UNION *fromAddrP,
 	   int replyFd, int udpMode)
 {
     fd_set testSet;
@@ -4168,8 +4192,8 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 #endif
 		    {
 			num = sendto(replyFd, (char *)(msgBuf->data), msgBuf->size,
-				     0, (struct sockaddr *)toAddrP,
-				     sizeof(struct sockaddr_in));
+				     0, &toAddrP->sa,
+				     sizeof(toAddrP->in));
 		    }
 		}
 		else
@@ -4491,8 +4515,8 @@ makeDetached(void)
 */
 
 int
-allowRedirect(unsigned short port, struct sockaddr_in *addrP,
-	      struct sockaddr_in *peerAddrP, int udpMode,
+allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
+	      SOCKADDR_UNION *peerAddrP, int udpMode,
 	      char **hostP, char **idFileP)
 {
     EndPtList_t *lp1, *lp2;
@@ -4520,7 +4544,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
     ** host, if any.
     */
 
-    if (addrP->sin_addr.s_addr == 0x00000000)
+    if (addrP->in.sin_addr.s_addr == 0x00000000)
     {
 	if (!getHostAddress(TargetHost, addrP, NULL, NULL))
 	{
@@ -4534,7 +4558,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
     ** It must be available before this check can be made!
     */
 
-    if (peerAddrP->sin_addr.s_addr == 0x00000000)
+    if (peerAddrP->in.sin_addr.s_addr == 0x00000000)
     {
 	message(0, 0, "client peer address not available");
 	return 0;
@@ -4547,7 +4571,7 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
 	message(0, errno, "out of memory allocating hostname");
 	return 0;
     }
-    *hostP = ipString(addrP->sin_addr, ipName);
+    *hostP = ipString(addrP->in.sin_addr, ipName);
 
     /*
     ** Search the AllowedTargets list to determine whether the port lies
@@ -4558,13 +4582,13 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
     {
 	mask = lp1->mask;
 
-	if ((addrP->sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
+	if ((addrP->in.sin_addr.s_addr & mask) != (lp1->addr.in.sin_addr.s_addr & mask))
 	{
 	    /* Did not match primary address, check aliases */
 
 	    for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
 	    {
-		if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
+		if ((addrP->in.sin_addr.s_addr & mask) == (alp->s_addr & mask))
 		{
 		    /* Found a matching address in the aliases */
 		
@@ -4650,10 +4674,10 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
 */
 
 int
-checkPeerForSocket(int fd, struct sockaddr_in *addrP)
+checkPeerForSocket(int fd, SOCKADDR_UNION *addrP)
 {
-    struct sockaddr_in addr;
-    int addrLen = sizeof(struct sockaddr_in);
+    SOCKADDR_UNION addr;
+    int addrLen = sizeof(SOCKADDR_UNION);
     char ipBuf[IP_BUF_SIZE];
 
 
@@ -4666,12 +4690,12 @@ checkPeerForSocket(int fd, struct sockaddr_in *addrP)
 
     if (addrP == NULL) addrP = &addr;
 
-    if (getpeername(fd, (struct sockaddr *)addrP, &addrLen))
+    if (getpeername(fd, &addrP->sa, &addrLen))
     {
 	message(0, errno, "can't get peer address for socket");
 	return 0;
     }
-    message(4, 0, "peer address from connection is %s", ipString(addrP->sin_addr, ipBuf));
+    message(4, 0, "peer address from connection is %s", ipString(addrP->in.sin_addr, ipBuf));
 
     /* Now check against the global peer list */
 
@@ -4684,10 +4708,11 @@ checkPeerForSocket(int fd, struct sockaddr_in *addrP)
 */
 
 int
-checkPeerAddress(struct sockaddr_in *addrP, EndPtList_t *peerList)
+checkPeerAddress(SOCKADDR_UNION *addrP, EndPtList_t *peerList)
 {
     unsigned short port = 0;
     EndPtList_t *lp1 = NULL;
+// TODO use something useful for IPv6
     struct in_addr *alp = NULL;
     unsigned long mask = 0xffffffff;
 
@@ -4697,19 +4722,19 @@ checkPeerAddress(struct sockaddr_in *addrP, EndPtList_t *peerList)
 
     /* Otherwise, search for a match ... */
 
-    port = ntohs(addrP->sin_port);
+    port = ntohs(addrP->in.sin_port);
 
     for (lp1 = peerList; lp1; lp1 = lp1->next)
     {
 	mask = lp1->mask;
 
-	if ((addrP->sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
+	if ((addrP->in.sin_addr.s_addr & mask) != (lp1->addr.in.sin_addr.s_addr & mask))
 	{
 	    /* Did not match primary address, check aliases */
 
 	    for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
 	    {
-		if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
+		if ((addrP->in.sin_addr.s_addr & mask) == (alp->s_addr & mask))
 		{
 		    /* Found a matching address in the aliases */
 
@@ -4778,7 +4803,7 @@ countPorts(EndPtList_t *list)
 */
 
 unsigned short
-mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP)
+mapPort(unsigned short localPort, char **hostP, SOCKADDR_UNION *addrP)
 {
     EndPtList_t *localPtr = ClientPorts;
     EndPtList_t *remotePtr = TargetPorts;
@@ -4814,7 +4839,7 @@ mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP)
 	{
 	    if (addrP)
 	    {
-		addrP->sin_addr.s_addr = remotePtr->addr.sin_addr.s_addr;
+		addrP->in.sin_addr.s_addr = remotePtr->addr.in.sin_addr.s_addr;
 	    }
 	    if (hostP)
 	    {
@@ -4853,10 +4878,10 @@ mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP)
 
 unsigned long
 spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
-	     int inLine, struct sockaddr_in *addrP, int udpMode)
+	     int inLine, SOCKADDR_UNION *addrP, int udpMode)
 {
     FnArgs_t *argP = NULL;
-    struct sockaddr_in localAddr;
+    SOCKADDR_UNION localAddr;
     int addrLen = sizeof(localAddr);
 
 
@@ -4868,7 +4893,7 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
     argP->fd = clientFd;
     if (addrP)
     {
-	memcpy(&(argP->addr), addrP, sizeof(struct sockaddr_in));
+	memcpy(&(argP->addr), addrP, sizeof(SOCKADDR_UNION));
     }
 
     /*
@@ -4881,12 +4906,12 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
     {
 	addrLen = sizeof(localAddr);
 	memset(&localAddr, 0, sizeof(localAddr));
-	if (getsockname(listenFd, (struct sockaddr *)&localAddr, &addrLen))
+	if (getsockname(listenFd, &localAddr.sa, &addrLen))
 	{
 	    message(0, errno, "can't get local port number");
 	    return 0;
 	}
-	argP->port = ntohs(localAddr.sin_port);
+	argP->port = ntohs(localAddr.in.sin_port);
     }
 
     argP->udpMode = udpMode;
@@ -4973,7 +4998,7 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
 */
 
 int
-findHandler(struct sockaddr_in *fromAddrP, struct sockaddr_in *localAddrP)
+findHandler(SOCKADDR_UNION *fromAddrP, SOCKADDR_UNION *localAddrP)
 {
     HndInfo_t *ptr = NULL;
     HndInfo_t *tmp = NULL;
@@ -4981,7 +5006,7 @@ findHandler(struct sockaddr_in *fromAddrP, struct sockaddr_in *localAddrP)
     char ipBuf[IP_BUF_SIZE];
 
 
-    message(5, 0, "searching for handler for address %s:%hu", ipString(fromAddrP->sin_addr, ipBuf), ntohs(fromAddrP->sin_port));
+    message(5, 0, "searching for handler for address %s:%hu", ipString(fromAddrP->in.sin_addr, ipBuf), ntohs(fromAddrP->in.sin_port));
 
     mutexLock(MUTEX_HNDLIST);
 
@@ -5009,12 +5034,12 @@ findHandler(struct sockaddr_in *fromAddrP, struct sockaddr_in *localAddrP)
 	    continue;
 	}
 #endif
-	if (ptr->fromAddr.sin_port == fromAddrP->sin_port &&
-	    ptr->fromAddr.sin_addr.s_addr == fromAddrP->sin_addr.s_addr)
+	if (ptr->fromAddr.in.sin_port == fromAddrP->in.sin_port &&
+	    ptr->fromAddr.in.sin_addr.s_addr == fromAddrP->in.sin_addr.s_addr)
 	{
 	    message(5, 0, "found handler, id = %lu, socket = %d", ptr->id, ptr->fd);
 	    found = ptr->fd;
-	    memcpy(localAddrP, &(ptr->localAddr), sizeof(struct sockaddr_in));
+	    memcpy(localAddrP, &(ptr->localAddr), sizeof(SOCKADDR_UNION));
 	}
 
 	tmp = ptr; /* Shut the compiler up by using tmp! */
@@ -5036,7 +5061,7 @@ findHandler(struct sockaddr_in *fromAddrP, struct sockaddr_in *localAddrP)
 */
 
 void
-addHandler(struct sockaddr_in *fromAddrP, unsigned long id, int fd, struct sockaddr_in *localAddrP)
+addHandler(SOCKADDR_UNION *fromAddrP, unsigned long id, int fd, SOCKADDR_UNION *localAddrP)
 {
     HndInfo_t *ptr = NULL;
 
@@ -5056,8 +5081,8 @@ addHandler(struct sockaddr_in *fromAddrP, unsigned long id, int fd, struct socka
     {
 	ptr->next->id = id;
 	ptr->next->fd = fd;
-	memcpy(&(ptr->next->fromAddr), fromAddrP, sizeof(struct sockaddr_in));
-	memcpy(&(ptr->next->localAddr), localAddrP, sizeof(struct sockaddr_in));
+	memcpy(&(ptr->next->fromAddr), fromAddrP, sizeof(SOCKADDR_UNION));
+	memcpy(&(ptr->next->localAddr), localAddrP, sizeof(SOCKADDR_UNION));
 	ptr->next->prev = ptr;
 	ptr->next->next = NULL;
     }
@@ -5072,7 +5097,7 @@ addHandler(struct sockaddr_in *fromAddrP, unsigned long id, int fd, struct socka
 */
 
 void
-removeHandler(struct sockaddr_in *addrP)
+removeHandler(SOCKADDR_UNION *addrP)
 {
     HndInfo_t *ptr = NULL;
     HndInfo_t *tmp = NULL;
@@ -5081,8 +5106,8 @@ removeHandler(struct sockaddr_in *addrP)
 
     for (ptr = &HandlerList; ptr != NULL; ptr = ptr->next)
     {
-	if (ptr->fromAddr.sin_port == addrP->sin_port &&
-	    ptr->fromAddr.sin_addr.s_addr == addrP->sin_addr.s_addr)
+	if (ptr->fromAddr.in.sin_port == addrP->in.sin_port &&
+	    ptr->fromAddr.in.sin_addr.s_addr == addrP->in.sin_addr.s_addr)
 	{
 	    ptr->prev->next = ptr->next;
 	    if (ptr->next)
@@ -5126,8 +5151,8 @@ clientListener(EndPtList_t *ports)
 {
     int listenFd = -1;
     int clientFd;
-    struct sockaddr_in fromAddr;
-    struct sockaddr_in localAddr;
+    SOCKADDR_UNION fromAddr;
+    SOCKADDR_UNION localAddr;
     int addrLen;
     unsigned short localPort = 0;
     fd_set tcpSet;
@@ -5285,7 +5310,7 @@ clientListener(EndPtList_t *ports)
 
 		    addrLen = sizeof(fromAddr);
 		    if ((num = recvfrom(listenFd, data, MAX_BUF_SIZE, 0,
-					(struct sockaddr *)&fromAddr,
+					&fromAddr.sa,
 					&addrLen)) > 0)
 		    {
 			/*
@@ -5309,9 +5334,9 @@ clientListener(EndPtList_t *ports)
 			    if (id != 0)
 			    {
 				memset(&localAddr, 0, sizeof(localAddr));
-				localAddr.sin_family = AF_INET;
-				localAddr.sin_port = htons(localPort);
-				localAddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+				localAddr.in.sin_family = AF_INET;
+				localAddr.in.sin_port = htons(localPort);
+				localAddr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 				addHandler(&fromAddr, id, clientFd, &localAddr);
 			    }
@@ -5326,7 +5351,7 @@ clientListener(EndPtList_t *ports)
 			if (clientFd != -1)
 			{
 			    if (sendto(clientFd, data, num, 0,
-				       (struct sockaddr *)&localAddr,
+				       &localAddr.sa,
 				       sizeof(localAddr)) != num)
 			    {
 				message(0, errno, "failed to send data to loopback socket");
@@ -5347,17 +5372,17 @@ clientListener(EndPtList_t *ports)
 
 		    message(5, 0, "connection ready on socket %d", listenFd);
 
-		    addrLen = sizeof(struct sockaddr_in);
+		    addrLen = sizeof(SOCKADDR_UNION);
 		    memset(&fromAddr, 0, sizeof(fromAddr));
 		    if ((clientFd = accept(listenFd,
-					   (struct sockaddr *)&fromAddr,
+					   &fromAddr.sa,
 					   &addrLen)) < 0)
 		    {
 			message(0, errno, "error on accept");
 		    }
 		    else
 		    {
-			message(1, 0, "accepted connection from %s", ipString(fromAddr.sin_addr, ipBuf));
+			message(1, 0, "accepted connection from %s", ipString(fromAddr.in.sin_addr, ipBuf));
 
 			/* Set the "don't linger on close" option */
 
@@ -5490,8 +5515,8 @@ client(FnArgs_t *argP)
     unsigned char clientNonce[NONCE_SIZE];
     unsigned char serverNonce[NONCE_SIZE];
     char *targetHost = NULL;
-    struct sockaddr_in peerAddr;
-    struct sockaddr_in targetAddr;
+    SOCKADDR_UNION peerAddr;
+    SOCKADDR_UNION targetAddr;
     int inLine = argP->inLine;
     int udpMode = argP->udpMode;
     char ipBuf[IP_BUF_SIZE];
@@ -5516,7 +5541,7 @@ client(FnArgs_t *argP)
     if (redirectPort)
     {
 	message(3, 0, "client on local port %hu tunnels to target %s:%hu", argP->port, targetHost, redirectPort);
-	message(4, 0, "target address is %08x", ntohl(targetAddr.sin_addr.s_addr));
+	message(4, 0, "target address is %08x", ntohl(targetAddr.in.sin_addr.s_addr));
     }
     else
     {
@@ -5556,7 +5581,7 @@ client(FnArgs_t *argP)
 
     if (!checkPeerForSocket(serverFd, &peerAddr))
     {
-	message(0, 0, "connection with server %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
+	message(0, 0, "connection with server %s disallowed", ipString(peerAddr.in.sin_addr, ipBuf));
 	goto fatal;
     }
 
@@ -5644,10 +5669,10 @@ client(FnArgs_t *argP)
 	if (strcmp(targetHost, ServerHost) == 0)
 	{
 	    message(4, 0, "target is the same as the server");
-	    targetAddr.sin_addr.s_addr = 0x00000000;
+	    targetAddr.in.sin_addr.s_addr = 0x00000000;
 	}
-	message(3, 0, "requesting target address %08x", ntohl(targetAddr.sin_addr.s_addr));
-	headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.sin_addr.s_addr), HDR_OFFSET_TARGET);
+	message(3, 0, "requesting target address %08x", ntohl(targetAddr.in.sin_addr.s_addr));
+	headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in.sin_addr.s_addr), HDR_OFFSET_TARGET);
     }
 
     if (protocol >= PROTOCOL_V202)
@@ -6072,7 +6097,7 @@ serverListener(unsigned short *portPtr)
 {
     int listenFd;
     int clientFd;
-    struct sockaddr_in addr;
+    SOCKADDR_UNION addr;
     int addrLen;
     char ipBuf[IP_BUF_SIZE];
 
@@ -6102,14 +6127,14 @@ serverListener(unsigned short *portPtr)
 	message(1, 0, "waiting for connection on port %hu", *portPtr);
 
 	memset(&addr, 0, sizeof(addr));
-	addrLen = sizeof(struct sockaddr_in);
-	if ((clientFd = accept(listenFd, (struct sockaddr *)&addr, &addrLen)) < 0)
+	addrLen = sizeof(SOCKADDR_UNION);
+	if ((clientFd = accept(listenFd, &addr.sa, &addrLen)) < 0)
 	{
 	    message(0, errno, "error on accept");
 	}
 	else
 	{
-	    message(1, 0, "accepted connection from %s", ipString(addr.sin_addr, ipBuf));
+	    message(1, 0, "accepted connection from %s", ipString(addr.in.sin_addr, ipBuf));
 
 	    /* Set the "don't linger on close" option */
 
@@ -6283,8 +6308,8 @@ server(FnArgs_t *argP)
     unsigned long token = 0;
     unsigned char hdrData[HDR_SIZE_MAX];
     unsigned short hdrSize;
-    struct sockaddr_in localAddr;
-    struct sockaddr_in peerAddr;
+    SOCKADDR_UNION localAddr;
+    SOCKADDR_UNION peerAddr;
     unsigned char clientNonce[NONCE_SIZE];
     unsigned char serverNonce[NONCE_SIZE];
     char *targetHost = TargetHost;
@@ -6313,7 +6338,7 @@ server(FnArgs_t *argP)
     message(3, 0, "validating client IP address");
     if (!checkPeerForSocket(clientFd, &peerAddr))
     {
-	message(0, 0, "client connection from %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
+	message(0, 0, "client connection from %s disallowed", ipString(peerAddr.in.sin_addr, ipBuf));
 	goto fatal;
     }
 
@@ -6462,8 +6487,8 @@ server(FnArgs_t *argP)
     memset(&localAddr, 0, sizeof(localAddr));
     if (protocol >= PROTOCOL_V201)
     {
-	localAddr.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
-	message(3, 0, "read target address %s", ipString(localAddr.sin_addr, ipBuf));
+	localAddr.in.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
+	message(3, 0, "read target address %s", ipString(localAddr.in.sin_addr, ipBuf));
     }
 
     /*
@@ -6512,7 +6537,7 @@ server(FnArgs_t *argP)
     }
     else
     {
-	message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", ipString(localAddr.sin_addr, ipBuf), request, (udpMode ? "udp" : "tcp"));
+	message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", ipString(localAddr.in.sin_addr, ipBuf), request, (udpMode ? "udp" : "tcp"));
 	headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
     }
 
@@ -7071,7 +7096,8 @@ newEndPtList(unsigned short lo,
 	     unsigned short type)
 {
     EndPtList_t *new = NULL;
-    struct sockaddr_in addr;
+    SOCKADDR_UNION addr;
+// TODO use something that works with IPv6 here
     struct in_addr *addrList = NULL;
     unsigned long mask = 0xffffffff;
 
@@ -7084,7 +7110,7 @@ newEndPtList(unsigned short lo,
 
     if (addrList)
     {
-	new = allocEndPtList(lo, hi, host, idFile, peer, &(addr.sin_addr), addrList, mask, type);
+	new = allocEndPtList(lo, hi, host, idFile, peer, &(addr.in.sin_addr), addrList, mask, type);
     }
     else
     {
@@ -7129,7 +7155,7 @@ allocEndPtList(unsigned short lo,
     new->peer = NULL;
     if (host && addrP)
     {
-	memcpy(&(new->addr.sin_addr), addrP, sizeof(struct in_addr));
+	memcpy(&(new->addr.in.sin_addr), addrP, sizeof(struct in_addr));
 	if ((new->host = (char *)malloc(strlen(host) + 1)) == NULL)
 	{
 	    message(0, errno, "out of memory");

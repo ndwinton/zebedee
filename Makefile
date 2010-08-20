@@ -142,6 +142,9 @@ ISCOMP = "c:/Program Files/Inno Setup 4/compil32.exe"
 #   512, which should enable a server to handle about 250 simultaneous
 #   connections. If you need more then change the definition.
 #
+# IPv6 support:
+#   Use -DUSE_IPv6
+#
 
 DEFINES_win32 = -DFD_SETSIZE=512
 DEFINES_linux = -DHAVE_PTHREADS
