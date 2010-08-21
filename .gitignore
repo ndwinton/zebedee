@@ -1,0 +1,22 @@
+#	doc_jp/ftpgw.tcl.1
+#	doc_jp/ftpgw.tcl.html
+#	doc_jp/pod2htmd.tmp
+#	doc_jp/pod2htmi.tmp
+#	doc_jp/zebedee.1
+#	doc_jp/zebedee.html
+#	ftpgw.tcl.1
+#	ftpgw.tcl.html
+#	huge.o
+#	pod2htmd.tmp
+#	pod2htmi.tmp
+#	sha_func.o
+#	zebedee
+#	zebedee.1
+#	zebedee.html
+#	zebedee.ja_JP.html
+#	zebedee.o
+*.o
+*.html
+*.1
+*.tmp
+/zebedee
