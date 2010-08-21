@@ -2630,7 +2630,7 @@ acceptConnection(int listenFd, const char *host,
 	/*
 	** Check if the connection is usable, in case it has
 	** already been closed at the far end. If it isn't usable
-	** the silently discard it.
+	** then silently discard it.
 	*/
 
 	if (!socketIsUsable(serverFd))
@@ -2649,7 +2649,7 @@ acceptConnection(int listenFd, const char *host,
 
 	/*
 	** Check the received connection address against the specified
-	** server host name (applying a network mask as ppropriate).
+	** server host name (applying a network mask as appropriate).
 	*/
 
 	if ((fromAddr.sin_addr.s_addr & mask) ==
