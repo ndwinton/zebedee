@@ -323,7 +323,7 @@ pthread_attr_t ThreadAttr;
 typedef union sockaddr_union {
     struct sockaddr sa;
     struct sockaddr_in in;
-#if defined(USE_IPV6)
+#if defined(USE_IPv6)
     struct sockaddr_in6 in6;
 #endif
 } SOCKADDR_UNION;
@@ -364,7 +364,7 @@ typedef struct EndPtList_s
     unsigned short hi;
     char *host;
     SOCKADDR_UNION addr;
-    struct in_addr *addrList;
+    SOCKADDR_UNION *addrList;
     struct EndPtList_s *next;
     unsigned long mask;
     unsigned short type;
@@ -595,8 +595,8 @@ int writeMessage(int fd, MsgBuf_t *msg);
 
 int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 
-int getHostAddress(const char *host, SOCKADDR_UNION *addrP, struct in_addr **addrList, unsigned long *maskP);
-char *ipString(struct in_addr addr, char *buf);
+int getHostAddress(const char *host, SOCKADDR_UNION *addrP, SOCKADDR_UNION **addrList, unsigned long *maskP);
+char *ipString(SOCKADDR_UNION addr, char *buf);
 int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, SOCKADDR_UNION *fromAddrP, SOCKADDR_UNION *toAddrP, unsigned short timeout);
 int proxyConnection(const char *host, const unsigned short port, SOCKADDR_UNION *localAddrP, unsigned short timeout);
 int sendSpoofed(int fd, char *buf, int len, SOCKADDR_UNION *toAddrP, SOCKADDR_UNION *fromAddrP);
@@ -665,7 +665,7 @@ void setBoolean(char *value, int *resultP);
 void setUShort(char *value, unsigned short *resultP);
 void setPort(char *value, unsigned short *resultP);
 EndPtList_t *newEndPtList(unsigned short lo, unsigned short hi, char *host, char *idFile, char *peer, unsigned short type);
-EndPtList_t *allocEndPtList(unsigned short lo, unsigned short hi, char *host, char *idFile, char *peer, struct in_addr *addrP, struct in_addr *addrList, unsigned long mask, unsigned short type);
+EndPtList_t *allocEndPtList(unsigned short lo, unsigned short hi, char *host, char *idFile, char *peer, SOCKADDR_UNION *addrP, SOCKADDR_UNION *addrList, unsigned long mask, unsigned short type);
 void setEndPtList(char *value, EndPtList_t **listP, char *host, char *idFile, char *peer, int zeroOk);
 void setTarget(char *value);
 void setChecksum(char *value, unsigned short *resultP);
@@ -1812,9 +1812,9 @@ requestResponse(int fd, unsigned short request, unsigned short *responseP)
 ** Translate a hostname or numeric IP address and store the result in addrP.
 ** If addrList is not NULL then return the list of aliases addresses in it.
 ** The list is terminated with an address with all components set to 0xff
-** (i.e. 255.255.255.255). If maskP is not NULL and the address is in the
-** form of a CIDR mask specification then it will be set to contain the
-** appropriate address mask.
+** (i.e. 255.255.255.255 and sa.sa_family = AF_INET). 
+** If maskP is not NULL and the address is in the form of a CIDR mask 
+** specification then it will be set to contain the appropriate address mask.
 **
 ** Returns 1 on success, 0 on failure.
 */
@@ -1822,17 +1822,18 @@ requestResponse(int fd, unsigned short request, unsigned short *responseP)
 int
 getHostAddress(const char *host,
 	       SOCKADDR_UNION *addrP,
-// TODO use SOCKADDR_UNION for addrList
-	       struct in_addr **addrList,
+	       SOCKADDR_UNION **addrList,
 	       unsigned long *maskP)
 {
-    struct hostent *entry = NULL;
     int result = 1;
     int count = 0;
     int i = 0;
+    int success = 0;
     char *s = NULL;
     char *hostCopy = NULL;
     unsigned short bits = 32;
+    struct addrinfo *res = NULL;
+    struct addrinfo *addr_iter = NULL;
 
 
     mutexLock(MUTEX_IO);
@@ -1845,6 +1846,7 @@ getHostAddress(const char *host,
     if ((s = strchr(host, '/')) != NULL)
     {
 	hostCopy = (char *)malloc(strlen(host) + 1);
+// TODO fix pattern for IPv6 addresses
 	if (!hostCopy || (sscanf(host, "%[^/]/%hu", hostCopy, &bits) != 2))
 	{
 	    errno = 0;
@@ -1853,6 +1855,7 @@ getHostAddress(const char *host,
 	host = hostCopy;
 	if (maskP)
 	{
+// TODO use mask format usable for IPv6
 	    if (bits <= 0 || bits > 32) bits = 32;
 	    *maskP = htonl(0xffffffff << (32 - bits));
 	}
@@ -1860,19 +1863,31 @@ getHostAddress(const char *host,
 
     /*
     ** Try a direct conversion from numeric form first in order to avoid
-    ** an unnecessary name-service lookup.
+    ** an unnecessary name-service lookup. Try IPv4 first, then IPv6.
     */
 
-    if ((addrP->in.sin_addr.s_addr = inet_addr(host)) == INADDR_NONE)
+// TODO initialize mask for each alias entry, according to address family:
+// use mask 32 for ipv4 and mask 128 vor ipv6
+    success = inet_pton(AF_INET, host, &addrP->in.sin_addr);
+    if (success == 1)
+	addrP->sa.sa_family = AF_INET;
+#if defined(USE_IPv6)
+    else
     {
-	if ((entry = gethostbyname(host)) == NULL)
-	{
+	success = inet_pton(AF_INET6, host, &addrP->in6.sin6_addr);
+	if (success == 1)
+	    addrP->sa.sa_family = AF_INET6;
+    }
+#endif
+    if (success != 1) {
+	if (getaddrinfo(host, NULL, NULL, &res) != 0) {
 	    errno = 0;
 	    result = 0;
 	}
 	else
 	{
-	    memcpy(&(addrP->in.sin_addr), entry->h_addr, entry->h_length);
+	    // copy first result entry to addrP
+	    memcpy(addrP, res->ai_addr, res->ai_addrlen);
 	}
     }
 
@@ -1880,32 +1895,40 @@ getHostAddress(const char *host,
 
     if (addrList != NULL)
     {
-	if (entry)
+	if (result)
 	{
-	    for (count = 0; entry->h_addr_list[count]; count++)
+	    for (count = 0, addr_iter = res; addr_iter; addr_iter = addr_iter->ai_next)
 	    {
-		/* Nothing */
+		count++;
 	    }
-	    *addrList = (struct in_addr *)calloc(count + 1, sizeof(struct in_addr));
+	    *addrList = (SOCKADDR_UNION*)calloc(count + 1, sizeof(SOCKADDR_UNION));
 	    if (*addrList == NULL)
 	    {
 		result = 0;
 	    }
 	    else
 	    {
-		for (i = 0; i < count; i++)
+		for (i = 0, addr_iter = res; addr_iter; addr_iter = addr_iter->ai_next)
 		{
-		    memcpy(&((*addrList)[i]), entry->h_addr_list[i], sizeof(struct in_addr));
+		    memcpy(&((*addrList)[i]), addr_iter->ai_addr, addr_iter->ai_addrlen);
+		    i++;
 		}
-		memset(&((*addrList)[i]), 0xff, sizeof(struct in_addr));
+		((*addrList)[i]).sa.sa_family = AF_INET;
+		memset(&((*addrList)[i]).in.sin_addr, 0xff, sizeof(struct in_addr));
 	    }
 	}
 	else
 	{
-	    *addrList = (struct in_addr *)calloc(2, sizeof(struct in_addr));
-	    memcpy(&((*addrList)[0]), &(addrP->in.sin_addr), sizeof(struct in_addr));
+	    *addrList = (SOCKADDR_UNION *)calloc(1, sizeof(struct sockaddr_in));
+// FIXME should index not be 0 instead of 1?
+	    ((*addrList)[1]).sa.sa_family = AF_INET;
 	    memset(&((*addrList)[1]), 0xff, sizeof(struct in_addr));
 	}
+    }
+
+    if (res)
+    {
+	freeaddrinfo(res);
     }
 
     if (hostCopy)
@@ -1925,16 +1948,33 @@ getHostAddress(const char *host,
 ** reentrant version of inet_ntoa.
 */
 
-// TODO use SOCKADDR_UNION
 char *
-ipString(struct in_addr addr, char *buf)
+ipString(SOCKADDR_UNION addr, char *buf)
 {
-    unsigned long val = ntohl(addr.s_addr);
-    sprintf(buf, "%lu.%lu.%lu.%lu",
-	    (val >> 24) & 0xff,
-	    (val >> 16) & 0xff,
-	    (val >>  8) & 0xff,
-	    val & 0xff);
+    if (addr.sa.sa_family == AF_INET)
+    {
+	unsigned long val = ntohl(addr.in.sin_addr.s_addr);
+	sprintf(buf, "%lu.%lu.%lu.%lu",
+	       (val >> 24) & 0xff,
+	       (val >> 16) & 0xff,
+	       (val >>  8) & 0xff,
+		val & 0xff);
+    }
+#if defined(USE_IPv6)
+    else if (addr.sa.sa_family == AF_INET6)
+    {
+	if (!inet_ntop(AF_INET6, &addr.in6.sin6_addr, buf, INET6_ADDRSTRLEN))
+	{
+	    buf[0] = '\0';
+	    return NULL;
+	}
+    }
+#endif
+    else
+    {
+	buf[0] = '\0';
+	return NULL;
+    }
     return buf;
 }
 
@@ -2024,7 +2064,6 @@ makeConnection(const char *host, const unsigned short port,
 #else
 	memset(&addr, 0, sizeof(addr));
 	addr.in.sin_addr.s_addr = fromAddrP->in.sin_addr.s_addr;
-// TODO not sure if sizeof(addr) or sizeof(addr.in) is correct
 	if (bind(sfd, &addr.sa, sizeof(addr)) < 0)
 	{
 	    message(1, errno, "WARNING: failed to set connection source address -- ignored");
@@ -2059,7 +2098,6 @@ makeConnection(const char *host, const unsigned short port,
 
 	if (timeout == 0)
 	{
-// TODO not sure if sizeof(addr) or sizeof(addr.in) is correct
 	    if (connect(sfd, &addr.sa, sizeof(addr)) < 0)
 	    {
 		closesocket(sfd);
@@ -2078,7 +2116,6 @@ makeConnection(const char *host, const unsigned short port,
 	    ** EWOULDBLOCK or EINPROGRESS. EINTR is also possible
 	    */
 
-// TODO not sure if sizeof(addr) or sizeof(addr.in) is correct
 	    connect(sfd, &addr.sa, sizeof(addr));
 	    if (errno != 0 && errno != EWOULDBLOCK
 		&& errno != EINPROGRESS && errno != EINTR)
@@ -2431,8 +2468,29 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 
     /* Create the socket */
 
-// TODO use AF_INET6 (move host DNS lookup from below before socke())
-    if ((sfd = socket(AF_INET, (udpMode ? SOCK_DGRAM: SOCK_STREAM), 0)) < 0)
+    memset(&addr, 0, sizeof(addr));
+#if defined(USE_IPv6)
+    addr.sa.sa_family = AF_INET6;
+    memcpy(&addr.in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr));
+#else
+    addr.sa.sa_family = AF_INET;
+    addr.in.sin_addr.s_addr = htonl(INADDR_ANY);
+#endif
+    if (listenIp != NULL)
+    {
+	if (!getHostAddress(listenIp, &addr, NULL, NULL))
+	{
+	    message(0, 0, "can't resolve listen address '%s'", listenIp);
+	}
+    }
+#if defined(USE_IPv6)
+    if (addr.sa.sa_family == AF_INET6)
+	addr.in6.sin6_port = (portP ? htons(*portP) : 0);
+    else
+#endif
+	addr.in.sin_port = (portP ? htons(*portP) : 0);
+
+    if ((sfd = socket(addr.sa.sa_family, (udpMode ? SOCK_DGRAM: SOCK_STREAM), 0)) < 0)
     {
 	message(0, errno, "can't create listener socket");
 	goto failure;
@@ -2448,20 +2506,8 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 	}
     }
 
-    memset(&addr, 0, sizeof(addr));
-    addr.in.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (listenIp != NULL)
-    {
-	if (!getHostAddress(listenIp, &addr, NULL, NULL))
-	{
-	    message(0, 0, "can't resolve listen address '%s'", listenIp);
-	}
-    }
-    addr.in.sin_family = AF_INET;
-    addr.in.sin_port = (portP ? htons(*portP) : 0);
-    message(5, 0, "listening on %s", ipString(addr.in.sin_addr, ipBuf));
+    message(5, 0, "listening on %s", ipString(addr, ipBuf));
 
-// TODO not sure if addrLen must be adapted in case USE_IPv6 is defined and we have a IPv4 address
     if (bind(sfd, &addr.sa, addrLen) < 0)
     {
 	message(0, errno, "listener bind failed");
@@ -2582,9 +2628,9 @@ acceptConnection(int listenFd, const char *host,
     struct timeval delay;
     fd_set testSet;
     int ready;
-// TODO use SOCKADDR_UNION
-    struct in_addr *addrList = NULL;
-    struct in_addr *addrPtr = NULL;
+    SOCKADDR_UNION *addrList = NULL;
+    SOCKADDR_UNION *addrPtr = NULL;
+// TODO use default value appropriate for both address families
     unsigned long mask = 0xffffffff;
     char ipBuf[IP_BUF_SIZE];
 
@@ -2597,6 +2643,8 @@ acceptConnection(int listenFd, const char *host,
     }
     else
     {
+// FIXME does it make sense to pass &mask? it won't be altered by getHostAddress
+// 	 unless host string contains a '/'. Here host is ServerHost from the config.
 	if (!getHostAddress(host, &hostAddr, &addrList, &mask))
 	{
 	    message(0, 0, "can't resolve host or address '%s'", host);
@@ -2676,6 +2724,7 @@ acceptConnection(int listenFd, const char *host,
 	** server host name (applying a network mask as appropriate).
 	*/
 
+// TODO match address families and implement IPv6 comparison with applied mask 
 	if ((fromAddr.in.sin_addr.s_addr & mask) ==
 	    (hostAddr.in.sin_addr.s_addr & mask))
 	{
@@ -2686,16 +2735,16 @@ acceptConnection(int listenFd, const char *host,
 	{
 	    /* Try the alias addresses */
 
-	    for (addrPtr = addrList; addrPtr->s_addr != 0xffffffff; addrPtr++)
+	    for (addrPtr = addrList; !(addrPtr->sa.sa_family == AF_INET && addrPtr->in.sin_addr.s_addr == 0xffffffff); addrPtr++)
 	    {
 		if ((fromAddr.in.sin_addr.s_addr & mask) ==
-		    (addrPtr->s_addr & mask))
+		    (addrPtr->in.sin_addr.s_addr & mask))
 		{
 		    break;
 		}
 	    }
 
-	    if (addrPtr->s_addr != 0xffffffff)
+	    if (!(addrPtr->sa.sa_family == AF_INET && addrPtr->in.sin_addr.s_addr == 0xffffffff))
 	    {
 		/* We got a match -- break enclosing loop */
 		break;
@@ -2703,7 +2752,7 @@ acceptConnection(int listenFd, const char *host,
 	}
 
 	message(1, 0, "Warning: connection from %s rejected, does not match server host %s",
-		ipString(fromAddr.in.sin_addr, ipBuf), host);
+		ipString(fromAddr, ipBuf), host);
 	closesocket(serverFd);
 	errno = 0;
 	if (!loop)
@@ -2719,7 +2768,7 @@ acceptConnection(int listenFd, const char *host,
 	free(addrList);
     }
 
-    message(3, 0, "accepted connection from %s", ipString(fromAddr.in.sin_addr, ipBuf));
+    message(3, 0, "accepted connection from %s", ipString(fromAddr, ipBuf));
 
     /*
     ** Set the "don't linger on close" and "keep alive" options. The latter
@@ -3274,8 +3323,8 @@ runKeyGenCommand(char *keyGenCmd,
 	len > 0 && keyGenCmd[len - 1] == '+' &&
 	len < (MAX_LINE_SIZE - 40))
     {
-	ipString(peerAddrP->in.sin_addr, ip1);
-	ipString(targetAddrP->in.sin_addr, ip2);
+	ipString(*peerAddrP, ip1);
+	ipString(*targetAddrP, ip2);
 	sprintf(buf, "%.*s %s %s %hu", len - 1, keyGenCmd, ip1, ip2, targetPort);
     }
     else
@@ -4544,6 +4593,7 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
     ** host, if any.
     */
 
+// TODO implement IPv6 capable comparison
     if (addrP->in.sin_addr.s_addr == 0x00000000)
     {
 	if (!getHostAddress(TargetHost, addrP, NULL, NULL))
@@ -4558,6 +4608,7 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
     ** It must be available before this check can be made!
     */
 
+// TODO implement IPv6 capable comparison
     if (peerAddrP->in.sin_addr.s_addr == 0x00000000)
     {
 	message(0, 0, "client peer address not available");
@@ -4571,7 +4622,7 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
 	message(0, errno, "out of memory allocating hostname");
 	return 0;
     }
-    *hostP = ipString(addrP->in.sin_addr, ipName);
+    *hostP = ipString(*addrP, ipName);
 
     /*
     ** Search the AllowedTargets list to determine whether the port lies
@@ -4582,6 +4633,7 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
     {
 	mask = lp1->mask;
 
+// TODO implement IPv6 capable comparison
 	if ((addrP->in.sin_addr.s_addr & mask) != (lp1->addr.in.sin_addr.s_addr & mask))
 	{
 	    /* Did not match primary address, check aliases */
@@ -4695,7 +4747,7 @@ checkPeerForSocket(int fd, SOCKADDR_UNION *addrP)
 	message(0, errno, "can't get peer address for socket");
 	return 0;
     }
-    message(4, 0, "peer address from connection is %s", ipString(addrP->in.sin_addr, ipBuf));
+    message(4, 0, "peer address from connection is %s", ipString(*addrP, ipBuf));
 
     /* Now check against the global peer list */
 
@@ -4712,8 +4764,7 @@ checkPeerAddress(SOCKADDR_UNION *addrP, EndPtList_t *peerList)
 {
     unsigned short port = 0;
     EndPtList_t *lp1 = NULL;
-// TODO use something useful for IPv6
-    struct in_addr *alp = NULL;
+    SOCKADDR_UNION *alp = NULL;
     unsigned long mask = 0xffffffff;
 
     /* A NULL peerList means allow any address */
@@ -4722,19 +4773,25 @@ checkPeerAddress(SOCKADDR_UNION *addrP, EndPtList_t *peerList)
 
     /* Otherwise, search for a match ... */
 
-    port = ntohs(addrP->in.sin_port);
+#if defined(USE_IPv6)
+    if (addrP->sa.sa_family == AF_INET6)
+	port = ntohs(addrP->in6.sin6_port);
+    else
+#endif
+	port = ntohs(addrP->in.sin_port);
 
     for (lp1 = peerList; lp1; lp1 = lp1->next)
     {
 	mask = lp1->mask;
 
+// TODO implement IPv6 / IPv4 capable mask comparison (preparation: use bit number as mask instead of full binary 32 bit mask)
 	if ((addrP->in.sin_addr.s_addr & mask) != (lp1->addr.in.sin_addr.s_addr & mask))
 	{
 	    /* Did not match primary address, check aliases */
 
-	    for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
+	    for (alp = lp1->addrList; !(alp->sa.sa_family == AF_INET && alp->in.sin_addr.s_addr == 0xffffffff); alp++)
 	    {
-		if ((addrP->in.sin_addr.s_addr & mask) == (alp->s_addr & mask))
+		if ((addrP->in.sin_addr.s_addr & mask) == (alp->in.sin_addr.s_addr & mask))
 		{
 		    /* Found a matching address in the aliases */
 
@@ -4742,7 +4799,7 @@ checkPeerAddress(SOCKADDR_UNION *addrP, EndPtList_t *peerList)
 		}
 	    }
 
-	    if (alp->s_addr == 0xffffffff)
+	    if (alp->sa.sa_family == AF_INET && alp->in.sin_addr.s_addr == 0xffffffff)
 	    {
 		/* Did not match at all, try next entry */
 
@@ -5006,7 +5063,7 @@ findHandler(SOCKADDR_UNION *fromAddrP, SOCKADDR_UNION *localAddrP)
     char ipBuf[IP_BUF_SIZE];
 
 
-    message(5, 0, "searching for handler for address %s:%hu", ipString(fromAddrP->in.sin_addr, ipBuf), ntohs(fromAddrP->in.sin_port));
+    message(5, 0, "searching for handler for address %s:%hu", ipString(*fromAddrP, ipBuf), ntohs(fromAddrP->in.sin_port));
 
     mutexLock(MUTEX_HNDLIST);
 
@@ -5382,7 +5439,7 @@ clientListener(EndPtList_t *ports)
 		    }
 		    else
 		    {
-			message(1, 0, "accepted connection from %s", ipString(fromAddr.in.sin_addr, ipBuf));
+			message(1, 0, "accepted connection from %s", ipString(fromAddr, ipBuf));
 
 			/* Set the "don't linger on close" option */
 
@@ -5581,7 +5638,7 @@ client(FnArgs_t *argP)
 
     if (!checkPeerForSocket(serverFd, &peerAddr))
     {
-	message(0, 0, "connection with server %s disallowed", ipString(peerAddr.in.sin_addr, ipBuf));
+	message(0, 0, "connection with server %s disallowed", ipString(peerAddr, ipBuf));
 	goto fatal;
     }
 
@@ -6134,7 +6191,7 @@ serverListener(unsigned short *portPtr)
 	}
 	else
 	{
-	    message(1, 0, "accepted connection from %s", ipString(addr.in.sin_addr, ipBuf));
+	    message(1, 0, "accepted connection from %s", ipString(addr, ipBuf));
 
 	    /* Set the "don't linger on close" option */
 
@@ -6338,7 +6395,7 @@ server(FnArgs_t *argP)
     message(3, 0, "validating client IP address");
     if (!checkPeerForSocket(clientFd, &peerAddr))
     {
-	message(0, 0, "client connection from %s disallowed", ipString(peerAddr.in.sin_addr, ipBuf));
+	message(0, 0, "client connection from %s disallowed", ipString(peerAddr, ipBuf));
 	goto fatal;
     }
 
@@ -6487,8 +6544,9 @@ server(FnArgs_t *argP)
     memset(&localAddr, 0, sizeof(localAddr));
     if (protocol >= PROTOCOL_V201)
     {
+// TODO we need a newer protocol version that can carry IPv6 addresses
 	localAddr.in.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
-	message(3, 0, "read target address %s", ipString(localAddr.in.sin_addr, ipBuf));
+	message(3, 0, "read target address %s", ipString(localAddr, ipBuf));
     }
 
     /*
@@ -6537,7 +6595,7 @@ server(FnArgs_t *argP)
     }
     else
     {
-	message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", ipString(localAddr.in.sin_addr, ipBuf), request, (udpMode ? "udp" : "tcp"));
+	message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", ipString(localAddr, ipBuf), request, (udpMode ? "udp" : "tcp"));
 	headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
     }
 
@@ -7097,8 +7155,8 @@ newEndPtList(unsigned short lo,
 {
     EndPtList_t *new = NULL;
     SOCKADDR_UNION addr;
-// TODO use something that works with IPv6 here
-    struct in_addr *addrList = NULL;
+    SOCKADDR_UNION *addrList = NULL;
+// TODO use IPv6 capable mask format
     unsigned long mask = 0xffffffff;
 
 
@@ -7110,10 +7168,11 @@ newEndPtList(unsigned short lo,
 
     if (addrList)
     {
-	new = allocEndPtList(lo, hi, host, idFile, peer, &(addr.in.sin_addr), addrList, mask, type);
+	new = allocEndPtList(lo, hi, host, idFile, peer, &addr, addrList, mask, type);
     }
     else
     {
+// TODO use IPv6 capable mask format
 	new = allocEndPtList(lo, hi, NULL, idFile, peer, NULL, NULL, 0xffffffff, type);
     }
 
@@ -7134,8 +7193,8 @@ allocEndPtList(unsigned short lo,
 	       char *host,
 	       char *idFile,
 	       char *peer,
-	       struct in_addr *addrP,
-	       struct in_addr *addrList,
+	       SOCKADDR_UNION *addrP,
+	       SOCKADDR_UNION *addrList,
 	       unsigned long mask,
 	       unsigned short type)
 {
@@ -7149,13 +7208,13 @@ allocEndPtList(unsigned short lo,
 
     new->lo = lo;
     new->hi = hi;
-    memset(&(new->addr), 0, sizeof(struct in_addr));
+    memset(&(new->addr), 0, sizeof(SOCKADDR_UNION));
     new->host = NULL;
     new->idFile = NULL;
     new->peer = NULL;
     if (host && addrP)
     {
-	memcpy(&(new->addr.in.sin_addr), addrP, sizeof(struct in_addr));
+	memcpy(&(new->addr), addrP, sizeof(SOCKADDR_UNION));
 	if ((new->host = (char *)malloc(strlen(host) + 1)) == NULL)
 	{
 	    message(0, errno, "out of memory");
