@@ -281,9 +281,15 @@ pthread_attr_t ThreadAttr;
 #define PROTOCOL_V101	    0x0101  /* Extended buffer size */
 #define PROTOCOL_V102	    0x0102  /* Optionally omit key exchange */
 #define PROTOCOL_V200	    0x0200  /* Header, UDP and reusable key support */
-#define PROTOCOL_V201	    0x0201  /* Remote target selection */
+#define PROTOCOL_V201	    0x0201  /* Remote target selection (IPv4 only) */
 #define PROTOCOL_V202	    0x0202  /* Lock of protocol negotiation, checksum and source based targetting */
+#define PROTOCOL_V203	    0x0203  /* Support IPv6 address format for remote target selection */
+#if defined(USE_IPv6)
+// TODO switch to v203 as soon as implemented
 #define DFLT_PROTOCOL	    PROTOCOL_V202
+#else
+#define DFLT_PROTOCOL	    PROTOCOL_V202
+#endif
 
 #define TOKEN_NEW	    0xffffffff	/* Request new token allocation */
 #define TOKEN_EXPIRE_GRACE  10		/* CurrentToken valid until this close to expiry */
@@ -291,8 +297,10 @@ pthread_attr_t ThreadAttr;
 #define HDR_SIZE_V200	    22	/* Size of V200 protocol header message */
 #define HDR_SIZE_V201	    26	/* Size of V201 protocol header message */
 #define HDR_SIZE_V202	    28	/* Size of V202 protocol header message */
+#define HDR_SIZE_V203	    42	/* Size of V203 protocol header message 
+				 * (v202 header + 16 byte IPv6 address - 4 byte IPv4 address + 2 byte addr family) */
 #define HDR_SIZE_MIN	    HDR_SIZE_V200
-#define HDR_SIZE_MAX	    HDR_SIZE_V202
+#define HDR_SIZE_MAX	    HDR_SIZE_V203
 
 #define HDR_OFFSET_FLAGS    0	/* Offset of flags (TCP vs UDP) */
 #define HDR_OFFSET_MAXSIZE  2	/* Offset of max message size */
@@ -2004,6 +2012,7 @@ makeConnection(const char *host, const unsigned short port,
 {
     int sfd = -1;
     SOCKADDR_UNION addr;
+    SOCKADDR_UNION myFromAddr;
     fd_set testSet;
     struct timeval delay;
     int ready = -1;
@@ -2028,9 +2037,24 @@ makeConnection(const char *host, const unsigned short port,
 	}
     }
 
+    /* Translate hostname from DNS or IP-address form */
+
+    memset(&addr, 0, sizeof(addr));
+    if (!getHostAddress(host, &addr, NULL, NULL))
+    {
+	message(0, 0, "can't resolve host or address '%s'", host);
+	return -1;
+    }
+    if (addr.sa.sa_family == AF_INET)
+        addr.in.sin_port = htons(port);
+#if defined(USE_IPv6)
+    else if (addr.sa.sa_family == AF_INET6)
+	addr.in6.sin6_port = htons(port);
+#endif
+
     /* Create the socket */
 
-    if ((sfd = socket(AF_INET, (udpMode ? SOCK_DGRAM : SOCK_STREAM), 0)) < 0)
+    if ((sfd = socket(addr.sa.sa_family, (udpMode ? SOCK_DGRAM : SOCK_STREAM), 0)) < 0)
     {
 	message(0, errno, "socket creation failed");
 	errno = 0;
@@ -2051,7 +2075,11 @@ makeConnection(const char *host, const unsigned short port,
     */
 #error "Time to implement transparent proxy using setsockopt(fd, SOL_TCP, TCP_TPROXY_SRCADDR, ...) now!"
 #else
-    if (fromAddrP && fromAddrP->in.sin_addr.s_addr)
+    if (fromAddrP && (fromAddrP->sa.sa_family == AF_INET && fromAddrP->in.sin_addr.s_addr
+#if defined(USE_IPv6)
+    	|| fromAddrP->sa.sa_family == AF_INET6 && memcmp(&fromAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr))
+#endif
+    ))
     {
 #ifdef USE_UDP_SPOOFING
 	closesocket(sfd);
@@ -2062,27 +2090,15 @@ makeConnection(const char *host, const unsigned short port,
 	    return -1;
 	}
 #else
-	memset(&addr, 0, sizeof(addr));
-	addr.in.sin_addr.s_addr = fromAddrP->in.sin_addr.s_addr;
-	if (bind(sfd, &addr.sa, sizeof(addr)) < 0)
+	memset(&myFromAddr, 0, sizeof(addr));
+	memcpy(&myFromAddr, fromAddrP, sizeof(addr));
+	if (bind(sfd, &myFromAddr.sa, sizeof(addr)) < 0)
 	{
 	    message(1, errno, "WARNING: failed to set connection source address -- ignored");
 	}
 #endif
     }
 #endif
-
-    /* Translate hostname from DNS or IP-address form */
-
-    memset(&addr, 0, sizeof(addr));
-    if (!getHostAddress(host, &addr, NULL, NULL))
-    {
-	message(0, 0, "can't resolve host or address '%s'", host);
-	closesocket(sfd);
-	return -1;
-    }
-    addr.in.sin_family = AF_INET;
-    addr.in.sin_port = htons(port);
 
     if (!udpMode)
     {
@@ -4608,8 +4624,9 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
     ** It must be available before this check can be made!
     */
 
-// TODO implement IPv6 capable comparison
-    if (peerAddrP->in.sin_addr.s_addr == 0x00000000)
+    if (peerAddrP->sa.sa_family == AF_INET && peerAddrP->in.sin_addr.s_addr == 0x00000000
+	|| peerAddrP->sa.sa_family == AF_INET6 && !memcmp(&peerAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr))
+    )
     {
 	message(0, 0, "client peer address not available");
 	return 0;
@@ -4896,7 +4913,7 @@ mapPort(unsigned short localPort, char **hostP, SOCKADDR_UNION *addrP)
 	{
 	    if (addrP)
 	    {
-		addrP->in.sin_addr.s_addr = remotePtr->addr.in.sin_addr.s_addr;
+		memcpy(addrP, &remotePtr->addr, sizeof(*addrP));
 	    }
 	    if (hostP)
 	    {
@@ -5714,7 +5731,9 @@ client(FnArgs_t *argP)
     message(3, 0, "sending client nonce %02x%02x...", clientNonce[0], clientNonce[1]);
     memcpy(hdrData + HDR_OFFSET_NONCE, clientNonce, NONCE_SIZE);
 
-    if (protocol >= PROTOCOL_V201)
+// TODO support V203: IPv6 sized redirect target address
+// Caveat: HDR_OFFSET_CHECKSUM is a constant that needs to be increased in case of V203
+    if (protocol >= PROTOCOL_V201 && protocol < PROTOCOL_V203)
     {
 	hdrSize = HDR_SIZE_V201;
 	/*
@@ -6542,9 +6561,9 @@ server(FnArgs_t *argP)
     message(3, 0, "read port %hu", request);
 
     memset(&localAddr, 0, sizeof(localAddr));
-    if (protocol >= PROTOCOL_V201)
+// TODO implement V203
+    if (protocol >= PROTOCOL_V201 && protocol < PROTOCOL_V203)
     {
-// TODO we need a newer protocol version that can carry IPv6 addresses
 	localAddr.in.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
 	message(3, 0, "read target address %s", ipString(localAddr, ipBuf));
     }
