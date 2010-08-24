@@ -374,7 +374,7 @@ typedef struct EndPtList_s
     SOCKADDR_UNION addr;
     SOCKADDR_UNION *addrList;
     struct EndPtList_s *next;
-    unsigned long mask;
+    unsigned short mask;
     unsigned short type;
     char *idFile;
     struct EndPtList_s *peer;
@@ -603,7 +603,7 @@ int writeMessage(int fd, MsgBuf_t *msg);
 
 int requestResponse(int fd, unsigned short request, unsigned short *responseP);
 
-int getHostAddress(const char *host, SOCKADDR_UNION *addrP, SOCKADDR_UNION **addrList, unsigned long *maskP);
+int getHostAddress(const char *host, SOCKADDR_UNION *addrP, SOCKADDR_UNION **addrList, unsigned short *maskP);
 char *ipString(SOCKADDR_UNION addr, char *buf);
 int makeConnection(const char *host, const unsigned short port, int udpMode, int useProxy, SOCKADDR_UNION *fromAddrP, SOCKADDR_UNION *toAddrP, unsigned short timeout);
 int proxyConnection(const char *host, const unsigned short port, SOCKADDR_UNION *localAddrP, unsigned short timeout);
@@ -673,7 +673,7 @@ void setBoolean(char *value, int *resultP);
 void setUShort(char *value, unsigned short *resultP);
 void setPort(char *value, unsigned short *resultP);
 EndPtList_t *newEndPtList(unsigned short lo, unsigned short hi, char *host, char *idFile, char *peer, unsigned short type);
-EndPtList_t *allocEndPtList(unsigned short lo, unsigned short hi, char *host, char *idFile, char *peer, SOCKADDR_UNION *addrP, SOCKADDR_UNION *addrList, unsigned long mask, unsigned short type);
+EndPtList_t *allocEndPtList(unsigned short lo, unsigned short hi, char *host, char *idFile, char *peer, SOCKADDR_UNION *addrP, SOCKADDR_UNION *addrList, unsigned short mask, unsigned short type);
 void setEndPtList(char *value, EndPtList_t **listP, char *host, char *idFile, char *peer, int zeroOk);
 void setTarget(char *value);
 void setChecksum(char *value, unsigned short *resultP);
@@ -698,6 +698,7 @@ void sigusr1Catcher(int sig);
 
 void runAsUser(const char *user);
 void switchUser(void);
+int cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask);
 
 /*************************************\
 **				     **
@@ -1831,7 +1832,7 @@ int
 getHostAddress(const char *host,
 	       SOCKADDR_UNION *addrP,
 	       SOCKADDR_UNION **addrList,
-	       unsigned long *maskP)
+	       unsigned short *maskP)
 {
     int result = 1;
     int count = 0;
@@ -1839,7 +1840,8 @@ getHostAddress(const char *host,
     int success = 0;
     char *s = NULL;
     char *hostCopy = NULL;
-    unsigned short bits = 32;
+    unsigned short bits = 129;
+    struct addrinfo hints;
     struct addrinfo *res = NULL;
     struct addrinfo *addr_iter = NULL;
 
@@ -1854,19 +1856,12 @@ getHostAddress(const char *host,
     if ((s = strchr(host, '/')) != NULL)
     {
 	hostCopy = (char *)malloc(strlen(host) + 1);
-// TODO fix pattern for IPv6 addresses
 	if (!hostCopy || (sscanf(host, "%[^/]/%hu", hostCopy, &bits) != 2))
 	{
 	    errno = 0;
 	    result = 0;
 	}
 	host = hostCopy;
-	if (maskP)
-	{
-// TODO use mask format usable for IPv6
-	    if (bits <= 0 || bits > 32) bits = 32;
-	    *maskP = htonl(0xffffffff << (32 - bits));
-	}
     }
 
     /*
@@ -1874,21 +1869,43 @@ getHostAddress(const char *host,
     ** an unnecessary name-service lookup. Try IPv4 first, then IPv6.
     */
 
-// TODO initialize mask for each alias entry, according to address family:
-// use mask 32 for ipv4 and mask 128 vor ipv6
-    success = inet_pton(AF_INET, host, &addrP->in.sin_addr);
-    if (success == 1)
+    if ((success = inet_pton(AF_INET, host, &addrP->in.sin_addr)) == 1)
+    {
 	addrP->sa.sa_family = AF_INET;
+	if (maskP && hostCopy)
+	{
+	    if (bits <= 0 || bits > 32) bits = 32;
+	    *maskP = bits;
+	}
+    }
 #if defined(USE_IPv6)
     else
     {
-	success = inet_pton(AF_INET6, host, &addrP->in6.sin6_addr);
-	if (success == 1)
+	if ((success = inet_pton(AF_INET6, host, &addrP->in6.sin6_addr)) == 1)
+	{
 	    addrP->sa.sa_family = AF_INET6;
+	    if (maskP && hostCopy)
+	    {
+		if (bits <= 0 || bits > 128) bits = 128;
+		*maskP = bits;
+	    }
+	}
     }
 #endif
     if (success != 1) {
-	if (getaddrinfo(host, NULL, NULL, &res) != 0) {
+	if (maskP && hostCopy)
+	{
+	    errno = 0;
+	    result = 0;
+	    message(0, 0, "can't use a netmask with a hostname (%s); use IP instead", host);
+	}
+	memset(&hints, 0, sizeof(struct addrinfo));
+// TODO implement IPv4 / IPv6 preference
+	hints.ai_family = AF_UNSPEC; /* Allow IPv4 or IPv6 */
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = 0;
+	hints.ai_protocol = 0;
+	if (getaddrinfo(host, NULL, &hints, &res) != 0) {
 	    errno = 0;
 	    result = 0;
 	}
@@ -2646,28 +2663,33 @@ acceptConnection(int listenFd, const char *host,
     int ready;
     SOCKADDR_UNION *addrList = NULL;
     SOCKADDR_UNION *addrPtr = NULL;
-// TODO use default value appropriate for both address families
-    unsigned long mask = 0xffffffff;
+    unsigned short maskbits = 129;
     char ipBuf[IP_BUF_SIZE];
 
 
     memset(&hostAddr, 0, sizeof(hostAddr));
     if (strcmp(host, "*") == 0)
     {
-	mask = 0;
+	maskbits = 0;
 	hostAddr.in.sin_addr.s_addr = 0;
     }
     else
     {
 // FIXME does it make sense to pass &mask? it won't be altered by getHostAddress
 // 	 unless host string contains a '/'. Here host is ServerHost from the config.
-	if (!getHostAddress(host, &hostAddr, &addrList, &mask))
+	if (!getHostAddress(host, &hostAddr, &addrList, &maskbits))
 	{
 	    message(0, 0, "can't resolve host or address '%s'", host);
 	    closesocket(serverFd);
 	    errno = 0;
 	    return -1;
 	}
+    }
+
+    if (maskbits == 129)
+    {
+	/* set default */
+	maskbits = (hostAddr.sa.sa_family == AF_INET) ? 32 : 128;
     }
 
     while (1)
@@ -2740,9 +2762,7 @@ acceptConnection(int listenFd, const char *host,
 	** server host name (applying a network mask as appropriate).
 	*/
 
-// TODO match address families and implement IPv6 comparison with applied mask 
-	if ((fromAddr.in.sin_addr.s_addr & mask) ==
-	    (hostAddr.in.sin_addr.s_addr & mask))
+	if (cmpAddr(&fromAddr, &hostAddr, maskbits) == 0)
 	{
 	    /* We've got a straight match */
 	    break;
@@ -2753,8 +2773,7 @@ acceptConnection(int listenFd, const char *host,
 
 	    for (addrPtr = addrList; !(addrPtr->sa.sa_family == AF_INET && addrPtr->in.sin_addr.s_addr == 0xffffffff); addrPtr++)
 	    {
-		if ((fromAddr.in.sin_addr.s_addr & mask) ==
-		    (addrPtr->in.sin_addr.s_addr & mask))
+		if (cmpAddr(&fromAddr, &hostAddr, maskbits) == 0)
 		{
 		    break;
 		}
@@ -4585,7 +4604,8 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
 	      char **hostP, char **idFileP)
 {
     EndPtList_t *lp1, *lp2;
-    struct in_addr *alp = NULL;
+    SOCKADDR_UNION *alp = NULL;
+// TODO use unsigned short as mask and implement /32 instead of 0xffffffff semantics
     unsigned long mask = 0;
     char *ipName = NULL;
 
@@ -4624,8 +4644,8 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
     ** It must be available before this check can be made!
     */
 
-    if (peerAddrP->sa.sa_family == AF_INET && peerAddrP->in.sin_addr.s_addr == 0x00000000
-	|| peerAddrP->sa.sa_family == AF_INET6 && !memcmp(&peerAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr))
+    if ((peerAddrP->sa.sa_family == AF_INET && peerAddrP->in.sin_addr.s_addr == 0x00000000)
+	|| (peerAddrP->sa.sa_family == AF_INET6 && !memcmp(&peerAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))
     )
     {
 	message(0, 0, "client peer address not available");
@@ -4650,14 +4670,13 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
     {
 	mask = lp1->mask;
 
-// TODO implement IPv6 capable comparison
-	if ((addrP->in.sin_addr.s_addr & mask) != (lp1->addr.in.sin_addr.s_addr & mask))
+	if (cmpAddr(addrP, &lp1->addr, mask) != 0)
 	{
 	    /* Did not match primary address, check aliases */
 
-	    for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
+	    for (alp = lp1->addrList; !(alp->sa.sa_family == AF_INET && alp->in.sin_addr.s_addr == 0xffffffff); alp++)
 	    {
-		if ((addrP->in.sin_addr.s_addr & mask) == (alp->s_addr & mask))
+		if (cmpAddr(addrP, alp, mask) == 0)
 		{
 		    /* Found a matching address in the aliases */
 		
@@ -4665,7 +4684,7 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
 		}
 	    }
 
-	    if (alp->s_addr == 0xffffffff)
+	    if (alp->sa.sa_family == AF_INET && alp->in.sin_addr.s_addr == 0xffffffff)
 	    {
 		/* Did not match at all, try next entry */
 
@@ -4782,7 +4801,7 @@ checkPeerAddress(SOCKADDR_UNION *addrP, EndPtList_t *peerList)
     unsigned short port = 0;
     EndPtList_t *lp1 = NULL;
     SOCKADDR_UNION *alp = NULL;
-    unsigned long mask = 0xffffffff;
+    unsigned short mask = 0;
 
     /* A NULL peerList means allow any address */
 
@@ -4801,14 +4820,13 @@ checkPeerAddress(SOCKADDR_UNION *addrP, EndPtList_t *peerList)
     {
 	mask = lp1->mask;
 
-// TODO implement IPv6 / IPv4 capable mask comparison (preparation: use bit number as mask instead of full binary 32 bit mask)
-	if ((addrP->in.sin_addr.s_addr & mask) != (lp1->addr.in.sin_addr.s_addr & mask))
+	if (cmpAddr(addrP, &lp1->addr, mask) != 0)
 	{
 	    /* Did not match primary address, check aliases */
 
 	    for (alp = lp1->addrList; !(alp->sa.sa_family == AF_INET && alp->in.sin_addr.s_addr == 0xffffffff); alp++)
 	    {
-		if ((addrP->in.sin_addr.s_addr & mask) == (alp->in.sin_addr.s_addr & mask))
+		if (cmpAddr(addrP, alp, mask) == 0)
 		{
 		    /* Found a matching address in the aliases */
 
@@ -7175,8 +7193,7 @@ newEndPtList(unsigned short lo,
     EndPtList_t *new = NULL;
     SOCKADDR_UNION addr;
     SOCKADDR_UNION *addrList = NULL;
-// TODO use IPv6 capable mask format
-    unsigned long mask = 0xffffffff;
+    unsigned short mask = 128;
 
 
     if (host && !getHostAddress(host, &addr, &addrList, &mask))
@@ -7191,8 +7208,7 @@ newEndPtList(unsigned short lo,
     }
     else
     {
-// TODO use IPv6 capable mask format
-	new = allocEndPtList(lo, hi, NULL, idFile, peer, NULL, NULL, 0xffffffff, type);
+	new = allocEndPtList(lo, hi, NULL, idFile, peer, NULL, NULL, 128, type);
     }
 
     return new;
@@ -7214,7 +7230,7 @@ allocEndPtList(unsigned short lo,
 	       char *peer,
 	       SOCKADDR_UNION *addrP,
 	       SOCKADDR_UNION *addrList,
-	       unsigned long mask,
+	       unsigned short mask,
 	       unsigned short type)
 {
     EndPtList_t *new = NULL;
@@ -8148,6 +8164,51 @@ switchUser(void)
 	}
     }
 #endif   	
+}
+
+
+/*
+** cmpAddr
+**
+** Compare two sockaddr structures after applying mask to each one of them.
+** Return value is similar to memcmp: 0 if both addresses match; or an
+** arbitrary negative or positive value otherwise.
+*/
+
+int 
+cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask)
+{
+    unsigned long ip4mask = 0;
+    unsigned int ip6mask[4];
+    struct in6_addr addr6[2];
+
+    if (a1->sa.sa_family != a2->sa.sa_family)
+	return 1;
+
+    if (a1->sa.sa_family == AF_INET)
+    {
+	if (mask > 32) mask = 32;
+	assert(mask >= 0);
+	ip4mask = htonl(0xffffffff << (32 - mask));
+	if ((a1->in.sin_addr.s_addr & ip4mask) ==
+	    (a2->in.sin_addr.s_addr & ip4mask))
+	    return 0;
+	else
+	    return 1;
+    }
+    else
+    {
+	assert(mask >= 0 && mask <= 128);
+	memset(ip6mask, 0, sizeof(ip6mask));
+	memset(addr6, 0, sizeof(addr6));
+	// TODO setup mask
+
+	// TODO copy a1 and a2 to addr6[2]
+
+	// TODO apply mask (another function?)
+
+	return memcmp(&addr6[0], &addr6[1], sizeof(addr6)/2);
+    }
 }
 
 /******************\
