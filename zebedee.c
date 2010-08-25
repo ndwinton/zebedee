@@ -8062,7 +8062,9 @@ main(int argc, char **argv)
     int doPubKey = 0;
     char hashBuf[HASH_STR_SIZE];
     char *last;
+#ifdef WIN32
     char *serviceArgs = NULL;
+#endif
 
 
 
