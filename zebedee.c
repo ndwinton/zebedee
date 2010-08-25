@@ -2092,9 +2092,9 @@ makeConnection(const char *host, const unsigned short port,
     */
 #error "Time to implement transparent proxy using setsockopt(fd, SOL_TCP, TCP_TPROXY_SRCADDR, ...) now!"
 #else
-    if (fromAddrP && (fromAddrP->sa.sa_family == AF_INET && fromAddrP->in.sin_addr.s_addr
+    if (fromAddrP && ((fromAddrP->sa.sa_family == AF_INET && fromAddrP->in.sin_addr.s_addr)
 #if defined(USE_IPv6)
-    	|| fromAddrP->sa.sa_family == AF_INET6 && memcmp(&fromAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr))
+    	|| (fromAddrP->sa.sa_family == AF_INET6 && memcmp(&fromAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))
 #endif
     ))
     {
@@ -8179,14 +8179,17 @@ int
 cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask)
 {
     unsigned long ip4mask = 0;
-    unsigned int ip6mask[4];
-    struct in6_addr addr6[2];
+#if defined(USE_IPv6)
+    struct in6_addr ip6mask;
+    struct in6_addr *addr6[2];
+#endif
 
     if (a1->sa.sa_family != a2->sa.sa_family)
 	return 1;
 
     if (a1->sa.sa_family == AF_INET)
     {
+	/* default value is 128, here is the place to reduce it */
 	if (mask > 32) mask = 32;
 	assert(mask >= 0);
 	ip4mask = htonl(0xffffffff << (32 - mask));
@@ -8196,20 +8199,33 @@ cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask)
 	else
 	    return 1;
     }
+#if defined(USE_IPv6)
     else
     {
 	assert(mask >= 0 && mask <= 128);
-	memset(ip6mask, 0, sizeof(ip6mask));
-	memset(addr6, 0, sizeof(addr6));
-	// TODO setup mask
 
-	// TODO copy a1 and a2 to addr6[2]
+	/* setup mask */
+	memset(&ip6mask, 0, sizeof(ip6mask));
+	ip6mask.s6_addr32[0] = mask <= 32 ? htonl(0xffffffff << (32 - mask)) : 0xffffffff;
+// TODO optimize: setting to zero not necessary due to memset above
+	ip6mask.s6_addr32[1] = mask <= 32 ? 0 : mask > 64 ? 0xffffffff : htonl(0xffffffff << (32 - (mask-32)));
+	ip6mask.s6_addr32[2] = mask <= 64 ? 0 : mask > 96 ? 0xffffffff : htonl(0xffffffff << (32 - (mask-64)));
+	ip6mask.s6_addr32[3] = mask <= 96 ? 0 : htonl(0xffffffff << (32 - (mask-96)));
 
-	// TODO apply mask (another function?)
+	/* setup addr pointer */
+	addr6[0] = (struct in6_addr*)&a1->in6.sin6_addr;
+	addr6[1] = (struct in6_addr*)&a2->in6.sin6_addr;
 
-	return memcmp(&addr6[0], &addr6[1], sizeof(addr6)/2);
+	/* apply mask and compare */
+	return (!!(((addr6[0]->s6_addr32[0] ^ addr6[1]->s6_addr32[0]) & ip6mask.s6_addr32[0]) |
+	    ((addr6[0]->s6_addr32[1] ^ addr6[1]->s6_addr32[1]) & ip6mask.s6_addr32[1]) |
+	    ((addr6[0]->s6_addr32[2] ^ addr6[1]->s6_addr32[2]) & ip6mask.s6_addr32[2]) |
+	    ((addr6[0]->s6_addr32[3] ^ addr6[1]->s6_addr32[3]) & ip6mask.s6_addr32[3])));
     }
+#endif
+    return -1;
 }
+
 
 /******************\
 **		  **
