@@ -1002,7 +1002,7 @@ logToSystemLog(unsigned short level, char *msg)
 	break;
     }
 
-    syslog(logLevel, msg);
+    syslog(logLevel, "%s", msg);
 #endif
 }
 
