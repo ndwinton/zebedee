@@ -4627,8 +4627,11 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
     ** host, if any.
     */
 
-// TODO implement IPv6 capable comparison
-    if (addrP->in.sin_addr.s_addr == 0x00000000)
+    if ((addrP->sa.sa_family == AF_INET && addrP->in.sin_addr.s_addr == 0x00000000)
+#if defined(USE_IPv6)
+	|| (addrP->sa.sa_family == AF_INET6 && !memcmp(&addrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))
+#endif
+	)
     {
 	if (!getHostAddress(TargetHost, addrP, NULL, NULL))
 	{
@@ -4643,7 +4646,9 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
     */
 
     if ((peerAddrP->sa.sa_family == AF_INET && peerAddrP->in.sin_addr.s_addr == 0x00000000)
+#if defined(USE_IPv6)
 	|| (peerAddrP->sa.sa_family == AF_INET6 && !memcmp(&peerAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))
+#endif
     )
     {
 	message(0, 0, "client peer address not available");
