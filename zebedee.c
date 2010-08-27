@@ -1944,10 +1944,9 @@ getHostAddress(const char *host,
 	}
 	else
 	{
-	    *addrList = (SOCKADDR_UNION *)calloc(1, sizeof(struct sockaddr_in));
-// FIXME should index not be 0 instead of 1?
-	    ((*addrList)[1]).sa.sa_family = AF_INET;
-	    memset(&((*addrList)[1]), 0xff, sizeof(struct in_addr));
+	    *addrList = (SOCKADDR_UNION *)calloc(1, sizeof(SOCKADDR_UNION));
+	    ((*addrList)[0]).sa.sa_family = AF_INET;
+	    memset(&((*addrList)[0]).in.sin_addr, 0xff, sizeof(struct in_addr));
 	}
     }
 
@@ -2663,21 +2662,21 @@ acceptConnection(int listenFd, const char *host,
     int ready;
     SOCKADDR_UNION *addrList = NULL;
     SOCKADDR_UNION *addrPtr = NULL;
-    unsigned short maskbits = 129;
+    unsigned short mask = 129;
     char ipBuf[IP_BUF_SIZE];
 
 
     memset(&hostAddr, 0, sizeof(hostAddr));
     if (strcmp(host, "*") == 0)
     {
-	maskbits = 0;
+	mask = 0;
 	hostAddr.in.sin_addr.s_addr = 0;
     }
     else
     {
 // FIXME does it make sense to pass &mask? it won't be altered by getHostAddress
 // 	 unless host string contains a '/'. Here host is ServerHost from the config.
-	if (!getHostAddress(host, &hostAddr, &addrList, &maskbits))
+	if (!getHostAddress(host, &hostAddr, &addrList, &mask))
 	{
 	    message(0, 0, "can't resolve host or address '%s'", host);
 	    closesocket(serverFd);
@@ -2686,10 +2685,10 @@ acceptConnection(int listenFd, const char *host,
 	}
     }
 
-    if (maskbits == 129)
+    if (mask == 129)
     {
 	/* set default */
-	maskbits = (hostAddr.sa.sa_family == AF_INET) ? 32 : 128;
+	mask = (hostAddr.sa.sa_family == AF_INET) ? 32 : 128;
     }
 
     while (1)
@@ -2762,7 +2761,7 @@ acceptConnection(int listenFd, const char *host,
 	** server host name (applying a network mask as appropriate).
 	*/
 
-	if (cmpAddr(&fromAddr, &hostAddr, maskbits) == 0)
+	if (cmpAddr(&fromAddr, &hostAddr, mask) == 0)
 	{
 	    /* We've got a straight match */
 	    break;
@@ -2773,7 +2772,7 @@ acceptConnection(int listenFd, const char *host,
 
 	    for (addrPtr = addrList; !(addrPtr->sa.sa_family == AF_INET && addrPtr->in.sin_addr.s_addr == 0xffffffff); addrPtr++)
 	    {
-		if (cmpAddr(&fromAddr, &hostAddr, maskbits) == 0)
+		if (cmpAddr(&fromAddr, &hostAddr, mask) == 0)
 		{
 		    break;
 		}
@@ -4605,8 +4604,7 @@ allowRedirect(unsigned short port, SOCKADDR_UNION *addrP,
 {
     EndPtList_t *lp1, *lp2;
     SOCKADDR_UNION *alp = NULL;
-// TODO use unsigned short as mask and implement /32 instead of 0xffffffff semantics
-    unsigned long mask = 0;
+    unsigned short mask = 0;
     char *ipName = NULL;
 
 
