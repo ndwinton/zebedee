@@ -285,8 +285,7 @@ pthread_attr_t ThreadAttr;
 #define PROTOCOL_V202	    0x0202  /* Lock of protocol negotiation, checksum and source based targetting */
 #define PROTOCOL_V203	    0x0203  /* Support IPv6 address format for remote target selection */
 #if defined(USE_IPv6)
-// TODO switch to v203 as soon as implemented
-#define DFLT_PROTOCOL	    PROTOCOL_V202
+#define DFLT_PROTOCOL	    PROTOCOL_V203
 #else
 #define DFLT_PROTOCOL	    PROTOCOL_V202
 #endif
@@ -297,8 +296,7 @@ pthread_attr_t ThreadAttr;
 #define HDR_SIZE_V200	    22	/* Size of V200 protocol header message */
 #define HDR_SIZE_V201	    26	/* Size of V201 protocol header message */
 #define HDR_SIZE_V202	    28	/* Size of V202 protocol header message */
-#define HDR_SIZE_V203	    42	/* Size of V203 protocol header message 
-				 * (v202 header + 16 byte IPv6 address - 4 byte IPv4 address + 2 byte addr family) */
+#define HDR_SIZE_V203	    (HDR_SIZE_V202 - 4 + sizeof(sa_family_t) + 16)	/* Size of V203 protocol header message */
 #define HDR_SIZE_MIN	    HDR_SIZE_V200
 #define HDR_SIZE_MAX	    HDR_SIZE_V203
 
@@ -310,6 +308,9 @@ pthread_attr_t ThreadAttr;
 #define HDR_OFFSET_TOKEN    10	/* Offset of key token */
 #define HDR_OFFSET_NONCE    14	/* Offset of nonce value */
 #define HDR_OFFSET_TARGET   22	/* Offset of target host address */
+#if defined(USE_IPv6)
+#define HDR_OFFSET_CHECKSUM_V203 (26 - 4 + sizeof(sa_family_t) + 16)	/* Offset of checksum type */
+#endif
 #define HDR_OFFSET_CHECKSUM 26	/* Offset of checksum type */
 
 #define HDR_FLAG_UDPMODE    0x1	/* Operate in UDP mode */
@@ -1900,8 +1901,12 @@ getHostAddress(const char *host,
 	    message(0, 0, "can't use a netmask with a hostname (%s); use IP instead", host);
 	}
 	memset(&hints, 0, sizeof(struct addrinfo));
-// TODO implement IPv4 / IPv6 preference
+#if defined(USE_IPv6)
+// TODO implement IPv6 over IPv4 preference
 	hints.ai_family = AF_UNSPEC; /* Allow IPv4 or IPv6 */
+#else
+	hints.ai_family = AF_INET; /* Request IPv4 addresses only */
+#endif
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = 0;
 	hints.ai_protocol = 0;
@@ -2430,6 +2435,15 @@ sendSpoofed(int fd, char *buf, int len, SOCKADDR_UNION *toAddrP, SOCKADDR_UNION 
 
     /* Build IP packet header */
 
+#if defined(USE_IPv6)
+    // TODO implement spoofing for IPv6
+    if (fromAddrP->sa.sa_family != AF_INET || toAddrP->sa.sa_family !=  AF_INET)
+    {
+	message(0, 0, "spoofed IPv6 not supported");
+	return -1;
+    }
+#endif
+
     libnet_build_ip(LIBNET_UDP_H + len,	/* Size beyond IP header */
 		    0,			/* IP ToS */
 		    rand() % 11965 + 1,	/* IP ID */
@@ -2444,6 +2458,9 @@ sendSpoofed(int fd, char *buf, int len, SOCKADDR_UNION *toAddrP, SOCKADDR_UNION 
 
     /* Add UDP packet header and payload */
 
+    /* We must use ntohs because:
+     *  1) sockaddr_* structures store things in network byte order
+     *  2) libnet_build_udp converts back by calling htons according to source code of libnet */
     libnet_build_udp(ntohs(fromAddrP->in.sin_port),    /* Source port */
 		     ntohs(toAddrP->in.sin_port),	    /* Dest port */
 		     buf,		/* Payload */
@@ -2504,6 +2521,7 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 #if defined(USE_IPv6)
     addr.sa.sa_family = AF_INET6;
     memcpy(&addr.in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr));
+    // FIXME on BSD platforms, this won't create a mixed IPv4/IPv6 socket as on Linux
 #else
     addr.sa.sa_family = AF_INET;
     addr.in.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -5417,6 +5435,7 @@ clientListener(EndPtList_t *ports)
 			{
 			    /* Create a "loopback" socket */
 
+			    // TODO we could create an IPv6 loopback socket, in case fromAddr has AF_INET6
 			    localPort = 0;
 			    if ((clientFd = makeListener(&localPort, "127.0.0.1", 1, MAX_LISTEN)) == -1)
 			    {
@@ -5431,6 +5450,7 @@ clientListener(EndPtList_t *ports)
 				memset(&localAddr, 0, sizeof(localAddr));
 				localAddr.in.sin_family = AF_INET;
 				localAddr.in.sin_port = htons(localPort);
+				// TODO for IPv6 this would be in6addr_loopback
 				localAddr.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 				addHandler(&fromAddr, id, clientFd, &localAddr);
@@ -5636,7 +5656,7 @@ client(FnArgs_t *argP)
     if (redirectPort)
     {
 	message(3, 0, "client on local port %hu tunnels to target %s:%hu", argP->port, targetHost, redirectPort);
-	message(4, 0, "target address is %08x", ntohl(targetAddr.in.sin_addr.s_addr));
+	message(4, 0, "target address is %s", ipString(targetAddr, ipBuf));
     }
     else
     {
@@ -5709,6 +5729,10 @@ client(FnArgs_t *argP)
     {
 	switch (response)
 	{
+	case PROTOCOL_V203:
+	    protocol = PROTOCOL_V203;
+	    break;
+
 	case PROTOCOL_V202:
 	    protocol = PROTOCOL_V202;
 	    break;
@@ -5752,8 +5776,6 @@ client(FnArgs_t *argP)
     message(3, 0, "sending client nonce %02x%02x...", clientNonce[0], clientNonce[1]);
     memcpy(hdrData + HDR_OFFSET_NONCE, clientNonce, NONCE_SIZE);
 
-// TODO support V203: IPv6 sized redirect target address
-// Caveat: HDR_OFFSET_CHECKSUM is a constant that needs to be increased in case of V203
     if (protocol >= PROTOCOL_V201 && protocol < PROTOCOL_V203)
     {
 	hdrSize = HDR_SIZE_V201;
@@ -5771,15 +5793,65 @@ client(FnArgs_t *argP)
 	message(3, 0, "requesting target address %08x", ntohl(targetAddr.in.sin_addr.s_addr));
 	headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in.sin_addr.s_addr), HDR_OFFSET_TARGET);
     }
+#if defined(USE_IPv6)
+    else if (protocol >= PROTOCOL_V203)
+    {
+	/* hdrSize = HDR_SIZE_V203; makes no sense here, because it would be overwritten. */
+
+	if (strcmp(targetHost, ServerHost) == 0)
+	{
+	    message(4, 0, "target is the same as the server");
+	    targetAddr.sa.sa_family = AF_INET;
+	    targetAddr.in.sin_addr.s_addr = 0x00000000;
+	}
+
+	if (targetAddr.sa.sa_family == AF_INET)
+	{
+	    message(3, 0, "requesting target address %s", ipString(targetAddr, ipBuf));
+	    headerSetUShort(hdrData, AF_INET, HDR_OFFSET_TARGET);
+	    /* FIXME I thought, on the wire we should use net byte order (reverse ntohl/htonl)
+	     * On the other hand, at least for connections between hosts of same
+	     * endianness the old code works. headerSetULong reverses the
+	     * byte order again, so in Intel (little-endian) we regain network byte
+	     * order. But on big-endian platforms, this code submits non-network byte
+	     * order.*/
+	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in.sin_addr.s_addr), HDR_OFFSET_TARGET+2);
+	    /* hdrData is not zeroed initially. don't submit arbitrary data in unused fields . */
+	    headerSetULong(hdrData, 0, HDR_OFFSET_TARGET+2+4);
+	    headerSetULong(hdrData, 0, HDR_OFFSET_TARGET+2+8);
+	    headerSetULong(hdrData, 0, HDR_OFFSET_TARGET+2+12);
+	}
+	else if (targetAddr.sa.sa_family == AF_INET6)
+	{
+	    message(3, 0, "requesting target address %s", ipString(targetAddr, ipBuf));
+	    headerSetUShort(hdrData, AF_INET6, HDR_OFFSET_TARGET);
+	    // FIXME I thought, on the wire we should use net byte order (reverse ntohl/htonl).
+	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[0]), HDR_OFFSET_TARGET+2);
+	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[1]), HDR_OFFSET_TARGET+2+4);
+	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[2]), HDR_OFFSET_TARGET+2+8);
+	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[3]), HDR_OFFSET_TARGET+2+12);
+	}
+    }
+#endif
 
     if (protocol >= PROTOCOL_V202)
     {
-	hdrSize = HDR_SIZE_V202;
+#if defined(USE_IPv6)
+	if (protocol >= PROTOCOL_V203)
+	    hdrSize = HDR_SIZE_V203;
+	else
+#endif
+	    hdrSize = HDR_SIZE_V202;
 	/*
 	** This adds a message checksum to allows us to detect if
 	** somebody has tampered with the data "in flight".
 	*/
-	headerSetUShort(hdrData, ChecksumLevel, HDR_OFFSET_CHECKSUM);
+#if defined(USE_IPv6)
+	if (protocol >= PROTOCOL_V203)
+	    headerSetUShort(hdrData, ChecksumLevel, HDR_OFFSET_CHECKSUM_V203);
+	else
+#endif
+	    headerSetUShort(hdrData, ChecksumLevel, HDR_OFFSET_CHECKSUM);
 
 	/*
 	** The header data sent and received is hashed in order to
@@ -5865,7 +5937,12 @@ client(FnArgs_t *argP)
 
     if (protocol >= PROTOCOL_V202)
     {
-	cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
+#if defined(USE_IPv6)
+	if (protocol >= PROTOCOL_V203)
+	    cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM_V203);
+	else
+#endif
+	    cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
 	if (cksumLevel >= MinChecksumLevel)
 	{
 	    message(3, 0, "accepted checksum level %hu", cksumLevel);
@@ -6507,8 +6584,11 @@ server(FnArgs_t *argP)
     case PROTOCOL_V201:
 	    hdrSize = HDR_SIZE_V201;
 	    break;
-    default:
+    case PROTOCOL_V202:
 	    hdrSize = HDR_SIZE_V202;
+	    break;
+    default:
+	    hdrSize = HDR_SIZE_V203;
 	    break;
     }
 
@@ -6582,12 +6662,33 @@ server(FnArgs_t *argP)
     message(3, 0, "read port %hu", request);
 
     memset(&localAddr, 0, sizeof(localAddr));
-// TODO implement V203
     if (protocol >= PROTOCOL_V201 && protocol < PROTOCOL_V203)
     {
+	localAddr.sa.sa_family = AF_INET;
 	localAddr.in.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
 	message(3, 0, "read target address %s", ipString(localAddr, ipBuf));
     }
+#if defined(USE_IPv6)
+    else if (protocol >= PROTOCOL_V203)
+    {
+	localAddr.sa.sa_family = headerGetUShort(hdrData, HDR_OFFSET_TARGET);
+	if (localAddr.sa.sa_family == AF_INET)
+	{
+	    headerSetUShort(hdrData, AF_INET, HDR_OFFSET_TARGET);
+	    // FIXME I thought, on the wire we should use net byte order (reverse ntohl/htonl)
+	    localAddr.in.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2) & 0xffffffff);
+	    message(3, 0, "read target address %s", ipString(localAddr, ipBuf));
+	}
+	else if (localAddr.sa.sa_family == AF_INET6)
+	{
+	    // FIXME I thought, on the wire we should use net byte order (reverse ntohl/htonl)
+	    localAddr.in6.sin6_addr.s6_addr32[0] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2));
+	    localAddr.in6.sin6_addr.s6_addr32[1] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+4));
+	    localAddr.in6.sin6_addr.s6_addr32[2] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+8));
+	    localAddr.in6.sin6_addr.s6_addr32[3] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+12));
+	}
+    }
+#endif
 
     /*
     ** The server should not, in general, redirect arbitrary ports because
@@ -6692,7 +6793,12 @@ server(FnArgs_t *argP)
 
     if (protocol >= PROTOCOL_V202)
     {
-	cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
+#if defined(USE_IPv6)
+	if (protocol >= PROTOCOL_V203)
+	    cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM_V203);
+	else
+#endif
+	    cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
 	if (cksumLevel > ChecksumLevel)
 	{
 	    cksumLevel = ChecksumLevel;
@@ -6702,7 +6808,12 @@ server(FnArgs_t *argP)
 	    cksumLevel = MinChecksumLevel;
 	}
 	message(3, 0, "replying with checksum level %hu", cksumLevel);
-	headerSetUShort(hdrData, cksumLevel, HDR_OFFSET_CHECKSUM);
+#if defined(USE_IPv6)
+	if (protocol >= PROTOCOL_V203)
+	    headerSetUShort(hdrData, cksumLevel, HDR_OFFSET_CHECKSUM_V203);
+	else
+#endif
+	    headerSetUShort(hdrData, cksumLevel, HDR_OFFSET_CHECKSUM);
     }
     else
     {
@@ -7453,6 +7564,8 @@ setTunnel(char *value)
     char targetList[MAX_LINE_SIZE];
 
 
+/* FIXME this fails in case of an IPv6 address. Square brackets around IPv6 addresses might help, 
+ * 	 together with an adaption of the pattern. */
     if (sscanf(value, "%[^:]:%[^:]:%[^:]", clientList, hostName, targetList) == 3)
     {
 	setEndPtList(clientList, &ClientPorts, NULL, NULL, NULL, 0);
@@ -7913,7 +8026,11 @@ parseConfigLine(const char *lineBuf, int level)
     {
 	int yesNo = 0;
 	setBoolean(value, &yesNo);
+#if defined(USE_IPv6)
+	setString(yesNo ? "::1" : "::", &ListenIp);
+#else
 	setString(yesNo ? "127.0.0.1" : "0.0.0.0", &ListenIp);
+#endif
     }
     else if (!strcasecmp(key, "listenip")) setString(value, &ListenIp);
     else if (!strcasecmp(key, "listenmode")) setBoolean(value, &ListenMode);
@@ -8209,11 +8326,11 @@ cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask)
 
 	/* setup mask */
 	memset(&ip6mask, 0, sizeof(ip6mask));
-	ip6mask.s6_addr32[0] = mask <= 32 ? htonl(0xffffffff << (32 - mask)) : 0xffffffff;
+	ip6mask.s6_addr32[0] = htonl(mask <= 32 ? 0xffffffff << (32 - mask) : 0xffffffff);
 // TODO optimize: setting to zero not necessary due to memset above
-	ip6mask.s6_addr32[1] = mask <= 32 ? 0 : mask > 64 ? 0xffffffff : htonl(0xffffffff << (32 - (mask-32)));
-	ip6mask.s6_addr32[2] = mask <= 64 ? 0 : mask > 96 ? 0xffffffff : htonl(0xffffffff << (32 - (mask-64)));
-	ip6mask.s6_addr32[3] = mask <= 96 ? 0 : htonl(0xffffffff << (32 - (mask-96)));
+	ip6mask.s6_addr32[1] = htonl(mask <= 32 ? 0 : mask > 64 ? 0xffffffff : 0xffffffff << (32 - (mask-32)));
+	ip6mask.s6_addr32[2] = htonl(mask <= 64 ? 0 : mask > 96 ? 0xffffffff : 0xffffffff << (32 - (mask-64)));
+	ip6mask.s6_addr32[3] = htonl(mask <= 96 ? 0 : 0xffffffff << (32 - (mask-96)));
 
 	/* setup addr pointer */
 	addr6[0] = (struct in6_addr*)&a1->in6.sin6_addr;
