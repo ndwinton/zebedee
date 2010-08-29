@@ -5816,7 +5816,7 @@ client(FnArgs_t *argP)
 	     * order. But on big-endian platforms, this code submits non-network byte
 	     * order.*/
 	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in.sin_addr.s_addr), HDR_OFFSET_TARGET+2);
-	    /* hdrData is not zeroed initially. don't submit arbitrary data in unused fields . */
+	    /* hdrData is not zeroed initially. don't submit arbitrary data in unused fields. */
 	    headerSetULong(hdrData, 0, HDR_OFFSET_TARGET+2+4);
 	    headerSetULong(hdrData, 0, HDR_OFFSET_TARGET+2+8);
 	    headerSetULong(hdrData, 0, HDR_OFFSET_TARGET+2+12);
@@ -7496,6 +7496,33 @@ setTarget(char *value)
     char idFile[MAX_LINE_SIZE];
     char peerList[MAX_LINE_SIZE];
 
+#if defined(USE_IPv6)
+    if (sscanf(value, "[%[^]]]:%[^?]?%s", target, portList, idFile) == 3)
+    {
+    	setEndPtList(portList, &AllowedTargets, target, idFile, NULL, 0);
+    }
+    else if (sscanf(value, "[%[^]]]:%[^@]@%s", target, portList, peerList) == 3)
+    {
+    	setEndPtList(portList, &AllowedTargets, target, NULL, peerList, 0);
+    }
+    else if (sscanf(value, "[%[^?]]?%s", target, idFile) == 2)
+    {
+	setEndPtList("0", &AllowedTargets, target, idFile, NULL, 1);
+    }
+    else if (sscanf(value, "[%[^@]]@%s", target, peerList) == 2)
+    {
+	setEndPtList("0", &AllowedTargets, target, NULL, peerList, 1);
+    }
+    else if (sscanf(value, "[%[^]]]:%s", target, portList) == 2)
+    {
+	setEndPtList(portList, &AllowedTargets, target, NULL, NULL, 0);
+    }
+    else if (sscanf(value, "[%[^]]]", target) == 1)
+    {
+	setEndPtList("0", &AllowedTargets, target, NULL, NULL, 1);
+    }
+    else
+#endif
     if (sscanf(value, "%[^:]:%[^?]?%s", target, portList, idFile) == 3)
     {
     	setEndPtList(portList, &AllowedTargets, target, idFile, NULL, 0);
@@ -7564,8 +7591,58 @@ setTunnel(char *value)
     char targetList[MAX_LINE_SIZE];
 
 
-/* FIXME this fails in case of an IPv6 address. Square brackets around IPv6 addresses might help, 
- * 	 together with an adaption of the pattern. */
+/* IPv6 addresses must be enclosed by square brackets. */
+
+#if defined(USE_IPv6)
+    if (sscanf(value, "%[^:]:[%[^]]]:%[^:]", clientList, hostName, targetList) == 3)
+    {
+	setEndPtList(clientList, &ClientPorts, NULL, NULL, NULL, 0);
+	if (ServerHost == NULL)
+	{
+	    setString(hostName, &ServerHost);
+	}
+	if (strcmp(hostName, "*") == 0)
+	{
+	    setEndPtList(targetList, &TargetPorts, NULL, NULL, NULL, 0);
+	}
+	else
+	{
+	    setEndPtList(targetList, &TargetPorts, hostName, NULL, NULL, 0);
+	}
+    }
+    else if (sscanf(value, "[%[^]]]:%[^:]", hostName, targetList) == 2)
+    {
+	if (ServerHost == NULL)
+	{
+	    setString(hostName, &ServerHost);
+	}
+	if (strcmp(hostName, "*") == 0)
+	{
+	    setEndPtList(targetList, &TargetPorts, NULL, NULL, NULL, 0);
+	}
+	else
+	{
+	    setEndPtList(targetList, &TargetPorts, hostName, NULL, NULL, 0);
+	}
+	if (countPorts(TargetPorts) != 1)
+	{
+	    message(0, 0, "target port list contains more than one port");
+	    exit(EXIT_FAILURE);
+	}
+    }
+    else if (sscanf(value, "[%[^]]]", hostName) == 1)
+    {
+	if (ServerHost == NULL || strcmp(ServerHost, "*") == 0)
+	{
+	    setString(hostName, &ServerHost);
+	}
+	else
+	{
+	    message(0, 0, "invalid tunnel specification '%s'", value);
+	}
+    }
+    else
+#endif
     if (sscanf(value, "%[^:]:%[^:]:%[^:]", clientList, hostName, targetList) == 3)
     {
 	setEndPtList(clientList, &ClientPorts, NULL, NULL, NULL, 0);
@@ -7628,7 +7705,12 @@ setAllowedPeer(char *value, EndPtList_t *peerList)
     char addr[MAX_LINE_SIZE];
     char portList[MAX_LINE_SIZE];
 
-
+#if defined(USE_IPv6)
+    if (sscanf(value, "[%[^]]]:%s", addr, portList) == 2)
+    {
+	setEndPtList(portList, &peerList, addr, NULL, NULL, 0);
+    }
+#endif
     if (sscanf(value, "%[^:]:%s", addr, portList) == 2)
     {
 	setEndPtList(portList, &peerList, addr, NULL, NULL, 0);
@@ -8047,7 +8129,11 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "httpproxy"))
     {
 	setString(value, &ProxyHost);
-	if (sscanf(value, "%[^:]:%hu", ProxyHost, &ProxyPort) != 2)
+	if (
+#if defined(USE_IPv6)
+	    sscanf(value, "[%[^]]]:%hu", ProxyHost, &ProxyPort) != 2 &&
+#endif
+	    sscanf(value, "%[^:]:%hu", ProxyHost, &ProxyPort) != 2)
 	{
 	    message(0, 0, "invalid httpproxy specification: %s", value);
 	    ProxyHost = NULL;
