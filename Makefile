@@ -247,7 +247,7 @@ install : precheck zebedee$(EXE) zebedee.1 ftpgw.tcl.1 $(ZBDFILES) $(TXTFILES)
 	$(INSTALL) $(TXTFILES) $(ZBDDIR)
 
 clean :
-	rm -f zebedee zebedee.exe *.o core *.1 *.html *.tmp *.bak
+	rm -f zebedee zebedee.exe *.o core *.1 *.html *.tmp *.bak doc_jp/*.tmp doc_jp/*.1 doc_jp/*.html
 
 # This makes the Win32 setup.exe using InnoSetup. The perl command in
 # this sequence "dosifies" the text files ... sigh ...
