@@ -8377,8 +8377,7 @@ switchUser(void)
 ** cmpAddr
 **
 ** Compare two sockaddr structures after applying mask to each one of them.
-** Return value is similar to memcmp: 0 if both addresses match; or an
-** arbitrary negative or positive value otherwise.
+** Return 0 if both addresses match; or -1 otherwise.
 */
 
 int 
@@ -8387,11 +8386,10 @@ cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask)
     unsigned long ip4mask = 0;
 #if defined(USE_IPv6)
     struct in6_addr ip6mask;
-    struct in6_addr *addr6[2];
 #endif
 
     if (a1->sa.sa_family != a2->sa.sa_family)
-	return 1;
+	return -1;
 
     if (a1->sa.sa_family == AF_INET)
     {
@@ -8403,7 +8401,7 @@ cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask)
 	    (a2->in.sin_addr.s_addr & ip4mask))
 	    return 0;
 	else
-	    return 1;
+	    return -1;
     }
 #if defined(USE_IPv6)
     else
@@ -8418,15 +8416,11 @@ cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask)
 	ip6mask.s6_addr32[2] = htonl(mask <= 64 ? 0 : mask > 96 ? 0xffffffff : 0xffffffff << (32 - (mask-64)));
 	ip6mask.s6_addr32[3] = htonl(mask <= 96 ? 0 : 0xffffffff << (32 - (mask-96)));
 
-	/* setup addr pointer */
-	addr6[0] = (struct in6_addr*)&a1->in6.sin6_addr;
-	addr6[1] = (struct in6_addr*)&a2->in6.sin6_addr;
-
 	/* apply mask and compare */
-	return (!!(((addr6[0]->s6_addr32[0] ^ addr6[1]->s6_addr32[0]) & ip6mask.s6_addr32[0]) |
-	    ((addr6[0]->s6_addr32[1] ^ addr6[1]->s6_addr32[1]) & ip6mask.s6_addr32[1]) |
-	    ((addr6[0]->s6_addr32[2] ^ addr6[1]->s6_addr32[2]) & ip6mask.s6_addr32[2]) |
-	    ((addr6[0]->s6_addr32[3] ^ addr6[1]->s6_addr32[3]) & ip6mask.s6_addr32[3])));
+	return (!!(((a1->in6.sin6_addr.s6_addr32[0] ^ a2->in6.sin6_addr.s6_addr32[0]) & ip6mask.s6_addr32[0]) |
+	    ((a1->in6.sin6_addr.s6_addr32[1] ^ a2->in6.sin6_addr.s6_addr32[1]) & ip6mask.s6_addr32[1]) |
+	    ((a1->in6.sin6_addr.s6_addr32[2] ^ a2->in6.sin6_addr.s6_addr32[2]) & ip6mask.s6_addr32[2]) |
+	    ((a1->in6.sin6_addr.s6_addr32[3] ^ a2->in6.sin6_addr.s6_addr32[3]) & ip6mask.s6_addr32[3])));
     }
 #endif
     return -1;
