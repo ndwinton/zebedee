@@ -46,8 +46,8 @@ OPTIM = -Wall -O3
 # BFINC = /usr/include/openssl
 # BFLIB = -lcrypto
 
-BFINC = -I../blowfish-0.9.5a
-BFLIB = ../blowfish-0.9.5a/libblowfish.a
+BFINC = -I../blowfish-1.0.0a
+BFLIB = ../blowfish-1.0.0a/libblowfish.a
 
 # Location of zlib include and library
 
