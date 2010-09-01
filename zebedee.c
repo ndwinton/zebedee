@@ -2118,7 +2118,7 @@ makeConnection(const char *host, const unsigned short port,
 #else
 	memset(&myFromAddr, 0, sizeof(addr));
 	memcpy(&myFromAddr, fromAddrP, sizeof(addr));
-	if (bind(sfd, &myFromAddr.sa, sizeof(addr)) < 0)
+	if (bind(sfd, &myFromAddr.sa, addr.sa.sa_family == AF_INET ? sizeof(addr.in) : sizeof(addr)) < 0)
 	{
 	    message(1, errno, "WARNING: failed to set connection source address -- ignored");
 	}
@@ -2140,7 +2140,7 @@ makeConnection(const char *host, const unsigned short port,
 
 	if (timeout == 0)
 	{
-	    if (connect(sfd, &addr.sa, sizeof(addr)) < 0)
+	    if (connect(sfd, &addr.sa, addr.sa.sa_family == AF_INET ? sizeof(addr.in) : sizeof(addr)) < 0)
 	    {
 		closesocket(sfd);
 		return -1;
@@ -2158,7 +2158,7 @@ makeConnection(const char *host, const unsigned short port,
 	    ** EWOULDBLOCK or EINPROGRESS. EINTR is also possible
 	    */
 
-	    connect(sfd, &addr.sa, sizeof(addr));
+	    connect(sfd, &addr.sa, addr.sa.sa_family == AF_INET ? sizeof(addr.in) : sizeof(addr));
 	    if (errno != 0 && errno != EWOULDBLOCK
 		&& errno != EINPROGRESS && errno != EINTR)
 	    {
