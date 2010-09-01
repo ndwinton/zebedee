@@ -8395,7 +8395,6 @@ cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask)
     {
 	/* default value is 128, here is the place to reduce it */
 	if (mask > 32) mask = 32;
-	assert(mask >= 0);
 	ip4mask = htonl(0xffffffff << (32 - mask));
 	if ((a1->in.sin_addr.s_addr & ip4mask) ==
 	    (a2->in.sin_addr.s_addr & ip4mask))
@@ -8406,7 +8405,7 @@ cmpAddr(SOCKADDR_UNION *a1, SOCKADDR_UNION *a2, unsigned short mask)
 #if defined(USE_IPv6)
     else
     {
-	assert(mask >= 0 && mask <= 128);
+	assert(mask <= 128);
 
 	/* setup mask */
 	memset(&ip6mask, 0, sizeof(ip6mask));
