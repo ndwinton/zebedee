@@ -6682,7 +6682,6 @@ server(FnArgs_t *argP)
 	    headerSetUShort(hdrData, AF_INET, HDR_OFFSET_TARGET);
 	    // FIXME I thought, on the wire we should use net byte order (reverse ntohl/htonl)
 	    localAddr.in.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2) & 0xffffffff);
-	    message(3, 0, "read target address %s", ipString(localAddr, ipBuf));
 	}
 	else if (localAddr.sa.sa_family == AF_INET6)
 	{
@@ -6692,6 +6691,7 @@ server(FnArgs_t *argP)
 	    localAddr.in6.sin6_addr.s6_addr32[2] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+8));
 	    localAddr.in6.sin6_addr.s6_addr32[3] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+12));
 	}
+	message(3, 0, "read target address %s", ipString(localAddr, ipBuf));
     }
 #endif
 
