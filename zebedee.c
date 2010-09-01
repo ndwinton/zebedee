@@ -5814,12 +5814,6 @@ client(FnArgs_t *argP)
 	{
 	    message(3, 0, "requesting target address %s", ipString(targetAddr, ipBuf));
 	    headerSetUShort(hdrData, AF_INET, HDR_OFFSET_TARGET);
-	    /* FIXME I thought, on the wire we should use net byte order (reverse ntohl/htonl)
-	     * On the other hand, at least for connections between hosts of same
-	     * endianness the old code works. headerSetULong reverses the
-	     * byte order again, so in Intel (little-endian) we regain network byte
-	     * order. But on big-endian platforms, this code submits non-network byte
-	     * order.*/
 	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in.sin_addr.s_addr), HDR_OFFSET_TARGET+2);
 	    /* hdrData is not zeroed initially. don't submit arbitrary data in unused fields. */
 	    headerSetULong(hdrData, 0, HDR_OFFSET_TARGET+2+4);
@@ -5830,7 +5824,6 @@ client(FnArgs_t *argP)
 	{
 	    message(3, 0, "requesting target address %s", ipString(targetAddr, ipBuf));
 	    headerSetUShort(hdrData, AF_INET6, HDR_OFFSET_TARGET);
-	    // FIXME I thought, on the wire we should use net byte order (reverse ntohl/htonl).
 	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[0]), HDR_OFFSET_TARGET+2);
 	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[1]), HDR_OFFSET_TARGET+2+4);
 	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[2]), HDR_OFFSET_TARGET+2+8);
@@ -6680,12 +6673,10 @@ server(FnArgs_t *argP)
 	if (localAddr.sa.sa_family == AF_INET)
 	{
 	    headerSetUShort(hdrData, AF_INET, HDR_OFFSET_TARGET);
-	    // FIXME I thought, on the wire we should use net byte order (reverse ntohl/htonl)
 	    localAddr.in.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2) & 0xffffffff);
 	}
 	else if (localAddr.sa.sa_family == AF_INET6)
 	{
-	    // FIXME I thought, on the wire we should use net byte order (reverse ntohl/htonl)
 	    localAddr.in6.sin6_addr.s6_addr32[0] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2));
 	    localAddr.in6.sin6_addr.s6_addr32[1] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+4));
 	    localAddr.in6.sin6_addr.s6_addr32[2] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+8));
