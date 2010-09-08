@@ -167,9 +167,13 @@ extern int svcRemove(char *name);
 #define INADDR_NONE 0xffffffff
 #endif
 
-/* Solaris 10 */
 #ifndef s6_addr32
-#define s6_addr32       _S6_un._S6_u32
+#ifdef __sun__
+#define s6_addr32 _S6_un._S6_u32
+#endif /* __sun__ */
+#ifdef __FreeBSD__
+#define s6_addr32 __u6_addr.__u6_addr32
+#endif /* __FreeBSD__ */
 #endif
 
 #define DFLT_SHELL	"/bin/sh"
