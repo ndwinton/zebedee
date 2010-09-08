@@ -167,6 +167,7 @@ extern int svcRemove(char *name);
 #define INADDR_NONE 0xffffffff
 #endif
 
+#ifdef USE_IPv6
 #ifndef s6_addr32
 #ifdef __sun__
 #define s6_addr32 _S6_un._S6_u32
@@ -174,7 +175,8 @@ extern int svcRemove(char *name);
 #ifdef __FreeBSD__
 #define s6_addr32 __u6_addr.__u6_addr32
 #endif /* __FreeBSD__ */
-#endif
+#endif /* s6_addr32 */
+#endif /* USE_IPv6 */
 
 #define DFLT_SHELL	"/bin/sh"
 #define FILE_SEP_CHAR	'/'
