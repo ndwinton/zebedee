@@ -57,8 +57,8 @@ ZLIB = ../zlib-1.2.5/libz.a
 # Location of bzlib include and library
 # Set these empty if you don't want bzib2 support
 
-BZINC = -I../bzip2-1.0.3
-BZLIB = ../bzip2-1.0.3/libbz2.a
+BZINC = -I../bzip2-1.0.5
+BZLIB = ../bzip2-1.0.5/libbz2.a
 
 #
 # Tools needed for Perl "POD"-format documentation conversion.
