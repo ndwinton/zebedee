@@ -16,7 +16,7 @@ OS =
 
 CC_$(OS) = gcc
 
-CC_win32 = gcc -mno-cygwin
+CC_win32 = gcc
 CC_linux = gcc -pthread
 CC_linux64 = $(CC_linux) -m64
 CC_solaris = gcc

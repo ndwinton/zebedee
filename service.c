@@ -54,11 +54,11 @@ SERVICE_STATUS_HANDLE   SvcStatusHandle;
 DWORD			SvcError;
 HANDLE			SvcThreadHandle = NULL;
 char			*SvcName = NULL;
-VOID			(*SvcFunction)(VOID *) = NULL;
+DWORD			(*SvcFunction)(VOID *) = NULL;
 VOID			*SvcArg = NULL;
 
 DWORD	svcPlatform(void);
-VOID	svcRun(char *name, VOID (*function)(VOID *), VOID *arg);
+VOID	svcRun(char *name, DWORD (*function)(VOID *), VOID *arg);
 VOID	svcRun9X(char *name);
 VOID	svcRunNT(char *name);
 VOID	svcMain(DWORD argc, LPTSTR *argv);
@@ -89,7 +89,7 @@ svcPlatform(void)
 }
 
 VOID
-svcRun(char *name, VOID (*function)(VOID *), VOID *arg)
+svcRun(char *name, DWORD (*function)(VOID *), VOID *arg)
 {
     DWORD platform = svcPlatform();
 
@@ -238,7 +238,7 @@ svcMain(DWORD argc, LPTSTR *argv)
 
     /* Start the worker thread */
 
-    SvcThreadHandle = (HANDLE)_beginthread(SvcFunction, 65536, SvcArg);
+    SvcThreadHandle = (HANDLE)CreateThread(NULL, 65536, SvcFunction, SvcArg, 0, NULL);
     if (!SvcThreadHandle)
     {
 	message(0, 0, "failed to create worker thread");
