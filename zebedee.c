@@ -6678,7 +6678,6 @@ server(FnArgs_t *argP)
 	localAddr.sa.sa_family = headerGetUShort(hdrData, HDR_OFFSET_TARGET);
 	if (localAddr.sa.sa_family == AF_INET)
 	{
-	    headerSetUShort(hdrData, AF_INET, HDR_OFFSET_TARGET);
 	    localAddr.in.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2) & 0xffffffff);
 	}
 	else if (localAddr.sa.sa_family == AF_INET6)
