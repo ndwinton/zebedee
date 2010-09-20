@@ -297,6 +297,8 @@ pthread_attr_t ThreadAttr;
 #define PROTOCOL_V203	    0x0203  /* Support IPv6 address format for remote target selection */
 #if defined(USE_IPv6)
 #define DFLT_PROTOCOL	    PROTOCOL_V203
+#define ADDR_FAMILY_IP4	    0x0
+#define ADDR_FAMILY_IP6	    0x1
 #else
 #define DFLT_PROTOCOL	    PROTOCOL_V202
 #endif
@@ -5819,7 +5821,7 @@ client(FnArgs_t *argP)
 	if (targetAddr.sa.sa_family == AF_INET)
 	{
 	    message(3, 0, "requesting target address %s", ipString(targetAddr, ipBuf));
-	    headerSetUShort(hdrData, AF_INET, HDR_OFFSET_TARGET);
+	    headerSetUShort(hdrData, ADDR_FAMILY_IP4, HDR_OFFSET_TARGET);
 	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in.sin_addr.s_addr), HDR_OFFSET_TARGET+2);
 	    /* hdrData is not zeroed initially. don't submit arbitrary data in unused fields. */
 	    headerSetULong(hdrData, 0, HDR_OFFSET_TARGET+2+4);
@@ -5829,7 +5831,7 @@ client(FnArgs_t *argP)
 	else if (targetAddr.sa.sa_family == AF_INET6)
 	{
 	    message(3, 0, "requesting target address %s", ipString(targetAddr, ipBuf));
-	    headerSetUShort(hdrData, AF_INET6, HDR_OFFSET_TARGET);
+	    headerSetUShort(hdrData, ADDR_FAMILY_IP6, HDR_OFFSET_TARGET);
 	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[0]), HDR_OFFSET_TARGET+2);
 	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[1]), HDR_OFFSET_TARGET+2+4);
 	    headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.in6.sin6_addr.s6_addr32[2]), HDR_OFFSET_TARGET+2+8);
@@ -6488,6 +6490,7 @@ server(FnArgs_t *argP)
     unsigned short hdrSize;
     SOCKADDR_UNION localAddr;
     SOCKADDR_UNION peerAddr;
+    unsigned short targetAddrFamily;
     unsigned char clientNonce[NONCE_SIZE];
     unsigned char serverNonce[NONCE_SIZE];
     char *targetHost = TargetHost;
@@ -6675,17 +6678,23 @@ server(FnArgs_t *argP)
 #if defined(USE_IPv6)
     else if (protocol >= PROTOCOL_V203)
     {
-	localAddr.sa.sa_family = headerGetUShort(hdrData, HDR_OFFSET_TARGET);
-	if (localAddr.sa.sa_family == AF_INET)
+	targetAddrFamily = headerGetUShort(hdrData, HDR_OFFSET_TARGET);
+	if (targetAddrFamily == ADDR_FAMILY_IP4)
 	{
+	    localAddr.sa.sa_family = AF_INET;
 	    localAddr.in.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2) & 0xffffffff);
 	}
-	else if (localAddr.sa.sa_family == AF_INET6)
+	else if (targetAddrFamily == ADDR_FAMILY_IP6)
 	{
+	    localAddr.sa.sa_family = AF_INET6;
 	    localAddr.in6.sin6_addr.s6_addr32[0] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2));
 	    localAddr.in6.sin6_addr.s6_addr32[1] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+4));
 	    localAddr.in6.sin6_addr.s6_addr32[2] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+8));
 	    localAddr.in6.sin6_addr.s6_addr32[3] = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET+2+12));
+	}
+	else
+	{
+	    message(0, 0, "invalid address family found in target address field of incoming packet: %d", targetAddrFamily);
 	}
 	message(3, 0, "read target address %s", ipString(localAddr, ipBuf));
     }
