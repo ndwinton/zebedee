@@ -309,7 +309,7 @@ pthread_attr_t ThreadAttr;
 #define HDR_SIZE_V200	    22	/* Size of V200 protocol header message */
 #define HDR_SIZE_V201	    26	/* Size of V201 protocol header message */
 #define HDR_SIZE_V202	    28	/* Size of V202 protocol header message */
-#define HDR_SIZE_V203	    (HDR_SIZE_V202 - 4 + sizeof(sa_family_t) + 16)	/* Size of V203 protocol header message */
+#define HDR_SIZE_V203	    (HDR_SIZE_V202 - 4 + 2 + 16)	/* Size of V203 protocol header message */
 #define HDR_SIZE_MIN	    HDR_SIZE_V200
 #define HDR_SIZE_MAX	    HDR_SIZE_V203
 
