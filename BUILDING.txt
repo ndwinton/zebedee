@@ -2,7 +2,7 @@ Linux
 =====
 
 Zebedee should build easily on all modern Linux distributions too although
-older versions (RedHat 5 vintage, I believe) may have problems with one or
+older versions (RedHat 5 vintage, Neil believed) may have problems with one or
 more of the pthread library functions being missing. Compile without
 HAVE_PTHREADS defined if this appears to be a problem.
 
@@ -16,18 +16,18 @@ Zebedee:
     then type "make OS=linux". For a "native" build on 64-bit systems
     use "make OS=linux64".
     
-blowfish-0.9.5a:
+blowfish-1.0.0a:
 
     Builds without modification to the Makefile. Use "make optimize" to build
     the best version for your platform.
     
-zlib-1.2.3:
+zlib-1.2.5:
 
     Configure and build using:
 
 	./configure; make
 
-bzip2-1.0.3:
+bzip2-1.0.6:
 
     Follow the instructions in the README file
 
@@ -46,7 +46,11 @@ some point or other, on:
 	MacOS X -- use "make OS=macosx"
         BSDi -- use "make OS=BSDi"
 
-I have received reports of Zebedee being built successfully under AIX
+IPv6 support has been tested successfully on Linux, Solaris and Cygwin.
+See http://github.com/basman/zebedee/wiki/IPv6 for latest information about
+IPv6 support.
+
+Neil Winton received reports of Zebedee being built successfully under AIX
 (some AIX-related changes have been made to the base code) and SCO Unix.  I
 will happily incorporate changes for other platforms if you can supply the
 necessary differences.
@@ -58,9 +62,9 @@ that you might want to tweak.
 Windows
 =======
 
-Zebedee was built using the Cygwin tools (http://sourceware.cygnus.com) and
-the "mingw32" version of gcc (see http://www.mingw.org) -- invoked from
-Cygwin as "gcc -mno-cygwin".
+Zebedee was built using the Cygwin tools (http://sourceware.cygnus.com),
+but not the "mingw32" version of gcc, because it does not support IPv6
+functions and data structures required.
 
 Zebedee:
 
@@ -68,17 +72,17 @@ Zebedee:
     files and installation directories, if necessary and then type
     "make OS=win32".
 
-blowfish-0.9.5a:
+blowfish-1.0.0a:
 
-    Ensure that you build with the Mingw32 compiler and then "make".
+    Ensure that you use the cygwin gcc compiler and then "make".
     The "make optimize" doesn't appear to work well under Cygwin, if you
     really want to try to optimize performance do "make bf_opts" and
     then run bf_opts.
 	
-zlib-1.2.3:
+zlib-1.2.5:
 
     Run "configure" and then make. It's a breeze!
 
-bzip2-1.0.3:
+bzip2-1.0.6:
 
     Follow the instructions in the README file.
