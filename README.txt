@@ -63,7 +63,7 @@ from the command-line.
 
 Zebedee clients will probably, in general, be started from the
 command line. However, a file-type association is created by
-theinstallation for files of type ".zbd". This can be used to
+the installation for files of type ".zbd". This can be used to
 launch Zebedee clients automatically from Explorer or elsewhere
 -- provided that all the necessary information is contained
 within the configuration file.
