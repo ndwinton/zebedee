@@ -1,3 +1,11 @@
+* Release 2.5.4
+
+Add IPv6 support.
+
+Update to latest libraries (zlib, bzip2 and blowfish/OpenSSL).
+
+Minor fixes (typos and compiler warnings).
+
 * Release 2.5.3
 
 Fix file descriptor leak when IP address lookup fails.

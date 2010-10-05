@@ -22,7 +22,7 @@
 */
 
 char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.49 2005-09-02 22:20:23 ndwinton Exp $";
-#define RELEASE_STR "2.5.3"
+#define RELEASE_STR "2.5.4"
 
 #include <stdio.h>
 #include <stdlib.h>
