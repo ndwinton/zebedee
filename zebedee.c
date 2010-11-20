@@ -172,9 +172,9 @@ extern int svcRemove(char *name);
 #ifdef __sun__
 #define s6_addr32 _S6_un._S6_u32
 #endif /* __sun__ */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__APPLE__)
 #define s6_addr32 __u6_addr.__u6_addr32
-#endif /* __FreeBSD__ */
+#endif /* defined(__FreeBSD__) || defined(__APPLE__) */
 #endif /* s6_addr32 */
 #endif /* USE_IPv6 */
 
