@@ -2596,7 +2596,13 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 	    message(0, errno, "can't get local port number");
 	    goto failure;
 	}
-	*portP = ntohs(addr.in.sin_port);
+
+#if defined(USE_IPv6)
+	if (addr.sa.sa_family == AF_INET6)
+	  *portP = ntohs(addr.in6.sin6_port);
+	else
+#endif
+	  *portP = ntohs(addr.in.sin_port);
     }
 
     return sfd;
