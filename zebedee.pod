@@ -19,7 +19,7 @@ B<zebedee> [B<-m>] [B<-e> I<command>]
 
 =item Common Options:
 
-B<zebedee> [B<-dDLtuU>] [B<-b> I<address>] [B<-F> I<char>] [B<-f> I<file>]
+B<zebedee> [B<-4dDLtuU>] [B<-b> I<address>] [B<-F> I<char>] [B<-f> I<file>]
 [B<-K> I<checksumlevel>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<log>]
 [B<-T> I<port>] [B<-v> I<level>] [B<-x> I<config>] [B<-z> I<level>] ...
 
@@ -377,6 +377,11 @@ usage. The choice of client or server behaviour is controlled by the
 B<L<server|/item_server>> keyword:
 
 =over 4
+
+=item B<ipv4only> (command-line B<-4>)
+
+Restrict network sockets to IPv4 protocol only. This is useful when running
+B<Zebedee> compiled with IPv6 support on machines without full IPv6 support.
 
 =item B<server> (command-line B<-s>)
 

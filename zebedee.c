@@ -560,6 +560,7 @@ gid_t ProcessGID = -1;          /* Group id to run zebedee process if started as
 long ThreadStackSize = THREAD_STACK_SIZE; /* As it says */
 unsigned short BugCompatibility = 0;	/* Be nice to development users */
 unsigned short MaxConnections = 0;      /* Maximum number of simultaneous connections */
+int IPv4Only = 0;
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -1915,10 +1916,11 @@ getHostAddress(const char *host,
 	}
 	memset(&hints, 0, sizeof(struct addrinfo));
 #if defined(USE_IPv6)
-// TODO implement IPv6 over IPv4 preference
-	hints.ai_family = AF_UNSPEC; /* Allow IPv4 or IPv6 */
+	if (!IPv4Only)
+	    hints.ai_family = AF_UNSPEC; /* Allow IPv4 or IPv6 */
+	else
 #else
-	hints.ai_family = AF_INET; /* Request IPv4 addresses only */
+	    hints.ai_family = AF_INET; /* Request IPv4 addresses only */
 #endif
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = 0;
@@ -2532,10 +2534,18 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 
     memset(&addr, 0, sizeof(addr));
 #if defined(USE_IPv6)
-    addr.sa.sa_family = AF_INET6;
-    memcpy(&addr.in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr));
-    // FIXME on BSD platforms, this won't create a mixed IPv4/IPv6 socket as on Linux
-#else
+    if (!IPv4Only)
+    {
+	addr.sa.sa_family = AF_INET6;
+	memcpy(&addr.in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr));
+	// FIXME on BSD platforms, this won't create a mixed IPv4/IPv6 socket as on Linux
+    }
+    else
+    {
+	addr.sa.sa_family = AF_INET;
+	addr.in.sin_addr.s_addr = htonl(INADDR_ANY);
+    }
+#else /* USE_IPv6 */
     addr.sa.sa_family = AF_INET;
     addr.in.sin_addr.s_addr = htonl(INADDR_ANY);
 #endif
@@ -2547,6 +2557,12 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 	}
     }
 #if defined(USE_IPv6)
+    if (addr.sa.sa_family == AF_INET6 && IPv4Only)
+    {
+	message(0, 0, "ListenIp '%s' resolved to IPv6 address '%s', but IPv6 is disabled", listenIp, ipString(addr, ipBuf));
+	goto failure;
+    }
+
     if (addr.sa.sa_family == AF_INET6)
 	addr.in6.sin6_port = (portP ? htons(*portP) : 0);
     else
@@ -8124,11 +8140,7 @@ parseConfigLine(const char *lineBuf, int level)
     {
 	int yesNo = 0;
 	setBoolean(value, &yesNo);
-#if defined(USE_IPv6)
-	setString(yesNo ? "::1" : "::", &ListenIp);
-#else
 	setString(yesNo ? "127.0.0.1" : "0.0.0.0", &ListenIp);
-#endif
     }
     else if (!strcasecmp(key, "listenip")) setString(value, &ListenIp);
     else if (!strcasecmp(key, "listenmode")) setBoolean(value, &ListenMode);
@@ -8165,6 +8177,10 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "threadstacksize")) setStackSize(value);
     else if (!strcasecmp(key, "bugcompatibility")) setUShort(value, &BugCompatibility);
     else if (!strcasecmp(key, "maxconnections")) setUShort(value, &MaxConnections);
+    else if (!strcasecmp(key, "ipv4only"))
+    {
+	setBoolean(value, &IPv4Only);
+    }
     else
     {
 	return 0;
@@ -8491,10 +8507,13 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "b:C:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "4b:C:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
+	case '4':
+	    setBoolean("true", &IPv4Only);
+	    break;
 	case 'C':
 	    setUShort(optarg, &ConnectAttempts);
 	    break;
@@ -8650,6 +8669,23 @@ main(int argc, char **argv)
 	    break;
 	}
     }
+
+    /*
+    ** If IPv4 only operation is requested, we need to change the ListenIP setting accordingly.
+    */
+
+#if defined(USE_IPv6)
+    if (!IPv4Only) {
+      if (!strcmp("127.0.0.1", ListenIp))
+      {
+	  setString("::1", &ListenIp);
+      }
+      else if (!strcmp("0.0.0.0", ListenIp))
+      {
+	  setString("::", &ListenIp);
+      }
+    }
+#endif
 
     /*
     ** If we are going to detach now is the time to invoke the workaround
