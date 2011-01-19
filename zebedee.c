@@ -8675,7 +8675,7 @@ main(int argc, char **argv)
     */
 
 #if defined(USE_IPv6)
-    if (!IPv4Only) {
+    if (!IPv4Only && ListenIp) {
       if (!strcmp("127.0.0.1", ListenIp))
       {
 	  setString("::1", &ListenIp);
