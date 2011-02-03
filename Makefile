@@ -42,17 +42,23 @@ OPTIM = -Wall -O3
 # GMPLIB = ../gmp-2.0.2/libgmp.a
 
 # Location of Blowfish include and library
-BFINC = -I/usr/include/openssl
-BFLIB = -lcrypto
+# You can use the versions from OpenSSL if you have it installed, as follows:
+# BFINC = /usr/include/openssl
+# BFLIB = -lcrypto
+
+BFINC = -I../blowfish-1.0.0a
+BFLIB = ../blowfish-1.0.0a/libblowfish.a
 
 # Location of zlib include and library
-ZINC = -I/usr/include
-ZLIB = -lz
+
+ZINC = -I../zlib-1.2.5
+ZLIB = ../zlib-1.2.5/libz.a
 
 # Location of bzlib include and library
 # Set these empty if you don't want bzib2 support
-BZINC = -I/usr/include
-BZLIB = -lbz2
+
+BZINC = -I../bzip2-1.0.6
+BZLIB = ../bzip2-1.0.6/libbz2.a
 
 #
 # Tools needed for Perl "POD"-format documentation conversion.
