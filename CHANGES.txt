@@ -1,3 +1,14 @@
+* Release 2.5.5
+
+Fix compilation of IPv6 support on Mac OS X.
+
+Add command line option -4 to enforce local IPv4 sockets when compiled with
+IPv6 support.
+
+Minor IPv6 fix.
+
+Makefile comments completion (system libs).
+
 * Release 2.5.4
 
 Add IPv6 support.
