@@ -8252,6 +8252,9 @@ usage(void)
 
     fprintf(stderr,
 	    "Options are:\n"
+#if defined(USE_IPv6)
+	    "    -4          Use IPv4 protocol only\n"
+#endif
 	    "    -b address  Bind only this address when listening for connections\n"
 	    "    -C num      Set the number of attempts to connect back to client (default 1)\n"
 	    "    -c host     Server initiates connection to client host\n"
