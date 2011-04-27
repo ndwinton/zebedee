@@ -2544,6 +2544,7 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
     {
 	addr.sa.sa_family = AF_INET;
 	addr.in.sin_addr.s_addr = htonl(INADDR_ANY);
+	addrLen = sizeof(addr.in);
     }
 #else /* USE_IPv6 */
     addr.sa.sa_family = AF_INET;
