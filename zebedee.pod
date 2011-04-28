@@ -53,7 +53,7 @@ example, B<telnet>, B<ftp> and B<X> sessions to be protected from snooping.
 You can also use compression, either with or without data encryption, to gain
 performance over low-bandwidth networks.
 
-This document describes the features of B<Zebedee> as at release 2.5.5. For
+This document describes the features of B<Zebedee> as at release 2.5.6. For
 details of the new features in this release see L<CHANGES|/changes>.
 
 The main goals for B<Zebedee> are to:

@@ -3,7 +3,7 @@
 #
 # $Id: Makefile,v 1.25 2005-09-06 05:59:53 ndwinton Exp $
 
-ZBD_VERSION = 2.5.5
+ZBD_VERSION = 2.5.6
 
 OS = 
 
