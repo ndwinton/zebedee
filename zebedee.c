@@ -4330,7 +4330,8 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 		    {
 			num = sendto(replyFd, (char *)(msgBuf->data), msgBuf->size,
 				     0, &toAddrP->sa,
-				     sizeof(toAddrP->in));
+				     toAddrP->sa.sa_family == AF_INET ? sizeof(toAddrP->in) :
+					 sizeof(toAddrP->in6));
 		    }
 		}
 		else
@@ -5503,7 +5504,8 @@ clientListener(EndPtList_t *ports)
 			{
 			    if (sendto(clientFd, data, num, 0,
 				       &localAddr.sa,
-				       sizeof(localAddr)) != num)
+				       localAddr.sa.sa_family == AF_INET ? sizeof(localAddr.in) :
+					 sizeof(localAddr.in6)) != num)
 			    {
 				message(0, errno, "failed to send data to loopback socket");
 			    }
