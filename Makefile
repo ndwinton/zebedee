@@ -225,6 +225,7 @@ zebedee.1 : zebedee.pod
 	$(PERL) -pe 's/^\=head3/\=head2/;' zebedee.pod > ./tmp/zebedee.pod
 	$(POD2MAN) --release="Zebedee $(ZBD_VERSION)" --center=Zebedee ./tmp/zebedee.pod > zebedee.1
 	rm -f ./tmp/zebedee.pod
+	rmdir ./tmp
 
 zebedee.html : zebedee.pod
 	$(POD2HTML) --title="Zebedee: A simple, secure IP tunnel" --noindex zebedee.pod > zebedee.tmp
