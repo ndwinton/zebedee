@@ -3,7 +3,7 @@
 #
 # $Id: Makefile,v 1.25 2005-09-06 05:59:53 ndwinton Exp $
 
-ZBD_VERSION = 2.5.3
+ZBD_VERSION = 2.5.4
 
 OS = 
 
@@ -16,7 +16,8 @@ OS =
 
 CC_$(OS) = gcc
 
-CC_win32 = gcc -mno-cygwin
+CC_win32 = i686-w64-mingw32-gcc
+CC_win64 = x86_64-w64-mingw32-gcc
 CC_linux = gcc -pthread
 CC_linux64 = $(CC_linux) -m64
 CC_solaris = gcc
@@ -51,23 +52,27 @@ BFLIB = ../blowfish-0.9.5a/libblowfish.a
 
 # Location of zlib include and library
 
-ZINC = -I../zlib-1.2.3
-ZLIB = ../zlib-1.2.3/libz.a
+ZINC = -I../zlib-1.2.7
+ZLIB = ../zlib-1.2.7/libz.a
 
 # Location of bzlib include and library
 # Set these empty if you don't want bzib2 support
 
-BZINC = -I../bzip2-1.0.3
-BZLIB = ../bzip2-1.0.3/libbz2.a
+BZINC = -I../bzip2-1.0.6
+BZLIB = ../bzip2-1.0.6/libbz2.a
 
 #
 # Tools needed for Perl "POD"-format documentation conversion.
 #
 PERL_$(OS) = perl
-PERL_win32 = c:/perl/bin/perl	# Avoid Cygwin port
+# These are only needed if the Cygwin text mode is DOS format.
+#PERL_win32 = c:/perl/bin/perl	# Avoid Cygwin port
+#PERL_win64 = c:/perl/bin/perl	# Avoid Cygwin port
 PERL = $(PERL_$(OS))
 
-BAT_win32 = .bat
+# These are only needed if the Cygwin text mode is DOS format.
+#BAT_win32 = .bat
+#BAT_win64 = .bat
 
 POD2HTML = $(PERL) -S pod2html$(BAT_$(OS))
 POD2MAN = $(PERL) -S pod2man$(BAT_$(OS))
@@ -96,7 +101,7 @@ INSTALL = $(INSTALL_$(OS))
 
 # InnoSetup compiler for Win32 (see http://www.jordanr.dhs.org/)
 
-ISCOMP = "c:/Program Files/Inno Setup 4/compil32.exe"
+ISCOMP = "c:/Program Files (x86)/Inno Setup 5/compil32.exe"
 
 ###
 ### OS-specific definitions
@@ -142,8 +147,12 @@ ISCOMP = "c:/Program Files/Inno Setup 4/compil32.exe"
 #   512, which should enable a server to handle about 250 simultaneous
 #   connections. If you need more then change the definition.
 #
+# Windows pre-Vista
+#   For Windows XP/NT add the following:
+#   -DDFLT_SHELL=\"c:\\winnt\\system32\\cmd.exe\"
 
 DEFINES_win32 = -DFD_SETSIZE=512
+DEFINES_win64 = -DFD_SETSIZE=512
 DEFINES_linux = -DHAVE_PTHREADS
 DEFINES_linux64 = $(DEFINES_linux)
 DEFINES_solaris = -D_REENTRANT -DHAVE_PTHREADS
@@ -158,11 +167,13 @@ DEFINES = $(DEFINES_$(OS))
 # Suffix for executables
 
 EXE_win32 = .exe	# Win32
+EXE_win64 = .exe	# Win64
 EXE = $(EXE_$(OS))
 
 # Extra OS-specific libraries
 
 OSLIBS_win32 = -lwsock32 -lwinmm
+OSLIBS_win64 = -lwsock32 -lwinmm
 OSLIBS_linux = -lpthread
 OSLIBS_linux64 = $(OSLIBS_linux)
 OSLIBS_solaris = -lsocket -lnsl -lthread
@@ -174,12 +185,14 @@ OSLIBS_macosx = -lpthread
 OSLIBS_bsdi =
 OSLIBS = $(OSLIBS_$(OS))
 
-# Supplementary object files (Win32 ONLY)
+# Supplementary object files (Windows ONLY)
 
 GETOPTOBJ_win32 = getopt.o
+GETOPTOBJ_win64 = getopt.o
 GETOPTOBJ = $(GETOPTOBJ_$(OS))
 
 SERVICEOBJ_win32 = service.o
+SERVICEOBJ_win64 = service.o
 SERVICEOBJ = $(SERVICEOBJ_$(OS))
 
 ####
@@ -251,6 +264,6 @@ clean :
 
 zbdsetup.exe : zebedee$(EXE) zebedee.html zebedee.ico vncloopback.reg \
 		$(ZBDFILES) $(TXTFILES)
-	$(PERL_win32) -ni.bak -e print $(ZBDFILES) $(TXTFILES) vncloopback.reg
+	$(PERL) -ni.bak -e print $(ZBDFILES) $(TXTFILES) vncloopback.reg
 	$(ISCOMP) /cc zebedee.iss
 	mv -f Output/setup.exe zbdsetup.exe

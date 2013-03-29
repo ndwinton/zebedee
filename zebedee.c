@@ -1,7 +1,7 @@
 /*
 ** This file is part of "zebedee".
 **
-** Copyright 1999-2005 by Neil Winton. All rights reserved.
+** Copyright 1999-2013 by Neil Winton. All rights reserved.
 ** 
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU General Public License as published by
@@ -111,18 +111,27 @@ typedef Huge *mpz_t;
 #include <winsock.h>
 #include <process.h>
 #include <mmsystem.h>
+#include <stdint.h>
 
 #include "getopt.h"
 
-#define DFLT_SHELL	"c:\\winnt\\system32\\cmd.exe"
+#ifndef DFLT_SHELL
+#define DFLT_SHELL	"c:\\windows\\system32\\cmd.exe"
+#endif
 #define getpid()	GetCurrentProcessId()
 #define FILE_SEP_CHAR	'\\'
 #define snprintf	_snprintf
 #define vsnprintf	_vsnprintf
 #define strcasecmp	_stricmp
+#ifndef ETIMEDOUT
 #define ETIMEDOUT	WSAETIMEDOUT
+#endif
+#ifndef EWOULDBLOCK
 #define EWOULDBLOCK	WSAEWOULDBLOCK
+#endif
+#ifndef EINPROGRESS
 #define EINPROGRESS	WSAEINPROGRESS
+#endif
 
 /*
 ** Winsock state data
@@ -7876,7 +7885,7 @@ void
 usage(void)
 {
     fprintf(stderr, "Zebedee -- A Secure Tunnel Program: Release %s\n", RELEASE_STR);
-    fprintf(stderr, "Copyright (c) 1999-2005 by Neil Winton. All Rights Reserved.\n");
+    fprintf(stderr, "Copyright (c) 1999-2013 by Neil Winton. All Rights Reserved.\n");
     fprintf(stderr,
 	    "This program is free software and may be distributed under the terms of the\n"
 	    "GNU General Public License, Version 2.\n");

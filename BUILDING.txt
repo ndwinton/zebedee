@@ -75,6 +75,8 @@ blowfish-0.9.5a:
     really want to try to optimize performance do "make bf_opts" and
     then run bf_opts.
 	
+	$ make CC=i686-w64-mingw32-gcc x86_64-w64-mingw32-gcc
+	
 zlib-1.2.3:
 
     Run "configure" and then make. It's a breeze!
@@ -82,3 +84,4 @@ zlib-1.2.3:
 bzip2-1.0.3:
 
     Follow the instructions in the README file.
+

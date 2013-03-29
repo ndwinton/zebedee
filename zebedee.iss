@@ -1,12 +1,12 @@
 [Setup]
-Bits=32
 AppName=Zebedee Secure Tunnel
-AppVerName=Zebedee Secure Tunnel Version 2.5.3
-AppCopyright=Copyright 1999-2005 by Neil Winton.
+AppVerName=Zebedee Secure Tunnel Version 2.5.4
+AppCopyright=Copyright 1999-2013 by Neil Winton.
 DefaultDirName={pf}\Zebedee
 DefaultGroupName=Zebedee
 InfoBeforeFile=NOTICE.txt
 LicenseFile=LICENCE.txt
+ArchitecturesInstallIn64BitMode=x64
 
 [Files]
 Source: "zebedee.exe"; DestDir: "{app}"
