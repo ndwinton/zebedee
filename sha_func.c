@@ -25,46 +25,46 @@
 
 /* SHA f()-functions */
 
-#define f1(x,y,z)	((x & y) | (~x & z))
-#define f2(x,y,z)	(x ^ y ^ z)
-#define f3(x,y,z)	((x & y) | (x & z) | (y & z))
-#define f4(x,y,z)	(x ^ y ^ z)
+#define f1(x,y,z)       ((x & y) | (~x & z))
+#define f2(x,y,z)       (x ^ y ^ z)
+#define f3(x,y,z)       ((x & y) | (x & z) | (y & z))
+#define f4(x,y,z)       (x ^ y ^ z)
 
 /* SHA constants */
 
-#define CONST1		0x5a827999L
-#define CONST2		0x6ed9eba1L
-#define CONST3		0x8f1bbcdcL
-#define CONST4		0xca62c1d6L
+#define CONST1          0x5a827999L
+#define CONST2          0x6ed9eba1L
+#define CONST3          0x8f1bbcdcL
+#define CONST4          0xca62c1d6L
 
 /* 32-bit rotate */
 
-#define ROT32(x,n)	((x << n) | (x >> (32 - n)))
+#define ROT32(x,n)      ((x << n) | (x >> (32 - n)))
 
 /* the generic case, for when the overall rotation is not unraveled */
 
-#define FG(n)	\
-    T = ROT32(A,5) + f##n(B,C,D) + E + *WP++ + CONST##n;	\
+#define FG(n)   \
+    T = ROT32(A,5) + f##n(B,C,D) + E + *WP++ + CONST##n;        \
     E = D; D = C; C = ROT32(B,30); B = A; A = T
 
 /* specific cases, for when the overall rotation is unraveled */
 
-#define FA(n)	\
+#define FA(n)   \
     T = ROT32(A,5) + f##n(B,C,D) + E + *WP++ + CONST##n; B = ROT32(B,30)
 
-#define FB(n)	\
+#define FB(n)   \
     E = ROT32(T,5) + f##n(A,B,C) + D + *WP++ + CONST##n; A = ROT32(A,30)
 
-#define FC(n)	\
+#define FC(n)   \
     D = ROT32(E,5) + f##n(T,A,B) + C + *WP++ + CONST##n; T = ROT32(T,30)
 
-#define FD(n)	\
+#define FD(n)   \
     C = ROT32(D,5) + f##n(E,T,A) + B + *WP++ + CONST##n; E = ROT32(E,30)
 
-#define FE(n)	\
+#define FE(n)   \
     B = ROT32(C,5) + f##n(D,E,T) + A + *WP++ + CONST##n; D = ROT32(D,30)
 
-#define FT(n)	\
+#define FT(n)   \
     A = ROT32(B,5) + f##n(C,D,E) + T + *WP++ + CONST##n; C = ROT32(C,30)
 
 /* do SHA transformation */
@@ -75,12 +75,12 @@ static void sha_transform(SHA_INFO *sha_info)
     SHA_LONG T, A, B, C, D, E, W[80], *WP;
 
     for (i = 0; i < 16; ++i) {
-	W[i] = sha_info->data[i];
+        W[i] = sha_info->data[i];
     }
     for (i = 16; i < 80; ++i) {
-	W[i] = W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16];
+        W[i] = W[i-3] ^ W[i-8] ^ W[i-14] ^ W[i-16];
 #ifdef USE_MODIFIED_SHA
-	W[i] = ROT32(W[i], 1);
+        W[i] = ROT32(W[i], 1);
 #endif /* USE_MODIFIED_SHA */
     }
     A = sha_info->digest[0];
@@ -138,34 +138,34 @@ static void maybe_byte_reverse(SHA_LONG *buffer, int count)
 
     if (!initialized)
     {
-	union {
-	    unsigned char bytes[4];
-	    SHA_LONG integer;
-	} u;
+        union {
+            unsigned char bytes[4];
+            SHA_LONG integer;
+        } u;
 
-	/*
-	** First call -- figure out endianness.
-	**
-	** In theory we ought to worry about thread safety but in practice
-	** even if two threads come in here simultaneously the worst
-	** that will happen is that they will both end up figuring out
-	** the endianness and will come to the same answer!
-	*/
+        /*
+        ** First call -- figure out endianness.
+        **
+        ** In theory we ought to worry about thread safety but in practice
+        ** even if two threads come in here simultaneously the worst
+        ** that will happen is that they will both end up figuring out
+        ** the endianness and will come to the same answer!
+        */
 
-	initialized++;
+        initialized++;
 
-	u.integer = 0x12345678;
+        u.integer = 0x12345678;
 
-	is_little_endian = (u.bytes[0] == 0x78);
+        is_little_endian = (u.bytes[0] == 0x78);
     }
 
     if (is_little_endian) {
-	count /= sizeof(SHA_LONG);
-	for (i = 0; i < count; ++i) {
-	    in = *buffer;
-	    *buffer++ = ((in << 24) & 0xff000000) | ((in <<  8) & 0x00ff0000) |
-			((in >>  8) & 0x0000ff00) | ((in >> 24) & 0x000000ff);
-	}
+        count /= sizeof(SHA_LONG);
+        for (i = 0; i < count; ++i) {
+            in = *buffer;
+            *buffer++ = ((in << 24) & 0xff000000) | ((in <<  8) & 0x00ff0000) |
+                        ((in >>  8) & 0x0000ff00) | ((in >> 24) & 0x000000ff);
+        }
     }
 }
 
@@ -190,32 +190,32 @@ void sha_update(SHA_INFO *sha_info, SHA_BYTE *buffer, int count)
     int i;
 
     if ((sha_info->count_lo + ((SHA_LONG) count << 3)) < sha_info->count_lo) {
-	++sha_info->count_hi;
+        ++sha_info->count_hi;
     }
     sha_info->count_lo += (SHA_LONG) count << 3;
     sha_info->count_hi += (SHA_LONG) count >> 29;
     if (sha_info->local) {
-	i = SHA_BLOCKSIZE - sha_info->local;
-	if (i > count) {
-	    i = count;
-	}
-	memcpy(((SHA_BYTE *) sha_info->data) + sha_info->local, buffer, i);
-	count -= i;
-	buffer += i;
-	sha_info->local += i;
-	if (sha_info->local == SHA_BLOCKSIZE) {
-	    maybe_byte_reverse(sha_info->data, SHA_BLOCKSIZE);
-	    sha_transform(sha_info);
-	} else {
-	    return;
-	}
+        i = SHA_BLOCKSIZE - sha_info->local;
+        if (i > count) {
+            i = count;
+        }
+        memcpy(((SHA_BYTE *) sha_info->data) + sha_info->local, buffer, i);
+        count -= i;
+        buffer += i;
+        sha_info->local += i;
+        if (sha_info->local == SHA_BLOCKSIZE) {
+            maybe_byte_reverse(sha_info->data, SHA_BLOCKSIZE);
+            sha_transform(sha_info);
+        } else {
+            return;
+        }
     }
     while (count >= SHA_BLOCKSIZE) {
-	memcpy(sha_info->data, buffer, SHA_BLOCKSIZE);
-	buffer += SHA_BLOCKSIZE;
-	count -= SHA_BLOCKSIZE;
-	maybe_byte_reverse(sha_info->data, SHA_BLOCKSIZE);
-	sha_transform(sha_info);
+        memcpy(sha_info->data, buffer, SHA_BLOCKSIZE);
+        buffer += SHA_BLOCKSIZE;
+        count -= SHA_BLOCKSIZE;
+        maybe_byte_reverse(sha_info->data, SHA_BLOCKSIZE);
+        sha_transform(sha_info);
     }
     memcpy(sha_info->data, buffer, count);
     sha_info->local = count;
@@ -233,13 +233,13 @@ void sha_final(SHA_INFO *sha_info)
     count = (int) ((lo_bit_count >> 3) & 0x3f);
     ((SHA_BYTE *) sha_info->data)[count++] = 0x80;
     if (count > SHA_BLOCKSIZE - 8) {
-	memset(((SHA_BYTE *) sha_info->data) + count, 0, SHA_BLOCKSIZE - count);
-	maybe_byte_reverse(sha_info->data, SHA_BLOCKSIZE);
-	sha_transform(sha_info);
-	memset((SHA_BYTE *) sha_info->data, 0, SHA_BLOCKSIZE - 8);
+        memset(((SHA_BYTE *) sha_info->data) + count, 0, SHA_BLOCKSIZE - count);
+        maybe_byte_reverse(sha_info->data, SHA_BLOCKSIZE);
+        sha_transform(sha_info);
+        memset((SHA_BYTE *) sha_info->data, 0, SHA_BLOCKSIZE - 8);
     } else {
-	memset(((SHA_BYTE *) sha_info->data) + count, 0,
-	    SHA_BLOCKSIZE - 8 - count);
+        memset(((SHA_BYTE *) sha_info->data) + count, 0,
+            SHA_BLOCKSIZE - 8 - count);
     }
     maybe_byte_reverse(sha_info->data, SHA_BLOCKSIZE);
     sha_info->data[14] = hi_bit_count;

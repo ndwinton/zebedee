@@ -54,9 +54,9 @@ typedef Huge *mpz_t;
 
 #define mpz_init(z)
 #define mpz_init_set_str(z, s, n)   (z = huge_from_string(s, NULL, n))
-#define mpz_powm(k, g, e, m)	    (k = huge_powmod(g, e, m))
-#define mpz_get_str(p, n, z)	    huge_format(z, n)
-#define mpz_clear(z)		    huge_free(z)
+#define mpz_powm(k, g, e, m)        (k = huge_powmod(g, e, m))
+#define mpz_get_str(p, n, z)        huge_format(z, n)
+#define mpz_clear(z)                huge_free(z)
 #endif
 
 #include "blowfish.h"
@@ -74,19 +74,19 @@ typedef Huge *mpz_t;
 ** Named mutex values (see mutexLock/Unlock)
 */
 
-#define MUTEX_IO	0   /* Mutex to protect stdio and other library calls */
-#define MUTEX_KEYLIST	1   /* Mutex to protect key list access */
-#define MUTEX_TOKEN	2   /* Mutex to protect token allocation/access */
-#define MUTEX_HNDLIST	3   /* Mutex to protect UDP handler list access */
-#define	MUTEX_ACTIVE	4   /* Mutex to protect count of active handlers */
-#define MUTEX_MAX	5   /* How many mutexes will we use? */
+#define MUTEX_IO        0   /* Mutex to protect stdio and other library calls */
+#define MUTEX_KEYLIST   1   /* Mutex to protect key list access */
+#define MUTEX_TOKEN     2   /* Mutex to protect token allocation/access */
+#define MUTEX_HNDLIST   3   /* Mutex to protect UDP handler list access */
+#define MUTEX_ACTIVE    4   /* Mutex to protect count of active handlers */
+#define MUTEX_MAX       5   /* How many mutexes will we use? */
 
 /*
 ** Named condition variables
 */
 
-#define COND_ACTIVE	0   /* Condition for change in active handler count */
-#define COND_MAX	1   /* How many condition variables? */
+#define COND_ACTIVE     0   /* Condition for change in active handler count */
+#define COND_MAX        1   /* How many condition variables? */
 
 /* BUG COMPATIBILITY -- REMOVE FOR PRODUCTION RELEASE */
 #define BUGHTONL(x) (BugCompatibility == 251 ? (x) : htonl(x))
@@ -103,7 +103,7 @@ typedef Huge *mpz_t;
 ** handle up to about 250 simultaneous tunnels). It can be overridden at
 ** compile time.
 */
-#define FD_SETSIZE	512
+#define FD_SETSIZE      512
 #endif
 
 #include <windows.h>
@@ -116,21 +116,21 @@ typedef Huge *mpz_t;
 #include "getopt.h"
 
 #ifndef DFLT_SHELL
-#define DFLT_SHELL	"c:\\windows\\system32\\cmd.exe"
+#define DFLT_SHELL      "c:\\windows\\system32\\cmd.exe"
 #endif
-#define getpid()	GetCurrentProcessId()
-#define FILE_SEP_CHAR	'\\'
-#define snprintf	_snprintf
-#define vsnprintf	_vsnprintf
-#define strcasecmp	_stricmp
+#define getpid()        GetCurrentProcessId()
+#define FILE_SEP_CHAR   '\\'
+#define snprintf        _snprintf
+#define vsnprintf       _vsnprintf
+#define strcasecmp      _stricmp
 #ifndef ETIMEDOUT
-#define ETIMEDOUT	WSAETIMEDOUT
+#define ETIMEDOUT       WSAETIMEDOUT
 #endif
 #ifndef EWOULDBLOCK
-#define EWOULDBLOCK	WSAEWOULDBLOCK
+#define EWOULDBLOCK     WSAEWOULDBLOCK
 #endif
 #ifndef EINPROGRESS
-#define EINPROGRESS	WSAEINPROGRESS
+#define EINPROGRESS     WSAEINPROGRESS
 #endif
 
 /*
@@ -177,10 +177,10 @@ extern int svcRemove(char *name);
 #define INADDR_NONE 0xffffffff
 #endif
 
-#define DFLT_SHELL	"/bin/sh"
-#define FILE_SEP_CHAR	'/'
+#define DFLT_SHELL      "/bin/sh"
+#define FILE_SEP_CHAR   '/'
 
-#define closesocket(fd)	    close((fd))
+#define closesocket(fd)     close((fd))
 
 #ifdef HAVE_PTHREADS
 #include <pthread.h>
@@ -196,35 +196,35 @@ pthread_attr_t ThreadAttr;
 #endif
 
 /**************************\
-**			  **
+**                        **
 **  Constants and Macros  **
-**			  **
+**                        **
 \**************************/
 
-#define MAX_BUF_SIZE	16383	/* Maximum network buffer size (< 2^14) */
-#define DFLT_BUF_SIZE	8192	/* Default network buffer size */
-#define MAX_LINE_SIZE	1024	/* Maximum file line size */
-#define MAX_KEY_BYTES	((BF_ROUNDS + 2)*4) /* Maximum size of Blowfish key */
-#define	MIN_KEY_BYTES	5	/* Minimum key length */
-#define MAX_LISTEN	5	/* Depth of listen queue */
-#define MAX_INCLUDE	5	/* Maximum depth of include files */
-#define MAX_KEYGEN_LEVEL 2	/* Maximum key generation strength level */
+#define MAX_BUF_SIZE    16383   /* Maximum network buffer size (< 2^14) */
+#define DFLT_BUF_SIZE   8192    /* Default network buffer size */
+#define MAX_LINE_SIZE   1024    /* Maximum file line size */
+#define MAX_KEY_BYTES   ((BF_ROUNDS + 2)*4) /* Maximum size of Blowfish key */
+#define MIN_KEY_BYTES   5       /* Minimum key length */
+#define MAX_LISTEN      5       /* Depth of listen queue */
+#define MAX_INCLUDE     5       /* Maximum depth of include files */
+#define MAX_KEYGEN_LEVEL 2      /* Maximum key generation strength level */
 
-#define HASH_STR_SIZE	41	/* Size of SHA hash string including null */
-#define TIMESTAMP_SIZE	20	/* Size of YYYY-dd-mm-HH:MM:SS timestamp */
-#define CHALLENGE_SIZE	4	/* Size of challenge data */
-#define THE_ANSWER	42	/* To Life, the Universe and Everything */
-#define CHALLENGE_SIZE	4	/* Size of challenge data */
-#define NONCE_SIZE	8	/* Size of nonce data */
+#define HASH_STR_SIZE   41      /* Size of SHA hash string including null */
+#define TIMESTAMP_SIZE  20      /* Size of YYYY-dd-mm-HH:MM:SS timestamp */
+#define CHALLENGE_SIZE  4       /* Size of challenge data */
+#define THE_ANSWER      42      /* To Life, the Universe and Everything */
+#define CHALLENGE_SIZE  4       /* Size of challenge data */
+#define NONCE_SIZE      8       /* Size of nonce data */
 
 #ifndef THREAD_STACK_SIZE
 #define THREAD_STACK_SIZE   65536   /* Stack size for threads */
 #endif
-#define MIN_THREAD_STACK_KB 16	/* Minimum allowable thread stack in kb */
-#define	CMP_OVERHEAD	250	/* Maximum overhead on 16k message */
-#define	CMP_MINIMUM	32	/* Minimum message size to attempt compression */
+#define MIN_THREAD_STACK_KB 16  /* Minimum allowable thread stack in kb */
+#define CMP_OVERHEAD    250     /* Maximum overhead on 16k message */
+#define CMP_MINIMUM     32      /* Minimum message size to attempt compression */
 
-#define IP_BUF_SIZE	16	/* Size of buffer for IP address string */
+#define IP_BUF_SIZE     16      /* Size of buffer for IP address string */
 
 /*
 ** Information about the compression algorithm and level is encoded in
@@ -235,11 +235,11 @@ pthread_attr_t ThreadAttr;
 ** is considered "stronger" than zlib.
 */
 
-#define CMPTYPE_ZLIB	0x0
-#define CMPTYPE_BZIP2	0x1
-#define GET_CMPTYPE(z)	    (((z) >> 8) & 0xff)
+#define CMPTYPE_ZLIB    0x0
+#define CMPTYPE_BZIP2   0x1
+#define GET_CMPTYPE(z)      (((z) >> 8) & 0xff)
 #define SET_CMPTYPE(z, t)   ((z) | ((t) << 8))
-#define GET_CMPLEVEL(z)	    ((z) & 0xff)
+#define GET_CMPLEVEL(z)     ((z) & 0xff)
 #define SET_CMPLEVEL(z, l)  ((z) | ((l) & 0xff))
 
 /*
@@ -249,77 +249,77 @@ pthread_attr_t ThreadAttr;
 ** (which must be no greater than MAX_BUF_SIZE).
 */
 
-#define FLAG_COMPRESSED	0x1
-#define FLAG_ENCRYPTED	0x2
+#define FLAG_COMPRESSED 0x1
+#define FLAG_ENCRYPTED  0x2
 
-#define CHECKSUM_NONE		0
-#define CHECKSUM_ADLER		1
-#define CHECKSUM_CRC32		2
-#define CHECKSUM_SHA		3
-#define CHECKSUM_MAX		CHECKSUM_SHA
-#define CHECKSUM_ADLER_LEN	4	/* ADLER32 32-bit checksum */
-#define CHECKSUM_CRC32_LEN	4	/* CRC32 32-bit checksum */
-#define CHECKSUM_SHA_LEN	20	/* SHA 160-bit message digest */
-#define CHECKSUM_MAX_LEN	CHECKSUM_SHA_LEN /* Max message digest */
-#define CHECKSUM_INVALID	0xffff
+#define CHECKSUM_NONE           0
+#define CHECKSUM_ADLER          1
+#define CHECKSUM_CRC32          2
+#define CHECKSUM_SHA            3
+#define CHECKSUM_MAX            CHECKSUM_SHA
+#define CHECKSUM_ADLER_LEN      4       /* ADLER32 32-bit checksum */
+#define CHECKSUM_CRC32_LEN      4       /* CRC32 32-bit checksum */
+#define CHECKSUM_SHA_LEN        20      /* SHA 160-bit message digest */
+#define CHECKSUM_MAX_LEN        CHECKSUM_SHA_LEN /* Max message digest */
+#define CHECKSUM_INVALID        0xffff
 
-#define GET_FLAGS(x)	(((x) >> 14) & 0x3)
-#define SET_FLAGS(x, f)	((x) | ((f) << 14))
+#define GET_FLAGS(x)    (((x) >> 14) & 0x3)
+#define SET_FLAGS(x, f) ((x) | ((f) << 14))
 
-#define GET_SIZE(x)	((x) & 0x3fff)
+#define GET_SIZE(x)     ((x) & 0x3fff)
 
-#define DFLT_GENERATOR	    "2"	    /* Default generator value */
-#define DFLT_MODULUS	    	    /* Default modulus value */ \
+#define DFLT_GENERATOR      "2"     /* Default generator value */
+#define DFLT_MODULUS                /* Default modulus value */ \
 "f488fd584e49dbcd20b49de49107366b336c380d451d0f7c88b31c7c5b2d8ef6" \
 "f3c923c043f0a55b188d8ebb558cb85d38d334fd7c175743a31d186cde33212c" \
 "b52aff3ce1b1294018118d7c84a70a72d686c40319c807297aca950cd9969fab" \
 "d00a509b0246d3083d66a45d419f9c7cbd894b221926baaba25ec355e92f78c7"
-#define DFLT_CMP_LEVEL	    SET_CMPLEVEL(CMPTYPE_ZLIB, 6)
-#define DFLT_KEY_BITS	    128	    /* Default key size */
-#define DFLT_TCP_PORT	    0x2EBD  /* Port on which TCP-mode server listens */
-#define DFLT_UDP_PORT	    0x2BDE  /* Port on which UDP-mode server listens */
+#define DFLT_CMP_LEVEL      SET_CMPLEVEL(CMPTYPE_ZLIB, 6)
+#define DFLT_KEY_BITS       128     /* Default key size */
+#define DFLT_TCP_PORT       0x2EBD  /* Port on which TCP-mode server listens */
+#define DFLT_UDP_PORT       0x2BDE  /* Port on which UDP-mode server listens */
 #define DFLT_KEY_LIFETIME   3600    /* Reuseable keys last an hour */
-#define DFLT_TCP_TIMEOUT    0	    /* Default never close idle TCP tunnels */
-#define DFLT_UDP_TIMEOUT    300	    /* Close UDP tunnels after 5 mins */
-#define DFLT_CONNECT_TIMEOUT	300 /* Timeout for making/accepting connection */
+#define DFLT_TCP_TIMEOUT    0       /* Default never close idle TCP tunnels */
+#define DFLT_UDP_TIMEOUT    300     /* Close UDP tunnels after 5 mins */
+#define DFLT_CONNECT_TIMEOUT    300 /* Timeout for making/accepting connection */
 
-#define PROTOCOL_V100	    0x0100  /* The original and base */
-#define PROTOCOL_V101	    0x0101  /* Extended buffer size */
-#define PROTOCOL_V102	    0x0102  /* Optionally omit key exchange */
-#define PROTOCOL_V200	    0x0200  /* Header, UDP and reusable key support */
-#define PROTOCOL_V201	    0x0201  /* Remote target selection */
-#define PROTOCOL_V202	    0x0202  /* Lock of protocol negotiation, checksum and source based targetting */
-#define DFLT_PROTOCOL	    PROTOCOL_V202
+#define PROTOCOL_V100       0x0100  /* The original and base */
+#define PROTOCOL_V101       0x0101  /* Extended buffer size */
+#define PROTOCOL_V102       0x0102  /* Optionally omit key exchange */
+#define PROTOCOL_V200       0x0200  /* Header, UDP and reusable key support */
+#define PROTOCOL_V201       0x0201  /* Remote target selection */
+#define PROTOCOL_V202       0x0202  /* Lock of protocol negotiation, checksum and source based targetting */
+#define DFLT_PROTOCOL       PROTOCOL_V202
 
-#define TOKEN_NEW	    0xffffffff	/* Request new token allocation */
-#define TOKEN_EXPIRE_GRACE  10		/* CurrentToken valid until this close to expiry */
+#define TOKEN_NEW           0xffffffff  /* Request new token allocation */
+#define TOKEN_EXPIRE_GRACE  10          /* CurrentToken valid until this close to expiry */
 
-#define HDR_SIZE_V200	    22	/* Size of V200 protocol header message */
-#define HDR_SIZE_V201	    26	/* Size of V201 protocol header message */
-#define HDR_SIZE_V202	    28	/* Size of V202 protocol header message */
-#define HDR_SIZE_MIN	    HDR_SIZE_V200
-#define HDR_SIZE_MAX	    HDR_SIZE_V202
+#define HDR_SIZE_V200       22  /* Size of V200 protocol header message */
+#define HDR_SIZE_V201       26  /* Size of V201 protocol header message */
+#define HDR_SIZE_V202       28  /* Size of V202 protocol header message */
+#define HDR_SIZE_MIN        HDR_SIZE_V200
+#define HDR_SIZE_MAX        HDR_SIZE_V202
 
-#define HDR_OFFSET_FLAGS    0	/* Offset of flags (TCP vs UDP) */
-#define HDR_OFFSET_MAXSIZE  2	/* Offset of max message size */
-#define HDR_OFFSET_CMPINFO  4	/* Offset of compression info */
-#define HDR_OFFSET_PORT	    6	/* Offset of port request */
-#define HDR_OFFSET_KEYLEN   8	/* Offset of key length */
-#define HDR_OFFSET_TOKEN    10	/* Offset of key token */
-#define HDR_OFFSET_NONCE    14	/* Offset of nonce value */
-#define HDR_OFFSET_TARGET   22	/* Offset of target host address */
-#define HDR_OFFSET_CHECKSUM 26	/* Offset of checksum type */
+#define HDR_OFFSET_FLAGS    0   /* Offset of flags (TCP vs UDP) */
+#define HDR_OFFSET_MAXSIZE  2   /* Offset of max message size */
+#define HDR_OFFSET_CMPINFO  4   /* Offset of compression info */
+#define HDR_OFFSET_PORT     6   /* Offset of port request */
+#define HDR_OFFSET_KEYLEN   8   /* Offset of key length */
+#define HDR_OFFSET_TOKEN    10  /* Offset of key token */
+#define HDR_OFFSET_NONCE    14  /* Offset of nonce value */
+#define HDR_OFFSET_TARGET   22  /* Offset of target host address */
+#define HDR_OFFSET_CHECKSUM 26  /* Offset of checksum type */
 
-#define HDR_FLAG_UDPMODE    0x1	/* Operate in UDP mode */
+#define HDR_FLAG_UDPMODE    0x1 /* Operate in UDP mode */
 
-#define ENDPTLIST_TCP	    0x1	/* TCP-type port list */
-#define ENDPTLIST_UDP	    0x2	/* UDP-type port list */
-#define ENDPTLIST_ANY	    (ENDPTLIST_TCP | ENDPTLIST_UDP)
+#define ENDPTLIST_TCP       0x1 /* TCP-type port list */
+#define ENDPTLIST_UDP       0x2 /* UDP-type port list */
+#define ENDPTLIST_ANY       (ENDPTLIST_TCP | ENDPTLIST_UDP)
 
 /***************************\
-**			   **
+**                         **
 **  Data Type Definitions  **
-**			   **
+**                         **
 \***************************/
 
 /*
@@ -327,7 +327,7 @@ pthread_attr_t ThreadAttr;
 ** to encrypt one data-stream (unidirectional).
 */
 
-#define	INIT_IVEC	"Time4Bed"  /* ... said Zebedee. Boing! */
+#define INIT_IVEC       "Time4Bed"  /* ... said Zebedee. Boing! */
 typedef struct
 {
     BF_KEY key;
@@ -375,22 +375,22 @@ EndPtList_t;
 
 typedef struct MsgBuf_s
 {
-    unsigned short maxSize;	/* Max size of data buffer read/writes */
-    unsigned short size;	/* Size of current message */
+    unsigned short maxSize;     /* Max size of data buffer read/writes */
+    unsigned short size;        /* Size of current message */
     unsigned char data[MAX_BUF_SIZE + CHECKSUM_MAX_LEN]; /* Data buffer */
     unsigned char tmp[MAX_BUF_SIZE + CMP_OVERHEAD + CHECKSUM_MAX_LEN]; /* Temporary work space */
-    unsigned short cmpInfo;	/* Compression level and type */
-    BFState_t *bfRead;		/* Encryption context for reads */
-    BFState_t *bfWrite;		/* Encryption context for writes */
-    unsigned long readCount;	/* Number of reads */
-    unsigned long bytesIn;	/* Actual data bytes from network */
-    unsigned long expBytesIn;	/* Expanded data bytes in */
-    unsigned long writeCount;	/* Number of writes */
-    unsigned long bytesOut;	/* Actual data bytes to network */
-    unsigned long expBytesOut;	/* Expanded data bytes out */
+    unsigned short cmpInfo;     /* Compression level and type */
+    BFState_t *bfRead;          /* Encryption context for reads */
+    BFState_t *bfWrite;         /* Encryption context for writes */
+    unsigned long readCount;    /* Number of reads */
+    unsigned long bytesIn;      /* Actual data bytes from network */
+    unsigned long expBytesIn;   /* Expanded data bytes in */
+    unsigned long writeCount;   /* Number of writes */
+    unsigned long bytesOut;     /* Actual data bytes to network */
+    unsigned long expBytesOut;  /* Expanded data bytes out */
     unsigned short checksumLevel;   /* Current checksum mode, 0 if none */
-    unsigned short checksumLen;	    /* Current checksum length, 0 if none */
-    unsigned char inSeed[CHECKSUM_MAX_LEN];	/* Seed for input checksum */
+    unsigned short checksumLen;     /* Current checksum length, 0 if none */
+    unsigned char inSeed[CHECKSUM_MAX_LEN];     /* Seed for input checksum */
     unsigned char outSeed[CHECKSUM_MAX_LEN];    /* Seed for output checksum */
 }
 MsgBuf_t;
@@ -458,9 +458,9 @@ typedef struct HndInfo_s
 HndInfo_t;
 
 /*****************\
-**		 **
+**               **
 **  Global Data  **
-**		 **
+**               **
 \*****************/
 
 /*
@@ -469,74 +469,74 @@ HndInfo_t;
 ** read-only by the rest of the routines.
 */
 
-FILE *LogFileP = NULL;		/* File handle for log file (NULL => stderr) */
-LogType_t LogFileType = LOGFILE_LOCAL;	/* Type of log file */
-unsigned short LogLevel = 1;	/* Message verbosity level */
-char *Program = "zebedee";	/* Program name (argv[0]) */
-char *Generator = "";		/* DH generator hex string ("" => default) */
-char *Modulus = "";		/* DH modulus hex string ("" => default) */ 
-char *PrivateKey = NULL;	/* Private key hex string */
-unsigned short KeyLength = DFLT_KEY_BITS;	/* Key length in bits */
-unsigned short MinKeyLength = 0;		/* Minimum allowed key length */
-unsigned short CompressInfo = DFLT_CMP_LEVEL;	/* Compression type and level */
-int IsDetached = 1;		/* Flag true if program should run detached */
-int IsServer = 0;		/* Flag true if program is a server */
-int Debug = 0;			/* Debug mode -- single threaded server */
-char *CommandString = NULL;	/* Command string to execute (client) */
-unsigned short ServerPort = 0;	/* Port on which server listens */
-EndPtList_t *ClientPorts = NULL;	/* Ports on which client listens */
-EndPtList_t *TargetPorts = NULL;	/* Target port to which to tunnel */
-char *ServerHost = NULL;	/* Name of host on which server runs */
-char *TargetHost = "localhost";	/* Default host to which tunnels are targeted */
-char *IdentityFile = NULL;	/* Name of identity file to check, if any */
+FILE *LogFileP = NULL;          /* File handle for log file (NULL => stderr) */
+LogType_t LogFileType = LOGFILE_LOCAL;  /* Type of log file */
+unsigned short LogLevel = 1;    /* Message verbosity level */
+char *Program = "zebedee";      /* Program name (argv[0]) */
+char *Generator = "";           /* DH generator hex string ("" => default) */
+char *Modulus = "";             /* DH modulus hex string ("" => default) */ 
+char *PrivateKey = NULL;        /* Private key hex string */
+unsigned short KeyLength = DFLT_KEY_BITS;       /* Key length in bits */
+unsigned short MinKeyLength = 0;                /* Minimum allowed key length */
+unsigned short CompressInfo = DFLT_CMP_LEVEL;   /* Compression type and level */
+int IsDetached = 1;             /* Flag true if program should run detached */
+int IsServer = 0;               /* Flag true if program is a server */
+int Debug = 0;                  /* Debug mode -- single threaded server */
+char *CommandString = NULL;     /* Command string to execute (client) */
+unsigned short ServerPort = 0;  /* Port on which server listens */
+EndPtList_t *ClientPorts = NULL;        /* Ports on which client listens */
+EndPtList_t *TargetPorts = NULL;        /* Target port to which to tunnel */
+char *ServerHost = NULL;        /* Name of host on which server runs */
+char *TargetHost = "localhost"; /* Default host to which tunnels are targeted */
+char *IdentityFile = NULL;      /* Name of identity file to check, if any */
 EndPtList_t *AllowedTargets = NULL; /* List of allowed target hosts/ports */
 EndPtList_t *AllowedDefault = NULL; /* List of default allowed redirection ports */
 EndPtList_t *AllowedPeers = NULL; /* List of allowed peer addresses/ports */
-char *KeyGenCmd = NULL;		/* Key generator command string */
-unsigned short KeyGenLevel = MAX_KEYGEN_LEVEL;	/* Key generation strength level */
-int LockProtocol = 0;		/* Is procol negotiation locked? */
-int DropUnknownProtocol = 0;	/* Allow any request? */
-int TimestampLog = 0;		/* Should messages have timestamps? */
-int MultiUse = 1;		/* Client handles multiple connections? */
+char *KeyGenCmd = NULL;         /* Key generator command string */
+unsigned short KeyGenLevel = MAX_KEYGEN_LEVEL;  /* Key generation strength level */
+int LockProtocol = 0;           /* Is procol negotiation locked? */
+int DropUnknownProtocol = 0;    /* Allow any request? */
+int TimestampLog = 0;           /* Should messages have timestamps? */
+int MultiUse = 1;               /* Client handles multiple connections? */
 unsigned short MaxBufSize = DFLT_BUF_SIZE;  /* Maximum buffer size */
-unsigned long CurrentToken = 0;	/* Client reuseable key token */
-unsigned short KeyLifetime = DFLT_KEY_LIFETIME;	/* Key lifetime in seconds */
-unsigned short ChecksumLevel = CHECKSUM_CRC32;	/* Type of checksum embedded in the message. Default CRC32 */
+unsigned long CurrentToken = 0; /* Client reuseable key token */
+unsigned short KeyLifetime = DFLT_KEY_LIFETIME; /* Key lifetime in seconds */
+unsigned short ChecksumLevel = CHECKSUM_CRC32;  /* Type of checksum embedded in the message. Default CRC32 */
 unsigned short MinChecksumLevel = CHECKSUM_NONE;
-int UdpMode = 0;		/* Run in UDP mode */
-int TcpMode = 1;		/* Run in TCP mode */
-unsigned short TcpTimeout = DFLT_TCP_TIMEOUT;	/* TCP inactivity timeout */
-unsigned short UdpTimeout = DFLT_UDP_TIMEOUT;	/* UDP inactivity timeout */
-char *ListenIp = NULL;		/* IP address on which to listen */
-int ListenMode = 0;		/* True if client waits for server connection */
-char *ClientHost = NULL;	/* Server initiates connection to client */
-int ListenSock = -1;		/* Socket on which to listen for server */
+int UdpMode = 0;                /* Run in UDP mode */
+int TcpMode = 1;                /* Run in TCP mode */
+unsigned short TcpTimeout = DFLT_TCP_TIMEOUT;   /* TCP inactivity timeout */
+unsigned short UdpTimeout = DFLT_UDP_TIMEOUT;   /* UDP inactivity timeout */
+char *ListenIp = NULL;          /* IP address on which to listen */
+int ListenMode = 0;             /* True if client waits for server connection */
+char *ClientHost = NULL;        /* Server initiates connection to client */
+int ListenSock = -1;            /* Socket on which to listen for server */
 unsigned short ServerConnectTimeout = DFLT_CONNECT_TIMEOUT; /* Timeout for server connections */
 unsigned short AcceptConnectTimeout = DFLT_CONNECT_TIMEOUT; /* Timeout for client to accept connections */
 unsigned short TargetConnectTimeout = DFLT_CONNECT_TIMEOUT; /* Timeout for connection to target */
 unsigned short ConnectAttempts = 1; /* Number of server-initiated connection attempts */
 unsigned short ReadTimeout = 0; /* Timeout for remote data reads */
-int ActiveCount = 0;		/* Count of active handlers */
-char *ProxyHost = NULL;		/* HTTP proxy host, if used */
-char *ProxyAuth = NULL;		/* HTTP proxy username:password, if used */
-unsigned short ProxyPort = 0;	/* HTTP proxy port, if used */
-int Transparent = 0;		/* Try to propagate the client IP address */
-char *FieldSeparator = NULL;	/* Input field separator character */
-char *SharedKey = NULL;		/* Static shared secret key */
-char *SharedKeyGenCmd = NULL;	/* Command to generate shared secret key */
-int DumpData = 0;		/* Dump out message contents only if true */
+int ActiveCount = 0;            /* Count of active handlers */
+char *ProxyHost = NULL;         /* HTTP proxy host, if used */
+char *ProxyAuth = NULL;         /* HTTP proxy username:password, if used */
+unsigned short ProxyPort = 0;   /* HTTP proxy port, if used */
+int Transparent = 0;            /* Try to propagate the client IP address */
+char *FieldSeparator = NULL;    /* Input field separator character */
+char *SharedKey = NULL;         /* Static shared secret key */
+char *SharedKeyGenCmd = NULL;   /* Command to generate shared secret key */
+int DumpData = 0;               /* Dump out message contents only if true */
 #ifndef WIN32
-uid_t ProcessUID = -1;		/* User id to run zebedee process if started as root */
+uid_t ProcessUID = -1;          /* User id to run zebedee process if started as root */
 gid_t ProcessGID = -1;          /* Group id to run zebedee process if started as root */
 #endif
 long ThreadStackSize = THREAD_STACK_SIZE; /* As it says */
-unsigned short BugCompatibility = 0;	/* Be nice to development users */
+unsigned short BugCompatibility = 0;    /* Be nice to development users */
 unsigned short MaxConnections = 0;      /* Maximum number of simultaneous connections */
-int InteractiveMode = 0;		/* Possibly better interactive performance */
-char *UserAgent = "Zebedee";		/* User agent provided to HTTP proxies */
+int InteractiveMode = 0;                /* Possibly better interactive performance */
+char *UserAgent = "Zebedee";            /* User agent provided to HTTP proxies */
 
-extern char *optarg;		/* From getopt */
-extern int optind;		/* From getopt */
+extern char *optarg;            /* From getopt */
+extern int optind;              /* From getopt */
 
 /*
 ** The following global data-structure ARE modified during normal operation
@@ -547,16 +547,16 @@ extern int optind;		/* From getopt */
 */
 
 KeyInfo_t ClientKeyList = { 0, NULL, (time_t)0, NULL, NULL };
-				/* Client-side list of token->key mappings */
+                                /* Client-side list of token->key mappings */
 KeyInfo_t ServerKeyList = { 0, NULL, (time_t)0, NULL, NULL };
-				/* Server-side list of token->key mappings */
-HndInfo_t HandlerList;		/* List of address to handler mappings */
+                                /* Server-side list of token->key mappings */
+HndInfo_t HandlerList;          /* List of address to handler mappings */
 
 
 /*************************\
-**			 **
+**                       **
 **  Function Prototypes  **
-**			 **
+**                       **
 \*************************/
 
 void threadInit(void);
@@ -630,8 +630,8 @@ unsigned long getCurrentToken(void);
 
 int spawnCommand(unsigned short port, char *cmdFormat);
 int filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
-	       struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP,
-	       int replyFd, int udpMode);
+               struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP,
+               int replyFd, int udpMode);
 
 void hashStrings(char *hashBuf, ...);
 void hashFile(char *hashBuf, char *fileName);
@@ -658,7 +658,7 @@ unsigned short mapPort(unsigned short localPort, char **hostP, struct sockaddr_i
 void server(FnArgs_t *argP);
 
 unsigned short scanPortRange(const char *str, unsigned short *loP,
-			     unsigned short *hiP, unsigned short *typeP);
+                             unsigned short *hiP, unsigned short *typeP);
 void setBoolean(char *value, int *resultP);
 void setUShort(char *value, unsigned short *resultP);
 void setPort(char *value, unsigned short *resultP);
@@ -690,9 +690,9 @@ void runAsUser(const char *user);
 void switchUser(void);
 
 /*************************************\
-**				     **
+**                                   **
 **  Thread Synchronisation Routines  **
-**				     **
+**                                   **
 \*************************************/
 
 /*
@@ -728,14 +728,14 @@ mutexInit(void)
 
     for (i = 0; i < MUTEX_MAX; i++)
     {
-	InitializeCriticalSection(&(Mutex[i]));
+        InitializeCriticalSection(&(Mutex[i]));
     }
 #elif defined(HAVE_PTHREADS)
     int i;
 
     for (i = 0; i < MUTEX_MAX; i++)
     {
-	pthread_mutex_init(&(Mutex[i]), NULL);
+        pthread_mutex_init(&(Mutex[i]), NULL);
     }
 #endif
 }
@@ -790,17 +790,17 @@ conditionInit(void)
 
     for (i = 0; i < COND_MAX; i++)
     {
-	Condition[i] = CreateEvent(NULL,    /* No security attributes */
-				   TRUE,    /* Manual reset */
-				   FALSE,   /* Initially cleared */
-				   NULL);   /* No name */
+        Condition[i] = CreateEvent(NULL,    /* No security attributes */
+                                   TRUE,    /* Manual reset */
+                                   FALSE,   /* Initially cleared */
+                                   NULL);   /* No name */
     }
 #elif defined(HAVE_PTHREADS)
     int i;
 
     for (i = 0; i < COND_MAX; i++)
     {
-	pthread_cond_init(&(Condition[i]), NULL);
+        pthread_cond_init(&(Condition[i]), NULL);
     }
 #endif
 }
@@ -893,7 +893,7 @@ incrActiveCount(int num)
     ActiveCount += num;
     if (ActiveCount == 0)
     {
-	conditionSignal(COND_ACTIVE);
+        conditionSignal(COND_ACTIVE);
     }
     mutexUnlock(MUTEX_ACTIVE);
     return ActiveCount;
@@ -913,7 +913,7 @@ waitForInactivity(void)
     mutexLock(MUTEX_ACTIVE);
     while (ActiveCount)
     {
-	conditionWait(COND_ACTIVE, MUTEX_ACTIVE);
+        conditionWait(COND_ACTIVE, MUTEX_ACTIVE);
     }
     mutexUnlock(MUTEX_ACTIVE);
 #else
@@ -922,9 +922,9 @@ waitForInactivity(void)
 }
 
 /*********************\
-**		     **
+**                   **
 **  Message Logging  **
-**		     **
+**                   **
 \*********************/
 
 /*
@@ -945,11 +945,11 @@ timestamp(char *timeBuf, int local)
     time(&now);
     if (local)
     {
-	tmPtr = localtime(&now);
+        tmPtr = localtime(&now);
     }
     else
     {
-	tmPtr = gmtime(&now);
+        tmPtr = gmtime(&now);
     }
     strftime(timeBuf, TIMESTAMP_SIZE, "%Y-%m-%d-%H:%M:%S", tmPtr);
     mutexUnlock(MUTEX_IO);
@@ -977,17 +977,17 @@ logToSystemLog(unsigned short level, char *msg)
 
     if (eventHandle != NULL)
     {
-	ReportEvent(eventHandle,	    /* Handle of event source */
-		    (level ? EVENTLOG_INFORMATION_TYPE :
-		     EVENTLOG_ERROR_TYPE),  /* Event type */
-		    (WORD)level,	    /* Event category */
-		    0,			    /* Event ID */
-		    NULL,		    /* User SID */
-		    1,			    /* Number of message strings */
-		    0,			    /* Bytes of binary data */
-		    (const char **)strings, /* Array of message strings */
-		    NULL);		    /* No binary data */
-	DeregisterEventSource(eventHandle);
+        ReportEvent(eventHandle,            /* Handle of event source */
+                    (level ? EVENTLOG_INFORMATION_TYPE :
+                     EVENTLOG_ERROR_TYPE),  /* Event type */
+                    (WORD)level,            /* Event category */
+                    0,                      /* Event ID */
+                    NULL,                   /* User SID */
+                    1,                      /* Number of message strings */
+                    0,                      /* Bytes of binary data */
+                    (const char **)strings, /* Array of message strings */
+                    NULL);                  /* No binary data */
+        DeregisterEventSource(eventHandle);
     }
 #else
     int logLevel;
@@ -1000,20 +1000,20 @@ logToSystemLog(unsigned short level, char *msg)
     switch (level)
     {
     case 0:
-	logLevel = LOG_ERR;
-	break;
+        logLevel = LOG_ERR;
+        break;
 
     case 1:
-	logLevel = LOG_NOTICE;
-	break;
+        logLevel = LOG_NOTICE;
+        break;
 
     case 2:
-	logLevel = LOG_INFO;
-	break;
+        logLevel = LOG_INFO;
+        break;
 
     default:
-	logLevel = LOG_DEBUG;
-	break;
+        logLevel = LOG_DEBUG;
+        break;
     }
 
     syslog(logLevel, msg);
@@ -1055,13 +1055,13 @@ message(unsigned short level, int err, char *fmt, ...)
 
     if (fp == NULL)
     {
-	fp = stderr;
+        fp = stderr;
     }
 
     if (TimestampLog)
     {
-	timestamp(timeBuf, 1);
-	timePtr = timeBuf;
+        timestamp(timeBuf, 1);
+        timePtr = timeBuf;
     }
 
     /*
@@ -1074,19 +1074,19 @@ message(unsigned short level, int err, char *fmt, ...)
     */
 
     snprintf(msgBuf, sizeof(msgBuf), "%s(%lu/%lu): %s%s%.*s%s",
-	     Program, (threadPid() % 100000), (threadTid() % 100000),
-	     (timePtr ? timePtr : ""), (timePtr ? ": " : ""),
-	     level, "          ", (level ? "" : "ERROR: "));
+             Program, (threadPid() % 100000), (threadTid() % 100000),
+             (timePtr ? timePtr : ""), (timePtr ? ": " : ""),
+             level, "          ", (level ? "" : "ERROR: "));
 
     vsnprintf(msgBuf + strlen(msgBuf), sizeof(msgBuf) - strlen(msgBuf),
-	      fmt, args);
+              fmt, args);
 
     va_end(args);
 
     if (err)
     {
-	snprintf(msgBuf + strlen(msgBuf), sizeof(msgBuf) - strlen(msgBuf),
-		 ": (%s)", strerror(err));
+        snprintf(msgBuf + strlen(msgBuf), sizeof(msgBuf) - strlen(msgBuf),
+                 ": (%s)", strerror(err));
     }
 
     /* Ensure we don't get overlapping messages */
@@ -1096,16 +1096,16 @@ message(unsigned short level, int err, char *fmt, ...)
     switch (LogFileType)
     {
     case LOGFILE_LOCAL:
-	fprintf(fp, "%s\n", msgBuf);
-	fflush(fp);
-	break;
+        fprintf(fp, "%s\n", msgBuf);
+        fflush(fp);
+        break;
 
     case LOGFILE_SYSLOG:
-	logToSystemLog(level, msgBuf);
-	break;
+        logToSystemLog(level, msgBuf);
+        break;
 
     default:
-	break;
+        break;
     }
 
     mutexUnlock(MUTEX_IO);
@@ -1130,38 +1130,38 @@ void dumpData(const char *prefix, unsigned char *data, unsigned short size)
     bptr = buf;
     for (i = 0; i < size; i++)
     {
-	if (isprint(data[i]))
-	{
-	    *bptr++ = data[i];
-	    *bptr++ = ' ';
-	}
-	else
-	{
-	    *bptr++ = hex[(data[i] >> 4) & 0xf];
-	    *bptr++ = hex[data[i] & 0xf];
-	}
-	*bptr++ = ' ';
-	    
-	if ((i % 16) == 15)
-	{
-	    *(bptr - 1) = '\0';
-	    message(5, 0, "%s %04hx %s", prefix, (i - 15), buf);
-	    bptr = buf;
-	}
+        if (isprint(data[i]))
+        {
+            *bptr++ = data[i];
+            *bptr++ = ' ';
+        }
+        else
+        {
+            *bptr++ = hex[(data[i] >> 4) & 0xf];
+            *bptr++ = hex[data[i] & 0xf];
+        }
+        *bptr++ = ' ';
+            
+        if ((i % 16) == 15)
+        {
+            *(bptr - 1) = '\0';
+            message(5, 0, "%s %04hx %s", prefix, (i - 15), buf);
+            bptr = buf;
+        }
     }
 
     if (i % 16)
     {
-	*bptr = '\0';
-	message(5, 0, "%s %04hx %s", prefix, (i - (i % 16)), buf);
-	bptr = buf;
+        *bptr = '\0';
+        message(5, 0, "%s %04hx %s", prefix, (i - (i % 16)), buf);
+        bptr = buf;
     }
 }
 
 /*******************************\
-**			       **
+**                             **
 **  Network Data Transmission  **
-**			       **
+**                             **
 \*******************************/
 
 /*
@@ -1185,32 +1185,32 @@ readData(int fd, unsigned char *buffer, unsigned short size)
     bufP = (char *)buffer;
     do
     {
-	if (ReadTimeout != 0)
-	{
-	    delay.tv_sec = ReadTimeout;
-	    delay.tv_usec = 0;
+        if (ReadTimeout != 0)
+        {
+            delay.tv_sec = ReadTimeout;
+            delay.tv_usec = 0;
 
-	    FD_ZERO(&testSet);
-	    FD_SET(fd, &testSet);
+            FD_ZERO(&testSet);
+            FD_SET(fd, &testSet);
 
-	    ready = select(fd + 1, &testSet, 0, 0, &delay);
+            ready = select(fd + 1, &testSet, 0, 0, &delay);
 
-	    if (ready == 0)
-	    {
-		message(0, errno, "timed out reading data");
-		return -1;
-	    }
-	}
+            if (ready == 0)
+            {
+                message(0, errno, "timed out reading data");
+                return -1;
+            }
+        }
 
-	message(5, 0, "readData: receiving %d of %d", (size - total), size);
-	if ((num = recv(fd, (bufP + total), (size - total), 0)) <= 0)
-	{
-	    message(5, errno, "readData: EOF or error");
-	    /* Premature EOF or error */
-	    return num;
-	}
-	message(5, 0, "readData: read %d byte(s)", num);
-	total += (unsigned short)num;
+        message(5, 0, "readData: receiving %d of %d", (size - total), size);
+        if ((num = recv(fd, (bufP + total), (size - total), 0)) <= 0)
+        {
+            message(5, errno, "readData: EOF or error");
+            /* Premature EOF or error */
+            return num;
+        }
+        message(5, 0, "readData: read %d byte(s)", num);
+        total += (unsigned short)num;
     }
     while (total < size);
 
@@ -1235,7 +1235,7 @@ readUShort(int fd, unsigned short *resultP)
 
     if ((num = readData(fd, buffer, 2)) != 2)
     {
-	return num;
+        return num;
     }
 
     *resultP = ((unsigned short)buffer[0] << 8) + (unsigned short)buffer[1];
@@ -1261,15 +1261,15 @@ writeData(int fd, unsigned char *buffer, unsigned short size)
     bufP = (char *)buffer;
     do
     {
-	message(5, 0, "writeData: sending %d of %d", (size - total), size);
-	if ((num = send(fd, (bufP + total), (size - total), 0)) <= 0)
-	{
-	    /* Premature EOF or error */
-	    message(5, errno, "writeData: EOF or error");
-	    return num;
-	}
-	total += (unsigned short)num;
-	message(5, 0, "writeData: sent %d byte(s)", num);
+        message(5, 0, "writeData: sending %d of %d", (size - total), size);
+        if ((num = send(fd, (bufP + total), (size - total), 0)) <= 0)
+        {
+            /* Premature EOF or error */
+            message(5, errno, "writeData: EOF or error");
+            return num;
+        }
+        total += (unsigned short)num;
+        message(5, 0, "writeData: sent %d byte(s)", num);
     }
     while (total < size);
 
@@ -1303,16 +1303,16 @@ writeUShort(int fd, unsigned short value)
 
 MsgBuf_t *
 makeMsgBuf(unsigned short maxSize,
-	   unsigned short cmpInfo,
-	   unsigned short checksumLevel)
+           unsigned short cmpInfo,
+           unsigned short checksumLevel)
 {
     MsgBuf_t *msg;
 
 
     if ((msg = (MsgBuf_t *)malloc(sizeof(MsgBuf_t))) == NULL)
     {
-	message(0, errno, "Failed to allocate message structure");
-	return NULL;
+        message(0, errno, "Failed to allocate message structure");
+        return NULL;
     }
 
     msg->maxSize = maxSize;
@@ -1333,26 +1333,26 @@ makeMsgBuf(unsigned short maxSize,
     switch (checksumLevel)
     {
     case CHECKSUM_NONE:
-	msg->checksumLen = 0;
-	break;
+        msg->checksumLen = 0;
+        break;
 
     case CHECKSUM_ADLER:
-	msg->checksumLen = CHECKSUM_ADLER_LEN;
-	break;
+        msg->checksumLen = CHECKSUM_ADLER_LEN;
+        break;
 
     case CHECKSUM_CRC32:
-	msg->checksumLen = CHECKSUM_CRC32_LEN;
-	break;
+        msg->checksumLen = CHECKSUM_CRC32_LEN;
+        break;
 
     case CHECKSUM_SHA:
-	msg->checksumLen = CHECKSUM_SHA_LEN;
-	break;
+        msg->checksumLen = CHECKSUM_SHA_LEN;
+        break;
 
     default:
-	message(0, 0, "invalid checksum level while allocating message buffer (%hu)", checksumLevel);
-	free(msg);
-	return NULL;
-	break;
+        message(0, 0, "invalid checksum level while allocating message buffer (%hu)", checksumLevel);
+        free(msg);
+        return NULL;
+        break;
     }
 
     return msg;
@@ -1369,9 +1369,9 @@ freeMsgBuf(MsgBuf_t *msg)
 {
     if (msg)
     {
-	if (msg->bfRead) free(msg->bfRead);
-	if (msg->bfWrite) free(msg->bfWrite);
-	free(msg);
+        if (msg->bfRead) free(msg->bfRead);
+        if (msg->bfWrite) free(msg->bfWrite);
+        free(msg);
     }
 }
 
@@ -1387,7 +1387,7 @@ getMsgBuf(MsgBuf_t *msg, void *buffer, unsigned short size)
 {
     if (msg->size > size)
     {
-	message(0, 0, "supplied buffer too small for received message (%hu > %hu)", msg->size, size);
+        message(0, 0, "supplied buffer too small for received message (%hu > %hu)", msg->size, size);
     }
 
     memcpy(buffer, msg->data, (size < msg->size ? size : msg->size));
@@ -1454,9 +1454,9 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
 
     if (thisSize ? size > thisSize : size > msg->maxSize)
     {
-	message(0, 0, "incoming message size too big (%hu > %hu)",
-		size, (thisSize ? thisSize : msg->maxSize));
-	return -1;
+        message(0, 0, "incoming message size too big (%hu > %hu)",
+                size, (thisSize ? thisSize : msg->maxSize));
+        return -1;
     }
 
     msg->size = size;
@@ -1465,147 +1465,147 @@ readMessage(int fd, MsgBuf_t *msg, unsigned short thisSize)
     msg->bytesIn += extSize;
 
     message(4, 0, "readMessage: message size = %hu, %s, %s", size,
-	    ((flags & FLAG_ENCRYPTED) ? "encrypted" : "unencrypted"),
-	    ((flags & FLAG_COMPRESSED) ? "compressed" : "uncompressed"));
+            ((flags & FLAG_ENCRYPTED) ? "encrypted" : "unencrypted"),
+            ((flags & FLAG_COMPRESSED) ? "compressed" : "uncompressed"));
 
     /* Read the remaining message data, and appended checksum */
 
-    if ((num = readData(fd, msg->tmp, extSize))	!= (int)extSize) return num;
+    if ((num = readData(fd, msg->tmp, extSize)) != (int)extSize) return num;
 
     /* Decrypt if necessary */
 
     if (flags & FLAG_ENCRYPTED)
     {
-	if (msg->bfRead == NULL)
-	{
-	    message(0, 0, "message with encryption flag sent with no encryption context");
-	    return -1;
-	}
+        if (msg->bfRead == NULL)
+        {
+            message(0, 0, "message with encryption flag sent with no encryption context");
+            return -1;
+        }
 
-	BF_cfb64_encrypt(msg->tmp, msg->bfRead->cryptBuf, extSize,
-			 &(msg->bfRead->key), msg->bfRead->iVec,
-			 &(msg->bfRead->pos), BF_DECRYPT);
-	memcpy(msg->tmp, msg->bfRead->cryptBuf, extSize);
+        BF_cfb64_encrypt(msg->tmp, msg->bfRead->cryptBuf, extSize,
+                         &(msg->bfRead->key), msg->bfRead->iVec,
+                         &(msg->bfRead->pos), BF_DECRYPT);
+        memcpy(msg->tmp, msg->bfRead->cryptBuf, extSize);
     }
 
     switch (msg->checksumLevel)
     {
     case CHECKSUM_NONE:
-	checksumOk = 1;
-	break;
+        checksumOk = 1;
+        break;
 
     case CHECKSUM_ADLER:
-	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
-	crc32exp = BUGNTOHL(crc32exp);
-	crc32in = (uint32_t)adler32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
-	crc32in = (uint32_t)adler32(crc32in, (unsigned char *)&msg->tmp, size);
-	checksumOk = (crc32exp == crc32in);
-	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
-	crc32in = BUGHTONL(crc32in);
-	memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
-	break;
+        memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
+        crc32exp = BUGNTOHL(crc32exp);
+        crc32in = (uint32_t)adler32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
+        crc32in = (uint32_t)adler32(crc32in, (unsigned char *)&msg->tmp, size);
+        checksumOk = (crc32exp == crc32in);
+        message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
+        crc32in = BUGHTONL(crc32in);
+        memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
+        break;
 
     case CHECKSUM_CRC32:
-	memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
-	crc32exp = BUGNTOHL(crc32exp);
-	crc32in = (uint32_t)crc32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
-	crc32in = (uint32_t)crc32(crc32in, (unsigned char *)&msg->tmp, size);
-	checksumOk = (crc32exp == crc32in);
-	message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
-	crc32in = BUGHTONL(crc32in);
-	memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
-	break;
+        memcpy(&crc32exp, msg->tmp + size, sizeof(crc32exp));
+        crc32exp = BUGNTOHL(crc32exp);
+        crc32in = (uint32_t)crc32(0L, (unsigned char *)&msg->inSeed, sizeof(msg->inSeed));
+        crc32in = (uint32_t)crc32(crc32in, (unsigned char *)&msg->tmp, size);
+        checksumOk = (crc32exp == crc32in);
+        message(5, 0, "expected checksum %#08lx, calculated checksum %#08lx", crc32exp, crc32in);
+        crc32in = BUGHTONL(crc32in);
+        memcpy(&(msg->inSeed), &crc32in, sizeof(crc32in));
+        break;
 
     case CHECKSUM_SHA:
-	sha_init(&shaExp);
-	sha_init(&shaIn);
-	memcpy(shaExp.digest, msg->tmp + size, sizeof(shaExp.digest));
-	shaExp.digest[0] = BUGNTOHL(shaExp.digest[0]);
-	shaExp.digest[1] = BUGNTOHL(shaExp.digest[1]);
-	shaExp.digest[2] = BUGNTOHL(shaExp.digest[2]);
-	shaExp.digest[3] = BUGNTOHL(shaExp.digest[3]);
-	shaExp.digest[4] = BUGNTOHL(shaExp.digest[4]);
-	sha_update(&shaIn, (SHA_BYTE *)&msg->inSeed, sizeof(msg->inSeed));
-	sha_update(&shaIn, (SHA_BYTE *)&msg->tmp, size);
-	sha_final(&shaIn);
-	checksumOk = (memcmp(&shaIn.digest, &shaExp.digest, sizeof(shaIn.digest)) == 0);
-	shaIn.digest[0] = BUGHTONL(shaIn.digest[0]);
-	shaIn.digest[1] = BUGHTONL(shaIn.digest[1]);
-	shaIn.digest[2] = BUGHTONL(shaIn.digest[2]);
-	shaIn.digest[3] = BUGHTONL(shaIn.digest[3]);
-	shaIn.digest[4] = BUGHTONL(shaIn.digest[4]);
-	memcpy(&(msg->inSeed), &shaIn.digest, sizeof(shaIn.digest));
-	message(5, 0, "expected checksum %08lx%08lx%08lx%08lx%08lx, calculated checksum %08lx%08lx%08lx%08lx%08lx",
-		BUGNTOHL((unsigned long)shaExp.digest[0]),
-		BUGNTOHL((unsigned long)shaExp.digest[1]),
-		BUGNTOHL((unsigned long)shaExp.digest[2]),
-		BUGNTOHL((unsigned long)shaExp.digest[3]),
-		BUGNTOHL((unsigned long)shaExp.digest[4]),
-		BUGNTOHL((unsigned long)shaIn.digest[0]),
-		BUGNTOHL((unsigned long)shaIn.digest[1]),
-		BUGNTOHL((unsigned long)shaIn.digest[2]),
-		BUGNTOHL((unsigned long)shaIn.digest[3]),
-		BUGNTOHL((unsigned long)shaIn.digest[4]));
-	break;
+        sha_init(&shaExp);
+        sha_init(&shaIn);
+        memcpy(shaExp.digest, msg->tmp + size, sizeof(shaExp.digest));
+        shaExp.digest[0] = BUGNTOHL(shaExp.digest[0]);
+        shaExp.digest[1] = BUGNTOHL(shaExp.digest[1]);
+        shaExp.digest[2] = BUGNTOHL(shaExp.digest[2]);
+        shaExp.digest[3] = BUGNTOHL(shaExp.digest[3]);
+        shaExp.digest[4] = BUGNTOHL(shaExp.digest[4]);
+        sha_update(&shaIn, (SHA_BYTE *)&msg->inSeed, sizeof(msg->inSeed));
+        sha_update(&shaIn, (SHA_BYTE *)&msg->tmp, size);
+        sha_final(&shaIn);
+        checksumOk = (memcmp(&shaIn.digest, &shaExp.digest, sizeof(shaIn.digest)) == 0);
+        shaIn.digest[0] = BUGHTONL(shaIn.digest[0]);
+        shaIn.digest[1] = BUGHTONL(shaIn.digest[1]);
+        shaIn.digest[2] = BUGHTONL(shaIn.digest[2]);
+        shaIn.digest[3] = BUGHTONL(shaIn.digest[3]);
+        shaIn.digest[4] = BUGHTONL(shaIn.digest[4]);
+        memcpy(&(msg->inSeed), &shaIn.digest, sizeof(shaIn.digest));
+        message(5, 0, "expected checksum %08lx%08lx%08lx%08lx%08lx, calculated checksum %08lx%08lx%08lx%08lx%08lx",
+                BUGNTOHL((unsigned long)shaExp.digest[0]),
+                BUGNTOHL((unsigned long)shaExp.digest[1]),
+                BUGNTOHL((unsigned long)shaExp.digest[2]),
+                BUGNTOHL((unsigned long)shaExp.digest[3]),
+                BUGNTOHL((unsigned long)shaExp.digest[4]),
+                BUGNTOHL((unsigned long)shaIn.digest[0]),
+                BUGNTOHL((unsigned long)shaIn.digest[1]),
+                BUGNTOHL((unsigned long)shaIn.digest[2]),
+                BUGNTOHL((unsigned long)shaIn.digest[3]),
+                BUGNTOHL((unsigned long)shaIn.digest[4]));
+        break;
 
     default:
-	message(0, 0, "unknown internal checksum mode (%hu)", msg->checksumLevel);
-	return -1;
+        message(0, 0, "unknown internal checksum mode (%hu)", msg->checksumLevel);
+        return -1;
     }
 
     if (!checksumOk)
     {
-	message(0, 0, "message failed checksum validation");
-	return -1;
+        message(0, 0, "message failed checksum validation");
+        return -1;
     }
 
     /* Decompress if necessary */
 
     if (flags & FLAG_COMPRESSED)
     {
-	switch (GET_CMPTYPE(msg->cmpInfo))
-	{
-	case CMPTYPE_ZLIB:
-	    if ((num = uncompress(msg->data, &uncmpSize,
-				  (Byte *)(msg->tmp), size)) != Z_OK)
-	    {
-		message(0, errno, "uncompressing message data (zlib status = %d)", num);
-		errno = 0;
-		return -1;
-	    }
-	    break;
+        switch (GET_CMPTYPE(msg->cmpInfo))
+        {
+        case CMPTYPE_ZLIB:
+            if ((num = uncompress(msg->data, &uncmpSize,
+                                  (Byte *)(msg->tmp), size)) != Z_OK)
+            {
+                message(0, errno, "uncompressing message data (zlib status = %d)", num);
+                errno = 0;
+                return -1;
+            }
+            break;
 
-	case CMPTYPE_BZIP2:
+        case CMPTYPE_BZIP2:
 #ifndef DONT_HAVE_BZIP2
-	    if ((num = BZ2_bzBuffToBuffDecompress((char *)(msg->data),
-						  &iUncmpSize,
-						  (char *)(msg->tmp),
-						  (unsigned int)size,
-						  0, 0)) != BZ_OK)
-	    {
-		message(0, errno, "uncompressing message data (bzip2 status = %d)", num);
-		errno = 0;
-		return -1;
-	    }
-	    uncmpSize = (unsigned long)iUncmpSize;
-	    break;
+            if ((num = BZ2_bzBuffToBuffDecompress((char *)(msg->data),
+                                                  &iUncmpSize,
+                                                  (char *)(msg->tmp),
+                                                  (unsigned int)size,
+                                                  0, 0)) != BZ_OK)
+            {
+                message(0, errno, "uncompressing message data (bzip2 status = %d)", num);
+                errno = 0;
+                return -1;
+            }
+            uncmpSize = (unsigned long)iUncmpSize;
+            break;
 #else
-	    message(0, 0, "received unsupported bzip2 compressed message -- should never happen!");
-	    return -1;
-	    break;
+            message(0, 0, "received unsupported bzip2 compressed message -- should never happen!");
+            return -1;
+            break;
 #endif
-	default:
-	    message(0, 0, "invalid compression info in readMessage (%#hx)", msg->cmpInfo);
-	    return -1;
-	    break;
-	}
+        default:
+            message(0, 0, "invalid compression info in readMessage (%#hx)", msg->cmpInfo);
+            return -1;
+            break;
+        }
 
-	msg->size = size = (unsigned short)uncmpSize;
-	message(4, 0, "readMessage: uncompressed size = %hu", size);
+        msg->size = size = (unsigned short)uncmpSize;
+        message(4, 0, "readMessage: uncompressed size = %hu", size);
     }
     else
     {
-	memcpy(msg->data, msg->tmp, size);
+        memcpy(msg->data, msg->tmp, size);
     }
 
     msg->expBytesIn += size;
@@ -1647,96 +1647,96 @@ writeMessage(int fd, MsgBuf_t *msg)
 
     if (msg->cmpInfo && msg->size > CMP_MINIMUM)
     {
-	switch (GET_CMPTYPE(msg->cmpInfo))
-	{
-	case CMPTYPE_ZLIB:
-	    if ((num = compress2(msg->tmp + 2, &cmpSize,
-				 (const Byte *)(msg->data), size,
-				 GET_CMPLEVEL(msg->cmpInfo))) != Z_OK)
-	    {
-		message(0, errno, "compressing data (zlib status = %d)", num);
-		cmpSize = msg->size;
-	    }
-	    break;
+        switch (GET_CMPTYPE(msg->cmpInfo))
+        {
+        case CMPTYPE_ZLIB:
+            if ((num = compress2(msg->tmp + 2, &cmpSize,
+                                 (const Byte *)(msg->data), size,
+                                 GET_CMPLEVEL(msg->cmpInfo))) != Z_OK)
+            {
+                message(0, errno, "compressing data (zlib status = %d)", num);
+                cmpSize = msg->size;
+            }
+            break;
 
-	case CMPTYPE_BZIP2:
+        case CMPTYPE_BZIP2:
 #ifndef DONT_HAVE_BZIP2
-	    if ((num = BZ2_bzBuffToBuffCompress((char *)(msg->tmp + 2),
-					    (unsigned int *)&cmpSize,
-					    (char *)(msg->data),
-					    (unsigned int)size,
-					    (int)GET_CMPLEVEL(msg->cmpInfo),
-					    0, 0)) != BZ_OK)
-	    {
-		message(0, errno, "compressing data (bzip2 status = %d)", num);
-	    }
-	    break;
+            if ((num = BZ2_bzBuffToBuffCompress((char *)(msg->tmp + 2),
+                                            (unsigned int *)&cmpSize,
+                                            (char *)(msg->data),
+                                            (unsigned int)size,
+                                            (int)GET_CMPLEVEL(msg->cmpInfo),
+                                            0, 0)) != BZ_OK)
+            {
+                message(0, errno, "compressing data (bzip2 status = %d)", num);
+            }
+            break;
 #else
-	    message(0, 0, "request to use unsupported bzip2 compression!");
-	    cmpSize = (unsigned long)size;
-	    break;
+            message(0, 0, "request to use unsupported bzip2 compression!");
+            cmpSize = (unsigned long)size;
+            break;
 #endif
 
-	default:
-	    cmpSize = (unsigned long)size;
-	    break;
-	}
+        default:
+            cmpSize = (unsigned long)size;
+            break;
+        }
 
-	/* Only use compressed message if it is shorter */
+        /* Only use compressed message if it is shorter */
 
-	if (cmpSize < (unsigned long)size)
-	{
-	    message(4, 0, "writeMessage: message compressed from %hu to %lu bytes", msg->size, cmpSize);
-	    data = msg->tmp + 2;
-	    size = (unsigned short)cmpSize;
-	    flags |= FLAG_COMPRESSED;
-	}
+        if (cmpSize < (unsigned long)size)
+        {
+            message(4, 0, "writeMessage: message compressed from %hu to %lu bytes", msg->size, cmpSize);
+            data = msg->tmp + 2;
+            size = (unsigned short)cmpSize;
+            flags |= FLAG_COMPRESSED;
+        }
     }
 
     switch (msg->checksumLevel)
     {
     case CHECKSUM_NONE:
-	break;
+        break;
 
     case CHECKSUM_ADLER:
-	crc = (uint32_t)adler32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
-	crc = BUGHTONL((uint32_t)adler32(crc, data, size));
-	memcpy(data + size, &crc, sizeof(crc));
-	memcpy(&msg->outSeed, &crc, sizeof(crc));
-	message(5, 0, "calculated checksum %#08lx", BUGNTOHL(crc));
-	break;
+        crc = (uint32_t)adler32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
+        crc = BUGHTONL((uint32_t)adler32(crc, data, size));
+        memcpy(data + size, &crc, sizeof(crc));
+        memcpy(&msg->outSeed, &crc, sizeof(crc));
+        message(5, 0, "calculated checksum %#08lx", BUGNTOHL(crc));
+        break;
 
     case CHECKSUM_CRC32:
-	crc = (uint32_t)crc32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
-	crc = BUGHTONL((uint32_t)crc32(crc, data, size));
-	memcpy(data + size, &crc, sizeof(crc));
-	memcpy(&msg->outSeed, &crc, sizeof(crc));
-	message(5, 0, "calculated checksum %#08lx", crc);
-	break;
+        crc = (uint32_t)crc32(0L, (unsigned char *)&msg->outSeed, sizeof(msg->outSeed));
+        crc = BUGHTONL((uint32_t)crc32(crc, data, size));
+        memcpy(data + size, &crc, sizeof(crc));
+        memcpy(&msg->outSeed, &crc, sizeof(crc));
+        message(5, 0, "calculated checksum %#08lx", crc);
+        break;
 
     case CHECKSUM_SHA:
-	sha_init(&sha);
-	sha_update(&sha, (SHA_BYTE *)&msg->outSeed, sizeof(msg->outSeed));
-	sha_update(&sha, (SHA_BYTE *)data, size);
-	sha_final(&sha);
-	sha.digest[0] = BUGHTONL(sha.digest[0]);
-	sha.digest[1] = BUGHTONL(sha.digest[1]);
-	sha.digest[2] = BUGHTONL(sha.digest[2]);
-	sha.digest[3] = BUGHTONL(sha.digest[3]);
-	sha.digest[4] = BUGHTONL(sha.digest[4]);
-	memcpy(data + size, &sha.digest, sizeof(sha.digest));
-	memcpy(&msg->outSeed, &sha.digest, sizeof(sha.digest));
-	message(5, 0, "calculated checksum %08lx%08lx%08lx%08lx%08lx",
-		(unsigned long)BUGNTOHL(sha.digest[0]),
-		(unsigned long)BUGNTOHL(sha.digest[1]),
-		(unsigned long)BUGNTOHL(sha.digest[2]),
-		(unsigned long)BUGNTOHL(sha.digest[3]),
-		(unsigned long)BUGNTOHL(sha.digest[4]));
-	break;
+        sha_init(&sha);
+        sha_update(&sha, (SHA_BYTE *)&msg->outSeed, sizeof(msg->outSeed));
+        sha_update(&sha, (SHA_BYTE *)data, size);
+        sha_final(&sha);
+        sha.digest[0] = BUGHTONL(sha.digest[0]);
+        sha.digest[1] = BUGHTONL(sha.digest[1]);
+        sha.digest[2] = BUGHTONL(sha.digest[2]);
+        sha.digest[3] = BUGHTONL(sha.digest[3]);
+        sha.digest[4] = BUGHTONL(sha.digest[4]);
+        memcpy(data + size, &sha.digest, sizeof(sha.digest));
+        memcpy(&msg->outSeed, &sha.digest, sizeof(sha.digest));
+        message(5, 0, "calculated checksum %08lx%08lx%08lx%08lx%08lx",
+                (unsigned long)BUGNTOHL(sha.digest[0]),
+                (unsigned long)BUGNTOHL(sha.digest[1]),
+                (unsigned long)BUGNTOHL(sha.digest[2]),
+                (unsigned long)BUGNTOHL(sha.digest[3]),
+                (unsigned long)BUGNTOHL(sha.digest[4]));
+        break;
 
     default:
-	    message(0, 0, "unknown internal checksum mode");
-	    return -1;
+            message(0, 0, "unknown internal checksum mode");
+            return -1;
     }
     extSize = size + msg->checksumLen;
     
@@ -1744,15 +1744,15 @@ writeMessage(int fd, MsgBuf_t *msg)
 
     if (msg->bfWrite)
     {
-	BF_cfb64_encrypt(data, msg->bfWrite->cryptBuf, extSize,
-			 &(msg->bfWrite->key), msg->bfWrite->iVec,
-			 &(msg->bfWrite->pos), BF_ENCRYPT);
-	memcpy(msg->tmp + 2, msg->bfWrite->cryptBuf, extSize);
-	flags |= FLAG_ENCRYPTED;
+        BF_cfb64_encrypt(data, msg->bfWrite->cryptBuf, extSize,
+                         &(msg->bfWrite->key), msg->bfWrite->iVec,
+                         &(msg->bfWrite->pos), BF_ENCRYPT);
+        memcpy(msg->tmp + 2, msg->bfWrite->cryptBuf, extSize);
+        flags |= FLAG_ENCRYPTED;
     }
     else
     {
-	memmove(msg->tmp + 2, data, extSize);
+        memmove(msg->tmp + 2, data, extSize);
     }
 
     /* Insert the header */
@@ -1765,8 +1765,8 @@ writeMessage(int fd, MsgBuf_t *msg)
     /* Write the message data */
 
     message(4, 0, "writeMessage: message size = %hu, %s, %s", size,
-	    ((flags & FLAG_ENCRYPTED) ? "encrypted" : "unencrypted"),
-	    ((flags & FLAG_COMPRESSED) ? "compressed" : "uncompressed"));
+            ((flags & FLAG_ENCRYPTED) ? "encrypted" : "unencrypted"),
+            ((flags & FLAG_COMPRESSED) ? "compressed" : "uncompressed"));
 
     if ((num = writeData(fd, msg->tmp, extSize + 2)) != (int)(extSize + 2)) return num;
 
@@ -1791,14 +1791,14 @@ requestResponse(int fd, unsigned short request, unsigned short *responseP)
 
     if (writeUShort(fd, request) != 2)
     {
-	return 0;
+        return 0;
     }
 
     /* Read response */
 
     if (readUShort(fd, responseP) != 2)
     {
-	return 0;
+        return 0;
     }
 
     return 1;
@@ -1819,9 +1819,9 @@ requestResponse(int fd, unsigned short request, unsigned short *responseP)
 
 int
 getHostAddress(const char *host,
-	       struct sockaddr_in *addrP,
-	       struct in_addr **addrList,
-	       unsigned long *maskP)
+               struct sockaddr_in *addrP,
+               struct in_addr **addrList,
+               unsigned long *maskP)
 {
     struct hostent *entry = NULL;
     int result = 1;
@@ -1841,18 +1841,18 @@ getHostAddress(const char *host,
 
     if ((s = strchr(host, '/')) != NULL)
     {
-	hostCopy = (char *)malloc(strlen(host) + 1);
-	if (!hostCopy || (sscanf(host, "%[^/]/%hu", hostCopy, &bits) != 2))
-	{
-	    errno = 0;
-	    result = 0;
-	}
-	host = hostCopy;
-	if (maskP)
-	{
-	    if (bits <= 0 || bits > 32) bits = 32;
-	    *maskP = htonl(0xffffffff << (32 - bits));
-	}
+        hostCopy = (char *)malloc(strlen(host) + 1);
+        if (!hostCopy || (sscanf(host, "%[^/]/%hu", hostCopy, &bits) != 2))
+        {
+            errno = 0;
+            result = 0;
+        }
+        host = hostCopy;
+        if (maskP)
+        {
+            if (bits <= 0 || bits > 32) bits = 32;
+            *maskP = htonl(0xffffffff << (32 - bits));
+        }
     }
 
     /*
@@ -1862,52 +1862,52 @@ getHostAddress(const char *host,
 
     if ((addrP->sin_addr.s_addr = inet_addr(host)) == INADDR_NONE)
     {
-	if ((entry = gethostbyname(host)) == NULL)
-	{
-	    errno = 0;
-	    result = 0;
-	}
-	else
-	{
-	    memcpy(&(addrP->sin_addr), entry->h_addr, entry->h_length);
-	}
+        if ((entry = gethostbyname(host)) == NULL)
+        {
+            errno = 0;
+            result = 0;
+        }
+        else
+        {
+            memcpy(&(addrP->sin_addr), entry->h_addr, entry->h_length);
+        }
     }
 
     /* Retrieve full list of addresses if required */
 
     if (addrList != NULL)
     {
-	if (entry)
-	{
-	    for (count = 0; entry->h_addr_list[count]; count++)
-	    {
-		/* Nothing */
-	    }
-	    *addrList = (struct in_addr *)calloc(count + 1, sizeof(struct in_addr));
-	    if (*addrList == NULL)
-	    {
-		result = 0;
-	    }
-	    else
-	    {
-		for (i = 0; i < count; i++)
-		{
-		    memcpy(&((*addrList)[i]), entry->h_addr_list[i], sizeof(struct in_addr));
-		}
-		memset(&((*addrList)[i]), 0xff, sizeof(struct in_addr));
-	    }
-	}
-	else
-	{
-	    *addrList = (struct in_addr *)calloc(2, sizeof(struct in_addr));
-	    memcpy(&((*addrList)[0]), &(addrP->sin_addr), sizeof(struct in_addr));
-	    memset(&((*addrList)[1]), 0xff, sizeof(struct in_addr));
-	}
+        if (entry)
+        {
+            for (count = 0; entry->h_addr_list[count]; count++)
+            {
+                /* Nothing */
+            }
+            *addrList = (struct in_addr *)calloc(count + 1, sizeof(struct in_addr));
+            if (*addrList == NULL)
+            {
+                result = 0;
+            }
+            else
+            {
+                for (i = 0; i < count; i++)
+                {
+                    memcpy(&((*addrList)[i]), entry->h_addr_list[i], sizeof(struct in_addr));
+                }
+                memset(&((*addrList)[i]), 0xff, sizeof(struct in_addr));
+            }
+        }
+        else
+        {
+            *addrList = (struct in_addr *)calloc(2, sizeof(struct in_addr));
+            memcpy(&((*addrList)[0]), &(addrP->sin_addr), sizeof(struct in_addr));
+            memset(&((*addrList)[1]), 0xff, sizeof(struct in_addr));
+        }
     }
 
     if (hostCopy)
     {
-	free(hostCopy);
+        free(hostCopy);
     }
 
     mutexUnlock(MUTEX_IO);
@@ -1927,10 +1927,10 @@ ipString(struct in_addr addr, char *buf)
 {
     unsigned long val = ntohl(addr.s_addr);
     sprintf(buf, "%lu.%lu.%lu.%lu",
-	    (val >> 24) & 0xff,
-	    (val >> 16) & 0xff,
-	    (val >>  8) & 0xff,
-	    val & 0xff);
+            (val >> 24) & 0xff,
+            (val >> 16) & 0xff,
+            (val >>  8) & 0xff,
+            val & 0xff);
     return buf;
 }
 
@@ -1954,9 +1954,9 @@ ipString(struct in_addr addr, char *buf)
 
 int
 makeConnection(const char *host, const unsigned short port,
-	       int udpMode, int useProxy,
-	       struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP,
-	       unsigned short timeout)
+               int udpMode, int useProxy,
+               struct sockaddr_in *fromAddrP, struct sockaddr_in *toAddrP,
+               unsigned short timeout)
 {
     int sfd = -1;
     struct sockaddr_in addr;
@@ -1976,21 +1976,21 @@ makeConnection(const char *host, const unsigned short port,
 
     if (!udpMode && useProxy)
     {
-	/* Only try if a proxy has been set */
+        /* Only try if a proxy has been set */
 
-	if (ProxyHost && ProxyPort)
-	{
-	    return proxyConnection(host, port, toAddrP, timeout);
-	}
+        if (ProxyHost && ProxyPort)
+        {
+            return proxyConnection(host, port, toAddrP, timeout);
+        }
     }
 
     /* Create the socket */
 
     if ((sfd = socket(AF_INET, (udpMode ? SOCK_DGRAM : SOCK_STREAM), 0)) < 0)
     {
-	message(0, errno, "socket creation failed");
-	errno = 0;
-	return -1;
+        message(0, errno, "socket creation failed");
+        errno = 0;
+        return -1;
     }
 
     /*
@@ -2010,20 +2010,20 @@ makeConnection(const char *host, const unsigned short port,
     if (fromAddrP && fromAddrP->sin_addr.s_addr)
     {
 #ifdef USE_UDP_SPOOFING
-	closesocket(sfd);
-	if ((sfd = libnet_open_raw_sock(IPPROTO_RAW)) < 0)
-	{
-	    message(0, errno, "raw socket creation failed");
-	    errno = 0;
-	    return -1;
-	}
+        closesocket(sfd);
+        if ((sfd = libnet_open_raw_sock(IPPROTO_RAW)) < 0)
+        {
+            message(0, errno, "raw socket creation failed");
+            errno = 0;
+            return -1;
+        }
 #else
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_addr.s_addr = fromAddrP->sin_addr.s_addr;
-	if (bind(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-	{
-	    message(1, errno, "WARNING: failed to set connection source address -- ignored");
-	}
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_addr.s_addr = fromAddrP->sin_addr.s_addr;
+        if (bind(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        {
+            message(1, errno, "WARNING: failed to set connection source address -- ignored");
+        }
 #endif
     }
 #endif
@@ -2033,9 +2033,9 @@ makeConnection(const char *host, const unsigned short port,
     memset(&addr, 0, sizeof(addr));
     if (!getHostAddress(host, &addr, NULL, NULL))
     {
-	message(0, 0, "can't resolve host or address '%s'", host);
-	closesocket(sfd);
-	return -1;
+        message(0, 0, "can't resolve host or address '%s'", host);
+        closesocket(sfd);
+        return -1;
     }
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
@@ -2043,85 +2043,85 @@ makeConnection(const char *host, const unsigned short port,
     if (!udpMode)
     {
 
-	/* Set the "don't linger on close" option */
+        /* Set the "don't linger on close" option */
 
-	setNoLinger(sfd);
+        setNoLinger(sfd);
 
-	/*
-	** If there is a timeout on the connection then we need to use
-	** non-blocking mode, otherwise we can just do a straight connect
-	*/
+        /*
+        ** If there is a timeout on the connection then we need to use
+        ** non-blocking mode, otherwise we can just do a straight connect
+        */
 
-	if (timeout == 0)
-	{
-	    if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-	    {
-		closesocket(sfd);
-		return -1;
-	    }
-	}
-	else
-	{
-	    /* Turn on non-blocking mode */
+        if (timeout == 0)
+        {
+            if (connect(sfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+            {
+                closesocket(sfd);
+                return -1;
+            }
+        }
+        else
+        {
+            /* Turn on non-blocking mode */
 
-	    setNonBlocking(sfd, 1);
+            setNonBlocking(sfd, 1);
 
-	    /*
-	    ** Issue the connect. This may succeed immediately, which
-	    ** is highly unlikely, or "fail" but with errno set to
-	    ** EWOULDBLOCK or EINPROGRESS. EINTR is also possible
-	    */
+            /*
+            ** Issue the connect. This may succeed immediately, which
+            ** is highly unlikely, or "fail" but with errno set to
+            ** EWOULDBLOCK or EINPROGRESS. EINTR is also possible
+            */
 
-	    connect(sfd, (struct sockaddr *)&addr, sizeof(addr));
-	    if (errno != 0 && errno != EWOULDBLOCK
-		&& errno != EINPROGRESS && errno != EINTR)
-	    {
-		closesocket(sfd);
-		return -1;
-	    }
+            connect(sfd, (struct sockaddr *)&addr, sizeof(addr));
+            if (errno != 0 && errno != EWOULDBLOCK
+                && errno != EINPROGRESS && errno != EINTR)
+            {
+                closesocket(sfd);
+                return -1;
+            }
 
-	    /* Now wait for socket to be writable -- connect complete */
+            /* Now wait for socket to be writable -- connect complete */
 
-	    delay.tv_sec = timeout;
-	    delay.tv_usec = 0;
+            delay.tv_sec = timeout;
+            delay.tv_usec = 0;
 
-	    FD_ZERO(&testSet);
-	    FD_SET(sfd, &testSet);
+            FD_ZERO(&testSet);
+            FD_SET(sfd, &testSet);
 
-	    ready = select(sfd + 1, 0, &testSet, 0, &delay);
+            ready = select(sfd + 1, 0, &testSet, 0, &delay);
 
-	    /* Check for timeout or other failure */
+            /* Check for timeout or other failure */
 
-	    if (ready <= 0)
-	    {
-		closesocket(sfd);
-		return -1;
-	    }
+            if (ready <= 0)
+            {
+                closesocket(sfd);
+                return -1;
+            }
 
-	    /* Set socket back to blocking mode */
+            /* Set socket back to blocking mode */
 
-	    setNonBlocking(sfd, 0);
+            setNonBlocking(sfd, 0);
 
-	    /* Now see if the socket is *really* usable */
+            /* Now see if the socket is *really* usable */
 
-	    errno = 0;
-	    if (!socketIsUsable(sfd))
-	    {
-		closesocket(sfd);
-		return -1;
-	    }
-	    
-	    /* Disable buffering for possible better performance, if requested */
+            errno = 0;
+            if (!socketIsUsable(sfd))
+            {
+                closesocket(sfd);
+                return -1;
+            }
+            
+            /* Disable buffering for possible better performance, if requested */
 
-	    setNoDelayIfInteractive(sfd);
-	}
+            setNoDelayIfInteractive(sfd);
+        }
     }
 
     /* If the address structure was requested then return it */
 
     if (toAddrP)
     {
-	memcpy(toAddrP, &addr, sizeof(addr));
+        memcpy(toAddrP, &addr, sizeof(addr));
     }
 
     return sfd;
@@ -2137,8 +2137,8 @@ char *
 base64Encode(char *str)
 {
     static char *encoding = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-			    "abcdefghijklmnopqrstuvwxyz"
-			    "0123456789+/";
+                            "abcdefghijklmnopqrstuvwxyz"
+                            "0123456789+/";
     char *s = NULL;
     char *buf = NULL;
     int len = -1;
@@ -2148,7 +2148,7 @@ base64Encode(char *str)
 
     if (str == NULL || *str == '\0')
     {
-	return NULL;
+        return NULL;
     }
 
     len = strlen(str);
@@ -2160,59 +2160,59 @@ base64Encode(char *str)
 
     if ((buf = malloc(4 * ((len + 2) / 3) + 1)) == NULL)
     {
-	return NULL;
+        return NULL;
     }
     
     s = buf;
     for (i = 0; i < len - 3; i += 3)
     {
-	bits = ((unsigned long)(str[i])) << 24;
-	bits |= ((unsigned long)(str[i + 1])) << 16;
-	bits |= ((unsigned long)(str[i + 2])) << 8;
+        bits = ((unsigned long)(str[i])) << 24;
+        bits |= ((unsigned long)(str[i + 1])) << 16;
+        bits |= ((unsigned long)(str[i + 2])) << 8;
 
-	*s++ = encoding[bits >> 26];
-	bits <<= 6;
-	*s++ = encoding[bits >> 26];
-	bits <<= 6;
-	*s++ = encoding[bits >> 26];
-	bits <<= 6;
-	*s++ = encoding[bits >> 26];
+        *s++ = encoding[bits >> 26];
+        bits <<= 6;
+        *s++ = encoding[bits >> 26];
+        bits <<= 6;
+        *s++ = encoding[bits >> 26];
+        bits <<= 6;
+        *s++ = encoding[bits >> 26];
     }
 
     switch (len % 3)
     {
     case 0:
-	bits = ((unsigned long)(str[i])) << 24;
-	bits |= ((unsigned long)(str[i + 1])) << 16;
-	bits |= ((unsigned long)(str[i + 2])) << 8;
-	*s++ = encoding[bits >> 26];
-	bits <<= 6;
-	*s++ = encoding[bits >> 26];
-	bits <<= 6;
-	*s++ = encoding[bits >> 26];
-	bits <<= 6;
-	*s++ = encoding[bits >> 26];
-	break;
+        bits = ((unsigned long)(str[i])) << 24;
+        bits |= ((unsigned long)(str[i + 1])) << 16;
+        bits |= ((unsigned long)(str[i + 2])) << 8;
+        *s++ = encoding[bits >> 26];
+        bits <<= 6;
+        *s++ = encoding[bits >> 26];
+        bits <<= 6;
+        *s++ = encoding[bits >> 26];
+        bits <<= 6;
+        *s++ = encoding[bits >> 26];
+        break;
 
     case 2:
-	bits = ((unsigned long)(str[len - 2])) << 24;
-	bits |= ((unsigned long)(str[len - 1])) << 16;
-	*s++ = encoding[bits >> 26];
-	bits <<= 6;
-	*s++ = encoding[bits >> 26];
-	bits <<= 6;
-	*s++ = encoding[bits >> 26];
-	*s++ = '=';
-	break;
+        bits = ((unsigned long)(str[len - 2])) << 24;
+        bits |= ((unsigned long)(str[len - 1])) << 16;
+        *s++ = encoding[bits >> 26];
+        bits <<= 6;
+        *s++ = encoding[bits >> 26];
+        bits <<= 6;
+        *s++ = encoding[bits >> 26];
+        *s++ = '=';
+        break;
 
     case 1:
-	bits = ((unsigned long)(str[len - 2])) << 24;
-	*s++ = encoding[bits >> 26];
-	bits <<= 6;
-	*s++ = encoding[bits >> 26];
-	*s++ = '=';
-	*s++ = '=';
-	break;
+        bits = ((unsigned long)(str[len - 2])) << 24;
+        *s++ = encoding[bits >> 26];
+        bits <<= 6;
+        *s++ = encoding[bits >> 26];
+        *s++ = '=';
+        *s++ = '=';
+        break;
     }
 
     *s = '\0';
@@ -2239,7 +2239,7 @@ base64Encode(char *str)
 
 int
 proxyConnection(const char *host, const unsigned short port,
-		struct sockaddr_in *toAddrP, unsigned short timeout)
+                struct sockaddr_in *toAddrP, unsigned short timeout)
 {
     int fd = -1;
     char buf[MAX_LINE_SIZE + 1];
@@ -2256,8 +2256,8 @@ proxyConnection(const char *host, const unsigned short port,
 
     if ((fd = makeConnection(ProxyHost, ProxyPort, 0, 0, NULL, toAddrP, timeout)) == -1)
     {
-	message(0, errno, "can't connect to proxy server at %s:%hu", ProxyHost, ProxyPort);
-	return -1;
+        message(0, errno, "can't connect to proxy server at %s:%hu", ProxyHost, ProxyPort);
+        return -1;
     }
 
     message(5, 0, "connected to proxy");
@@ -2274,16 +2274,16 @@ proxyConnection(const char *host, const unsigned short port,
     buf[MAX_LINE_SIZE] = '\0';
     if (ProxyAuth)
     {
-	snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nProxy-Authorization: Basic %s\r\nUser-Agent: %s\r\n\r\n", host, port, ProxyAuth, UserAgent);
+        snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nProxy-Authorization: Basic %s\r\nUser-Agent: %s\r\n\r\n", host, port, ProxyAuth, UserAgent);
     }
     else
     {
-	snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nUser-Agent: %s\r\n\r\n", host, port, UserAgent);
+        snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nUser-Agent: %s\r\n\r\n", host, port, UserAgent);
     }
 
     if (send(fd, buf, strlen(buf), 0) <= 0)
     {
-	message(0, errno, "failed writing to proxy server");
+        message(0, errno, "failed writing to proxy server");
     }
 
     message(5, 0, "written connect string");
@@ -2300,16 +2300,16 @@ proxyConnection(const char *host, const unsigned short port,
     bufP = buf;
     do
     {
-	if ((num = recv(fd, bufP, (MAX_LINE_SIZE - total), 0)) <= 0)
-	{
-	    message(0, errno, "failed reading response from proxy");
-	    closesocket(fd);
-	    return -1;
-	}
-	total += num;
-	bufP += num;
-	*bufP = '\0';
-	message(5, 0, "read %d bytes from proxy: %s", num, bufP - num);
+        if ((num = recv(fd, bufP, (MAX_LINE_SIZE - total), 0)) <= 0)
+        {
+            message(0, errno, "failed reading response from proxy");
+            closesocket(fd);
+            return -1;
+        }
+        total += num;
+        bufP += num;
+        *bufP = '\0';
+        message(5, 0, "read %d bytes from proxy: %s", num, bufP - num);
     }
     while(total < MAX_LINE_SIZE && strncmp(bufP - 4, "\r\n\r\n", 4));
 
@@ -2317,13 +2317,13 @@ proxyConnection(const char *host, const unsigned short port,
 
     if (strncmp(buf, "HTTP/1.0 200", 12) && strncmp(buf, "HTTP/1.1 200", 12))
     {
-	if ((bufP = strchr(buf, '\r')) != NULL)
-	{
-	    *bufP = '\0';
-	}
-	message(0, 0, "proxy server refused connection to %s:%h (%s)", host, port, buf);
-	closesocket(fd);
-	return -1;
+        if ((bufP = strchr(buf, '\r')) != NULL)
+        {
+            *bufP = '\0';
+        }
+        message(0, 0, "proxy server refused connection to %s:%h (%s)", host, port, buf);
+        closesocket(fd);
+        return -1;
     }
 
     message(4, 0, "connection via proxy successful");
@@ -2352,38 +2352,38 @@ sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sock
     libnet_init_packet(packetSize, &packet);
     if (packet == NULL)
     {
-	message(0, 0, "failed to allocate packet buffer");
-	return -1;
+        message(0, 0, "failed to allocate packet buffer");
+        return -1;
     }
 
     /* Build IP packet header */
 
-    libnet_build_ip(LIBNET_UDP_H + len,	/* Size beyond IP header */
-		    0,			/* IP ToS */
-		    rand() % 11965 + 1,	/* IP ID */
-		    0,			/* Frag */
-		    64,			/* TTL */
-		    IPPROTO_UDP,	/* Transport protocol */
-		    fromAddrP->sin_addr.s_addr,	/* Source address */
-		    toAddrP->sin_addr.s_addr,	/* Destination address */
-		    NULL,		/* Pointer to payload */
-		    0,			/* Size */
-		    packet);		/* Packet buffer */
+    libnet_build_ip(LIBNET_UDP_H + len, /* Size beyond IP header */
+                    0,                  /* IP ToS */
+                    rand() % 11965 + 1, /* IP ID */
+                    0,                  /* Frag */
+                    64,                 /* TTL */
+                    IPPROTO_UDP,        /* Transport protocol */
+                    fromAddrP->sin_addr.s_addr, /* Source address */
+                    toAddrP->sin_addr.s_addr,   /* Destination address */
+                    NULL,               /* Pointer to payload */
+                    0,                  /* Size */
+                    packet);            /* Packet buffer */
 
     /* Add UDP packet header and payload */
 
     libnet_build_udp(ntohs(fromAddrP->sin_port),    /* Source port */
-		     ntohs(toAddrP->sin_port),	    /* Dest port */
-		     buf,		/* Payload */
-		     len,		/* Payload size */
-		     packet + LIBNET_IP_H);
+                     ntohs(toAddrP->sin_port),      /* Dest port */
+                     buf,               /* Payload */
+                     len,               /* Payload size */
+                     packet + LIBNET_IP_H);
 
     /* Do the checksum for the UDP header */
 
     if (libnet_do_checksum(packet, IPPROTO_UDP, LIBNET_UDP_H + len) == -1)
     {
-	message(0, 0, "packet checksum failed");
-	goto cleanup;
+        message(0, 0, "packet checksum failed");
+        goto cleanup;
     }
 
     /* Write the packet */
@@ -2391,7 +2391,7 @@ sendSpoofed(int fd, char *buf, int len, struct sockaddr_in *toAddrP, struct sock
     num = libnet_write_ip(fd, packet, packetSize);
     if (num < packetSize)
     {
-	message(1, 0, "Warning: short packet write (%d < %d)", num, packetSize);
+        message(1, 0, "Warning: short packet write (%d < %d)", num, packetSize);
     }
     num -= (LIBNET_IP_H + LIBNET_UDP_H);
 
@@ -2430,28 +2430,28 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 
     if ((sfd = socket(AF_INET, (udpMode ? SOCK_DGRAM: SOCK_STREAM), 0)) < 0)
     {
-	message(0, errno, "can't create listener socket");
-	goto failure;
+        message(0, errno, "can't create listener socket");
+        goto failure;
     }
 
     /* If we requested a specific port then reuse the address if possible */
 
     if (portP && *portP)
     {
-	if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (char *)&trueVal, sizeof(trueVal)) < 0)
-	{
-	    message(1, 0, "Warning: failed to set SO_REUSEADDR option on socket");
-	}
+        if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (char *)&trueVal, sizeof(trueVal)) < 0)
+        {
+            message(1, 0, "Warning: failed to set SO_REUSEADDR option on socket");
+        }
     }
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     if (listenIp != NULL)
     {
-	if (!getHostAddress(listenIp, &addr, NULL, NULL))
-	{
-	    message(0, 0, "can't resolve listen address '%s'", listenIp);
-	}
+        if (!getHostAddress(listenIp, &addr, NULL, NULL))
+        {
+            message(0, 0, "can't resolve listen address '%s'", listenIp);
+        }
     }
     addr.sin_family = AF_INET;
     addr.sin_port = (portP ? htons(*portP) : 0);
@@ -2459,30 +2459,30 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 
     if (bind(sfd, (struct sockaddr *)&addr, addrLen) < 0)
     {
-	message(0, errno, "listener bind failed");
-	goto failure;
+        message(0, errno, "listener bind failed");
+        goto failure;
     }
 
     if (!udpMode)
     {
-	if (listen(sfd, listenQueue) < 0)
-	{
-	    message(0, errno, "listen failed");
-	    goto failure;
-	}
+        if (listen(sfd, listenQueue) < 0)
+        {
+            message(0, errno, "listen failed");
+            goto failure;
+        }
     }
 
     if (portP)
     {
-	/* Retrieve the port actually being used to return via portP */
+        /* Retrieve the port actually being used to return via portP */
 
-	memset(&addr, 0, sizeof(addr));
-	if (getsockname(sfd, (struct sockaddr *)&addr, &addrLen))
-	{
-	    message(0, errno, "can't get local port number");
-	    goto failure;
-	}
-	*portP = ntohs(addr.sin_port);
+        memset(&addr, 0, sizeof(addr));
+        if (getsockname(sfd, (struct sockaddr *)&addr, &addrLen))
+        {
+            message(0, errno, "can't get local port number");
+            goto failure;
+        }
+        *portP = ntohs(addr.sin_port);
     }
 
     return sfd;
@@ -2490,7 +2490,7 @@ makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQueue
 failure:
     if (sfd != -1)
     {
-	(void)closesocket(sfd);
+        (void)closesocket(sfd);
     }
     errno = -1;
     return -1;
@@ -2510,9 +2510,9 @@ setNoLinger(int fd)
     lingerVal.l_onoff = 0;
     lingerVal.l_linger = 0;
     if (setsockopt(fd, SOL_SOCKET, SO_LINGER,
-		   (char *)&lingerVal, sizeof(lingerVal)) < 0)
+                   (char *)&lingerVal, sizeof(lingerVal)) < 0)
     {
-	message(1, 0, "Warning: failed to set SO_LINGER option on socket");
+        message(1, 0, "Warning: failed to set SO_LINGER option on socket");
     }
 }
 
@@ -2528,9 +2528,9 @@ setKeepAlive(int fd)
     int trueVal = 1;
 
     if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE,
-		   (char *)&trueVal, sizeof(trueVal)) < 0)
+                   (char *)&trueVal, sizeof(trueVal)) < 0)
     {
-	message(1, 0, "Warning: failed to set SO_KEEPALIVE option on socket");
+        message(1, 0, "Warning: failed to set SO_KEEPALIVE option on socket");
     }
 }
 
@@ -2564,10 +2564,10 @@ setNoDelayIfInteractive(int fd)
     
     if (InteractiveMode) 
     {
-	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int)) != 0)
-	{
-	    message(1, 0, "Warning: failed to set TCP_NODELAY option on socket");
-	}
+        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int)) != 0)
+        {
+            message(1, 0, "Warning: failed to set TCP_NODELAY option on socket");
+        }
     }
 }
 /*
@@ -2588,7 +2588,7 @@ setNoDelayIfInteractive(int fd)
 
 int
 acceptConnection(int listenFd, const char *host,
-		 int loop, unsigned short timeout)
+                 int loop, unsigned short timeout)
 {
     struct sockaddr_in fromAddr;
     struct sockaddr_in hostAddr;
@@ -2606,131 +2606,131 @@ acceptConnection(int listenFd, const char *host,
     memset(&hostAddr, 0, sizeof(hostAddr));
     if (strcmp(host, "*") == 0)
     {
-	mask = 0;
-	hostAddr.sin_addr.s_addr = 0;
+        mask = 0;
+        hostAddr.sin_addr.s_addr = 0;
     }
     else
     {
-	if (!getHostAddress(host, &hostAddr, &addrList, &mask))
-	{
-	    message(0, 0, "can't resolve host or address '%s'", host);
-	    closesocket(serverFd);
-	    errno = 0;
-	    return -1;
-	}
+        if (!getHostAddress(host, &hostAddr, &addrList, &mask))
+        {
+            message(0, 0, "can't resolve host or address '%s'", host);
+            closesocket(serverFd);
+            errno = 0;
+            return -1;
+        }
     }
 
     while (1)
     {
-	message(3, 0, "waiting to accept connection");
+        message(3, 0, "waiting to accept connection");
 
-	delay.tv_sec = timeout;
-	delay.tv_usec = 0;
+        delay.tv_sec = timeout;
+        delay.tv_usec = 0;
 
-	FD_ZERO(&testSet);
-	FD_SET(listenFd, &testSet);
+        FD_ZERO(&testSet);
+        FD_SET(listenFd, &testSet);
 
-	ready = select(listenFd + 1, &testSet, 0, 0, &delay);
+        ready = select(listenFd + 1, &testSet, 0, 0, &delay);
 
-	if (ready == 0)
-	{
-	    message(0, 0, "timed out waiting to accept connection");
-	    goto failure;
-	}
+        if (ready == 0)
+        {
+            message(0, 0, "timed out waiting to accept connection");
+            goto failure;
+        }
 
-	/* Check for error but ignore interrupted system calls */
+        /* Check for error but ignore interrupted system calls */
 
-	if (ready < 0 && errno != EINTR)
-	{
-	    if (errno != EINTR)
-	    {
-		message(0, errno, "error in select waiting for client to accept connection");
-		goto failure;
-	    }
-	    else
-	    {
-		continue;
-	    }
-	}
+        if (ready < 0 && errno != EINTR)
+        {
+            if (errno != EINTR)
+            {
+                message(0, errno, "error in select waiting for client to accept connection");
+                goto failure;
+            }
+            else
+            {
+                continue;
+            }
+        }
 
-	/* Attempt to accept the connection */
+        /* Attempt to accept the connection */
 
-	addrLen = sizeof(struct sockaddr_in);
-	memset(&fromAddr, 0, sizeof(fromAddr));
-	if ((serverFd = accept(listenFd,
-			       (struct sockaddr *)&fromAddr,
-			       &addrLen)) < 0)
-	{
-	    /* This is always an error, looping or not */
-	    goto failure;
-	}
+        addrLen = sizeof(struct sockaddr_in);
+        memset(&fromAddr, 0, sizeof(fromAddr));
+        if ((serverFd = accept(listenFd,
+                               (struct sockaddr *)&fromAddr,
+                               &addrLen)) < 0)
+        {
+            /* This is always an error, looping or not */
+            goto failure;
+        }
 
-	/*
-	** Check if the connection is usable, in case it has
-	** already been closed at the far end. If it isn't usable
-	** the silently discard it.
-	*/
+        /*
+        ** Check if the connection is usable, in case it has
+        ** already been closed at the far end. If it isn't usable
+        ** the silently discard it.
+        */
 
-	if (!socketIsUsable(serverFd))
-	{
-	    closesocket(serverFd);
-	    errno = 0;
-	    if (loop)
-	    {
-		continue;
-	    }
-	    else
-	    {
-		goto failure;
-	    }
-	}
+        if (!socketIsUsable(serverFd))
+        {
+            closesocket(serverFd);
+            errno = 0;
+            if (loop)
+            {
+                continue;
+            }
+            else
+            {
+                goto failure;
+            }
+        }
 
-	/*
-	** Check the received connection address against the specified
-	** server host name (applying a network mask as ppropriate).
-	*/
+        /*
+        ** Check the received connection address against the specified
+        ** server host name (applying a network mask as ppropriate).
+        */
 
-	if ((fromAddr.sin_addr.s_addr & mask) ==
-	    (hostAddr.sin_addr.s_addr & mask))
-	{
-	    /* We've got a straight match */
-	    break;
-	}
-	else
-	{
-	    /* Try the alias addresses */
+        if ((fromAddr.sin_addr.s_addr & mask) ==
+            (hostAddr.sin_addr.s_addr & mask))
+        {
+            /* We've got a straight match */
+            break;
+        }
+        else
+        {
+            /* Try the alias addresses */
 
-	    for (addrPtr = addrList; addrPtr->s_addr != 0xffffffff; addrPtr++)
-	    {
-		if ((fromAddr.sin_addr.s_addr & mask) ==
-		    (addrPtr->s_addr & mask))
-		{
-		    break;
-		}
-	    }
+            for (addrPtr = addrList; addrPtr->s_addr != 0xffffffff; addrPtr++)
+            {
+                if ((fromAddr.sin_addr.s_addr & mask) ==
+                    (addrPtr->s_addr & mask))
+                {
+                    break;
+                }
+            }
 
-	    if (addrPtr->s_addr != 0xffffffff)
-	    {
-		/* We got a match -- break enclosing loop */
-		break;
-	    }
-	}
+            if (addrPtr->s_addr != 0xffffffff)
+            {
+                /* We got a match -- break enclosing loop */
+                break;
+            }
+        }
 
-	message(1, 0, "Warning: connection from %s rejected, does not match server host %s",
-		ipString(fromAddr.sin_addr, ipBuf), host);
-	closesocket(serverFd);
-	errno = 0;
-	if (!loop)
-	{
-	    goto failure;
-	}
+        message(1, 0, "Warning: connection from %s rejected, does not match server host %s",
+                ipString(fromAddr.sin_addr, ipBuf), host);
+        closesocket(serverFd);
+        errno = 0;
+        if (!loop)
+        {
+            goto failure;
+        }
     }
 
     /* Free memory allocated by getHostAddress */
 
     if (addrList)
     {
-	free(addrList);
+        free(addrList);
     }
 
     message(3, 0, "accepted connection from %s", ipString(fromAddr.sin_addr, ipBuf));
@@ -2773,8 +2773,8 @@ socketIsUsable(int sock)
 
     if (getpeername(sock, (struct sockaddr *)&addr, &addrLen))
     {
-	message(4, errno, "socket %d has no peer address", sock);
-	return 0;
+        message(4, errno, "socket %d has no peer address", sock);
+        return 0;
     }
 
     /* Check writability */
@@ -2786,8 +2786,8 @@ socketIsUsable(int sock)
 
     if (select(sock + 1, 0, &testSet, 0, &delay) <= 0)
     {
-	message(4, 0, "socket %d is not writable", sock);
-	return 0;
+        message(4, 0, "socket %d is not writable", sock);
+        return 0;
     }
 
     /*
@@ -2802,13 +2802,13 @@ socketIsUsable(int sock)
 
     if (select(sock + 1, &testSet, 0, 0, &delay) > 0)
     {
-	message(4, 0, "socket %d is readable, checking for EOF", sock);
-	errno = 0;
-	if (recv(sock, buf, sizeof(buf), MSG_PEEK) <= 0)
-	{
-	    message(4, errno, "socket %d has immediate EOF or error", sock);
-	    return 0;
-	}
+        message(4, 0, "socket %d is readable, checking for EOF", sock);
+        errno = 0;
+        if (recv(sock, buf, sizeof(buf), MSG_PEEK) <= 0)
+        {
+            message(4, errno, "socket %d has immediate EOF or error", sock);
+            return 0;
+        }
     }
 
     message(4, 0, "socket %d is usable", sock);
@@ -2870,15 +2870,15 @@ unsigned long
 headerGetULong(unsigned char *hdrBuf, int offset)
 {
     return  (((unsigned long)hdrBuf[offset]) << 24) +
-	    (((unsigned long)hdrBuf[offset + 1]) << 16) +
-	    (((unsigned long)hdrBuf[offset + 2]) << 8) +
-	    (unsigned long)hdrBuf[offset + 3];
+            (((unsigned long)hdrBuf[offset + 1]) << 16) +
+            (((unsigned long)hdrBuf[offset + 2]) << 8) +
+            (unsigned long)hdrBuf[offset + 3];
 }
 
 /*********************************\
-**				 **
+**                               **
 **  Encryption-related Routines  **
-**				 **
+**                               **
 \*********************************/
 
 /*
@@ -2912,9 +2912,9 @@ setupBlowfish(char *keyStr, unsigned short keyBits)
 
     if ((bf = (BFState_t *)malloc(sizeof(BFState_t))) == NULL)
     {
-	message(0, errno, "out of memory allocating Blowfish state data");
-	errno = 0;
-	return NULL;
+        message(0, errno, "out of memory allocating Blowfish state data");
+        errno = 0;
+        return NULL;
     }
 
     keyBytes = hexStrToBits(keyStr, keyBits, keyData);
@@ -2967,8 +2967,8 @@ setupBlowfish(char *keyStr, unsigned short keyBits)
 
 char *
 generateKey(struct sockaddr_in *peerAddrP,
-	    struct sockaddr_in *targetAddrP,
-	    unsigned short targetPort)
+            struct sockaddr_in *targetAddrP,
+            unsigned short targetPort)
 {
     SHA_INFO sha;
     time_t now = time(NULL);
@@ -2980,12 +2980,12 @@ generateKey(struct sockaddr_in *peerAddrP,
 
     if (PrivateKey)
     {
-	if ((result = (char *)malloc(strlen(PrivateKey) + 1)) == NULL)
-	{
-	    return NULL;
-	}
-	strcpy(result, PrivateKey);
-	return result;
+        if ((result = (char *)malloc(strlen(PrivateKey) + 1)) == NULL)
+        {
+            return NULL;
+        }
+        strcpy(result, PrivateKey);
+        return result;
     }
 
     /*
@@ -2996,7 +2996,7 @@ generateKey(struct sockaddr_in *peerAddrP,
 
     if (KeyGenCmd && (result = runKeyGenCommand(KeyGenCmd, peerAddrP, targetAddrP, targetPort)) != NULL)
     {
-	return result;
+        return result;
     }
 
     /*
@@ -3024,203 +3024,203 @@ generateKey(struct sockaddr_in *peerAddrP,
 
 #if defined(WIN32)
     {
-	LARGE_INTEGER perf;
-	FILETIME created, exited, kernel, user;
-	LONG val;
-	POINT point;
-	MEMORYSTATUS memoryStatus;
+        LARGE_INTEGER perf;
+        FILETIME created, exited, kernel, user;
+        LONG val;
+        POINT point;
+        MEMORYSTATUS memoryStatus;
 
-	/*
-	** Add in a large number of reasonable hard to guess (from the
-	** outside) values. Someone with access to the machines may,
-	** however be able to pinpoint these with some accuracy. We will
-	** assume a maximum of 8 BOU for each call an a minimum of 1.
-	**
-	** Min BOU: 13
-	** Max BOU: 104
-	*/
+        /*
+        ** Add in a large number of reasonable hard to guess (from the
+        ** outside) values. Someone with access to the machines may,
+        ** however be able to pinpoint these with some accuracy. We will
+        ** assume a maximum of 8 BOU for each call an a minimum of 1.
+        **
+        ** Min BOU: 13
+        ** Max BOU: 104
+        */
 
 #define ADDLONGVAL(func) val = ((LONG)func()); sha_update(&sha, (SHA_BYTE *)&val, sizeof(val))
-	ADDLONGVAL(GetActiveWindow);
-	ADDLONGVAL(GetCapture);
-	ADDLONGVAL(GetClipboardOwner);
-	ADDLONGVAL(GetClipboardViewer);
-	ADDLONGVAL(GetDesktopWindow);
-	ADDLONGVAL(GetFocus);
-	ADDLONGVAL(GetInputState);
-	ADDLONGVAL(GetMessagePos);
-	ADDLONGVAL(GetMessageTime);
-	ADDLONGVAL(GetOpenClipboardWindow);
-	ADDLONGVAL(GetProcessHeap);
-	ADDLONGVAL(GetProcessWindowStation);
-	ADDLONGVAL(GetTickCount);
+        ADDLONGVAL(GetActiveWindow);
+        ADDLONGVAL(GetCapture);
+        ADDLONGVAL(GetClipboardOwner);
+        ADDLONGVAL(GetClipboardViewer);
+        ADDLONGVAL(GetDesktopWindow);
+        ADDLONGVAL(GetFocus);
+        ADDLONGVAL(GetInputState);
+        ADDLONGVAL(GetMessagePos);
+        ADDLONGVAL(GetMessageTime);
+        ADDLONGVAL(GetOpenClipboardWindow);
+        ADDLONGVAL(GetProcessHeap);
+        ADDLONGVAL(GetProcessWindowStation);
+        ADDLONGVAL(GetTickCount);
 
-	/*
-	** QueryPerformanceCounter gives a very high resolution 64-bit
-	** time result. Unfortunately, if there is no hardware support
-	** for a high-resolution timer it can return zero. On hardware
-	** I have available the resolution is over 1 million counts per
-	** second.
-	**
-	** Assume, in the worst case that the process start time can
-	** be determined with millisecond accuracy.
-	**
-	** Min BOU: 10
-	** Max BOU: 64
-	*/
+        /*
+        ** QueryPerformanceCounter gives a very high resolution 64-bit
+        ** time result. Unfortunately, if there is no hardware support
+        ** for a high-resolution timer it can return zero. On hardware
+        ** I have available the resolution is over 1 million counts per
+        ** second.
+        **
+        ** Assume, in the worst case that the process start time can
+        ** be determined with millisecond accuracy.
+        **
+        ** Min BOU: 10
+        ** Max BOU: 64
+        */
 
-	(void)QueryPerformanceCounter(&perf);
+        (void)QueryPerformanceCounter(&perf);
 
-	sha_update(&sha, (SHA_BYTE *)&perf, sizeof(perf));
+        sha_update(&sha, (SHA_BYTE *)&perf, sizeof(perf));
 
-	/*
-	** The following quantities are 64 bit times in 100nsec
-	** intervals since Jan 1, 1601. They are available to be
-	** read by other suitably privileged processes. I'm not sure
-	** of the resolution and only the kernel and user times
-	** have any degree of unpredictability from "outside" so
-	** we will make conservative estimates.
-	**
-	** Min BOU: 4
-	** Max BOU: 32
-	*/
+        /*
+        ** The following quantities are 64 bit times in 100nsec
+        ** intervals since Jan 1, 1601. They are available to be
+        ** read by other suitably privileged processes. I'm not sure
+        ** of the resolution and only the kernel and user times
+        ** have any degree of unpredictability from "outside" so
+        ** we will make conservative estimates.
+        **
+        ** Min BOU: 4
+        ** Max BOU: 32
+        */
 
-	GetProcessTimes(GetCurrentProcess(),
-			&created, &exited, &kernel, &user);
+        GetProcessTimes(GetCurrentProcess(),
+                        &created, &exited, &kernel, &user);
 
-	sha_update(&sha, (SHA_BYTE *)&created, sizeof(created));
-	sha_update(&sha, (SHA_BYTE *)&exited, sizeof(exited));
-	sha_update(&sha, (SHA_BYTE *)&kernel, sizeof(kernel));
-	sha_update(&sha, (SHA_BYTE *)&user, sizeof(user));
+        sha_update(&sha, (SHA_BYTE *)&created, sizeof(created));
+        sha_update(&sha, (SHA_BYTE *)&exited, sizeof(exited));
+        sha_update(&sha, (SHA_BYTE *)&kernel, sizeof(kernel));
+        sha_update(&sha, (SHA_BYTE *)&user, sizeof(user));
 
-	/*
-	** Current caret and cursor positon. Maybe somewhere in a 800x600
-	** area ... but known to an attacker with physical access.
-	**
-	** Min BOU: 0
-	** Max BOU: 175
-	*/
+        /*
+        ** Current caret and cursor positon. Maybe somewhere in a 800x600
+        ** area ... but known to an attacker with physical access.
+        **
+        ** Min BOU: 0
+        ** Max BOU: 175
+        */
 
-	GetCaretPos(&point);
-	sha_update(&sha, (SHA_BYTE *)&point, sizeof(point));
-	GetCursorPos( &point );
-	sha_update(&sha, (SHA_BYTE *)&point, sizeof(point));
+        GetCaretPos(&point);
+        sha_update(&sha, (SHA_BYTE *)&point, sizeof(point));
+        GetCursorPos( &point );
+        sha_update(&sha, (SHA_BYTE *)&point, sizeof(point));
 
-	/*
-	** Memory usage statistics -- percent of memory in use, bytes of
-	** physical memory, bytes of free physical memory, bytes in paging
-	** file, free bytes in paging file, user bytes of address space,
-	** and free user bytes. Even to an attacker with physical access
-	** there is likely to be some uncertainty here, but maybe only
-	** a bit per variable quantity.
-	**
-	** Min BOU: 3
-	** Max BOU: 20+
-	*/
+        /*
+        ** Memory usage statistics -- percent of memory in use, bytes of
+        ** physical memory, bytes of free physical memory, bytes in paging
+        ** file, free bytes in paging file, user bytes of address space,
+        ** and free user bytes. Even to an attacker with physical access
+        ** there is likely to be some uncertainty here, but maybe only
+        ** a bit per variable quantity.
+        **
+        ** Min BOU: 3
+        ** Max BOU: 20+
+        */
 
-	memoryStatus.dwLength = sizeof(MEMORYSTATUS);
-	GlobalMemoryStatus(&memoryStatus);
-	sha_update(&sha, (SHA_BYTE *)&memoryStatus, sizeof(memoryStatus));
+        memoryStatus.dwLength = sizeof(MEMORYSTATUS);
+        GlobalMemoryStatus(&memoryStatus);
+        sha_update(&sha, (SHA_BYTE *)&memoryStatus, sizeof(memoryStatus));
 
-	/*
-	** Total estimates for Win32
-	**
-	** Min BOU: 31, Max BOU: 400+
-	*/
+        /*
+        ** Total estimates for Win32
+        **
+        ** Min BOU: 31, Max BOU: 400+
+        */
     }
-#else	/* !WIN32 */
+#else   /* !WIN32 */
     {
-	clock_t ticks;
-	struct tms tms;
+        clock_t ticks;
+        struct tms tms;
 
-	/*
-	** On all UNIX systems we get the process time stats. These are
-	** 32-bit quantities relative to system boot.
-	**
-	** Min BOU: 2
-	** Max BOU: 40
-	*/
+        /*
+        ** On all UNIX systems we get the process time stats. These are
+        ** 32-bit quantities relative to system boot.
+        **
+        ** Min BOU: 2
+        ** Max BOU: 40
+        */
 
-	ticks = times(&tms);
+        ticks = times(&tms);
 
-	sha_update(&sha, (SHA_BYTE *)&ticks, sizeof(ticks));
-	sha_update(&sha, (SHA_BYTE *)&tms, sizeof(tms));
+        sha_update(&sha, (SHA_BYTE *)&ticks, sizeof(ticks));
+        sha_update(&sha, (SHA_BYTE *)&tms, sizeof(tms));
     }
 
     if (KeyGenLevel == 2)
     {
-	/*
-	** Now we're talking! /dev/random uses internal kernel counters
-	** and state not accessible to normal users. We will read 10 chunks
-	** of 8 bytes which should give us more than enough to justify
-	** claiming that we have a full 160 bits of uncertainty coming
-	** out of the final hash.
-	**
-	** If you look closely we actually try /dev/urandom in preference
-	** to /dev/random. On Linux, although it is theoretically less
-	** secure, it will not block waiting for "enough" entropy unlike
-	** /dev/random.
-	**
-	** BOU: 160+
-	*/
+        /*
+        ** Now we're talking! /dev/random uses internal kernel counters
+        ** and state not accessible to normal users. We will read 10 chunks
+        ** of 8 bytes which should give us more than enough to justify
+        ** claiming that we have a full 160 bits of uncertainty coming
+        ** out of the final hash.
+        **
+        ** If you look closely we actually try /dev/urandom in preference
+        ** to /dev/random. On Linux, although it is theoretically less
+        ** secure, it will not block waiting for "enough" entropy unlike
+        ** /dev/random.
+        **
+        ** BOU: 160+
+        */
 
-	int fd = open("/dev/urandom", O_RDONLY);
-	char buffer[8];
-	int i;
+        int fd = open("/dev/urandom", O_RDONLY);
+        char buffer[8];
+        int i;
 
-	if (fd == -1 && (fd = open("/dev/random", O_RDONLY)) == -1)
-	{
-	    message(3, 0, "can't open /dev/urandom or /dev/random -- downgrading keygenlevel");
-	    KeyGenLevel--;
-	}
-	else
-	{
-	    for (i = 0; i < 10; i++)
-	    {
-		read(fd, buffer, 8);
-		sha_update(&sha, (SHA_BYTE *)buffer, 8);
-	    }
-	    close(fd);
-	}
+        if (fd == -1 && (fd = open("/dev/random", O_RDONLY)) == -1)
+        {
+            message(3, 0, "can't open /dev/urandom or /dev/random -- downgrading keygenlevel");
+            KeyGenLevel--;
+        }
+        else
+        {
+            for (i = 0; i < 10; i++)
+            {
+                read(fd, buffer, 8);
+                sha_update(&sha, (SHA_BYTE *)buffer, 8);
+            }
+            close(fd);
+        }
     }
 
     if (KeyGenLevel == 1)
     {
-	/*
-	** If we haven't got /dev/random but do have /proc then we can
-	** probably do quite well on an active system. We stat every
-	** process and hash that data in. On a very stable system this
-	** could, however, be fairly predictable to an attacker with
-	** access to the system.
-	**
-	** Min BOU: 4
-	** Max BOU: 160+
-	*/
+        /*
+        ** If we haven't got /dev/random but do have /proc then we can
+        ** probably do quite well on an active system. We stat every
+        ** process and hash that data in. On a very stable system this
+        ** could, however, be fairly predictable to an attacker with
+        ** access to the system.
+        **
+        ** Min BOU: 4
+        ** Max BOU: 160+
+        */
 
-	struct stat sbuf;
-	struct dirent *entryP;
-	DIR *dir = opendir("/proc");
-	char name[MAX_LINE_SIZE];
+        struct stat sbuf;
+        struct dirent *entryP;
+        DIR *dir = opendir("/proc");
+        char name[MAX_LINE_SIZE];
 
 
-	if (dir == NULL)
-	{
-	    message(4, 0, "can't open /proc -- downgrading keygenlevel");
-	    KeyGenLevel--;
-	}
-	else
-	{
-	    while ((entryP = readdir(dir)) != NULL)
-	    {
-		snprintf(name, sizeof(name), "/proc/%s", entryP->d_name);
-		stat(name, &sbuf);
-		sha_update(&sha, (SHA_BYTE *)entryP, sizeof(struct dirent));
-		sha_update(&sha, (SHA_BYTE *)&sbuf, sizeof(sbuf));
-	    }
-	    closedir(dir);
-	}
+        if (dir == NULL)
+        {
+            message(4, 0, "can't open /proc -- downgrading keygenlevel");
+            KeyGenLevel--;
+        }
+        else
+        {
+            while ((entryP = readdir(dir)) != NULL)
+            {
+                snprintf(name, sizeof(name), "/proc/%s", entryP->d_name);
+                stat(name, &sbuf);
+                sha_update(&sha, (SHA_BYTE *)entryP, sizeof(struct dirent));
+                sha_update(&sha, (SHA_BYTE *)&sbuf, sizeof(sbuf));
+            }
+            closedir(dir);
+        }
     }
-#endif	/* !WIN32 */
+#endif  /* !WIN32 */
 
     /* Convert the digest to a string and return */
 
@@ -3229,21 +3229,21 @@ generateKey(struct sockaddr_in *peerAddrP,
     /* Exclude REALLY bad keys */
 
     if (sha.digest[0] == 0 && sha.digest[1] == 0 &&
-	sha.digest[2] == 0 && sha.digest[3] == 0 &&
-	(sha.digest[4] == 0 || sha.digest[4] == 1))
+        sha.digest[2] == 0 && sha.digest[3] == 0 &&
+        (sha.digest[4] == 0 || sha.digest[4] == 1))
     {
-	return generateKey(peerAddrP, targetAddrP, targetPort);
+        return generateKey(peerAddrP, targetAddrP, targetPort);
     }
-	
+        
     if ((result = (char *)malloc(HASH_STR_SIZE)) == NULL)
     {
-	return NULL;
+        return NULL;
     }
 
     sprintf(result, "%08lx%08lx%08lx%08lx%08lx",
-	    (unsigned long)sha.digest[0], (unsigned long)sha.digest[1],
-	    (unsigned long)sha.digest[2], (unsigned long)sha.digest[3],
-	    (unsigned long)sha.digest[4]);
+            (unsigned long)sha.digest[0], (unsigned long)sha.digest[1],
+            (unsigned long)sha.digest[2], (unsigned long)sha.digest[3],
+            (unsigned long)sha.digest[4]);
 
     return result;
 }
@@ -3265,9 +3265,9 @@ generateKey(struct sockaddr_in *peerAddrP,
 
 char *
 runKeyGenCommand(char *keyGenCmd,
-		 struct sockaddr_in *peerAddrP,
-		 struct sockaddr_in *targetAddrP,
-		 unsigned short targetPort)
+                 struct sockaddr_in *peerAddrP,
+                 struct sockaddr_in *targetAddrP,
+                 unsigned short targetPort)
 {
     FILE *fp;
     char buf[MAX_LINE_SIZE];
@@ -3279,44 +3279,44 @@ runKeyGenCommand(char *keyGenCmd,
 
     if (keyGenCmd == NULL)
     {
-	message(3, 0, "no key generation command specified");
-	return NULL;
+        message(3, 0, "no key generation command specified");
+        return NULL;
     }
 
     /* Add addresses and ports if command end with + */
 
     len = strlen(keyGenCmd);
     if (peerAddrP && targetAddrP &&
-	len > 0 && keyGenCmd[len - 1] == '+' &&
-	len < (MAX_LINE_SIZE - 40))
+        len > 0 && keyGenCmd[len - 1] == '+' &&
+        len < (MAX_LINE_SIZE - 40))
     {
-	ipString(peerAddrP->sin_addr, ip1);
-	ipString(targetAddrP->sin_addr, ip2);
-	sprintf(buf, "%.*s %s %s %hu", len - 1, keyGenCmd, ip1, ip2, targetPort);
+        ipString(peerAddrP->sin_addr, ip1);
+        ipString(targetAddrP->sin_addr, ip2);
+        sprintf(buf, "%.*s %s %s %hu", len - 1, keyGenCmd, ip1, ip2, targetPort);
     }
     else
     {
-	strcpy(buf, keyGenCmd);
+        strcpy(buf, keyGenCmd);
     }
     message(3, 0, "running key generation command: %s", buf);
 
     if ((fp = popen(buf, "r")) == NULL)
     {
-	message(0, errno, "failed to spawn key generation command '%s'", keyGenCmd);
-	return NULL;
+        message(0, errno, "failed to spawn key generation command '%s'", keyGenCmd);
+        return NULL;
     }
 
     if (fgets(buf, MAX_LINE_SIZE, fp) != NULL)
     {
-	if ((result = (char *)malloc(strlen(buf) + 1)) != NULL)
-	{
-	    if (sscanf(buf, "%[0-9a-fA-F]", result) != 1 ||
-		strlen(buf) < (MIN_KEY_BYTES * 2))
-	    {
-		free(result);
-		result = NULL;
-	    }
-	}
+        if ((result = (char *)malloc(strlen(buf) + 1)) != NULL)
+        {
+            if (sscanf(buf, "%[0-9a-fA-F]", result) != 1 ||
+                strlen(buf) < (MIN_KEY_BYTES * 2))
+            {
+                free(result);
+                result = NULL;
+            }
+        }
     }
 
     fclose(fp);
@@ -3353,41 +3353,41 @@ generateNonce(unsigned char *nonce)
 
 #if defined(WIN32)
     {
-	LARGE_INTEGER perf;
-	DWORD ticks = timeGetTime();
-	FILETIME created, exited, kernel, user;
+        LARGE_INTEGER perf;
+        DWORD ticks = timeGetTime();
+        FILETIME created, exited, kernel, user;
 
 
-	sha_update(&sha, (SHA_BYTE *)&ticks, sizeof(ticks));
+        sha_update(&sha, (SHA_BYTE *)&ticks, sizeof(ticks));
 
-	(void)QueryPerformanceCounter(&perf);
-	sha_update(&sha, (SHA_BYTE *)&perf, sizeof(perf));
+        (void)QueryPerformanceCounter(&perf);
+        sha_update(&sha, (SHA_BYTE *)&perf, sizeof(perf));
 
-	GetProcessTimes(GetCurrentProcess(),
-			&created, &exited, &kernel, &user);
+        GetProcessTimes(GetCurrentProcess(),
+                        &created, &exited, &kernel, &user);
 
-	sha_update(&sha, (SHA_BYTE *)&created, sizeof(created));
-	sha_update(&sha, (SHA_BYTE *)&exited, sizeof(exited));
-	sha_update(&sha, (SHA_BYTE *)&kernel, sizeof(kernel));
-	sha_update(&sha, (SHA_BYTE *)&user, sizeof(user));
+        sha_update(&sha, (SHA_BYTE *)&created, sizeof(created));
+        sha_update(&sha, (SHA_BYTE *)&exited, sizeof(exited));
+        sha_update(&sha, (SHA_BYTE *)&kernel, sizeof(kernel));
+        sha_update(&sha, (SHA_BYTE *)&user, sizeof(user));
     }
-#else	/* !WIN32 */
+#else   /* !WIN32 */
     {
-	clock_t ticks;
-	struct tms tms;
+        clock_t ticks;
+        struct tms tms;
 
-	ticks = times(&tms);
+        ticks = times(&tms);
 
-	sha_update(&sha, (SHA_BYTE *)&ticks, sizeof(ticks));
-	sha_update(&sha, (SHA_BYTE *)&tms, sizeof(tms));
+        sha_update(&sha, (SHA_BYTE *)&ticks, sizeof(ticks));
+        sha_update(&sha, (SHA_BYTE *)&tms, sizeof(tms));
     }
-#endif	/* !WIN32 */
+#endif  /* !WIN32 */
 
     sha_final(&sha);
 
     for (i = 0; i < NONCE_SIZE; i++)
     {
-	nonce[i] = (sha.digest[i / 4] >> ((i % 4) * 8)) & 0xff;
+        nonce[i] = (sha.digest[i / 4] >> ((i % 4) * 8)) & 0xff;
     }
 }
 
@@ -3400,7 +3400,7 @@ generateNonce(unsigned char *nonce)
 
 char *
 generateSessionKey(char *secretKey, unsigned char *cNonce,
-		   unsigned char *sNonce, unsigned short keyBits)
+                   unsigned char *sNonce, unsigned short keyBits)
 {
     SHA_INFO sha;
     unsigned short bits = 0;
@@ -3411,27 +3411,27 @@ generateSessionKey(char *secretKey, unsigned char *cNonce,
 
     for (bits = 0; bits < keyBits; bits += 160)
     {
-	sha_init(&sha);
-	sha_update(&sha, (SHA_BYTE *)cNonce, NONCE_SIZE);
-	sha_update(&sha, (SHA_BYTE *)sNonce, NONCE_SIZE);
-	nybbles = bits / 4;
-	if (nybbles > len)
-	{
-	    nybbles %= len;
-	}
-	sha_update(&sha, (SHA_BYTE *)(secretKey + nybbles), (len - nybbles));
-	sha_final(&sha);
+        sha_init(&sha);
+        sha_update(&sha, (SHA_BYTE *)cNonce, NONCE_SIZE);
+        sha_update(&sha, (SHA_BYTE *)sNonce, NONCE_SIZE);
+        nybbles = bits / 4;
+        if (nybbles > len)
+        {
+            nybbles %= len;
+        }
+        sha_update(&sha, (SHA_BYTE *)(secretKey + nybbles), (len - nybbles));
+        sha_final(&sha);
 
-	if ((result = (char *)realloc(result, (bits / 160 + 1) * 40 + 1)) == NULL)
-	{
-	    return NULL;
-	}
+        if ((result = (char *)realloc(result, (bits / 160 + 1) * 40 + 1)) == NULL)
+        {
+            return NULL;
+        }
 
-	sprintf(result + (bits / 160) * 40,
-		"%08lx%08lx%08lx%08lx%08lx",
-		(unsigned long)sha.digest[0], (unsigned long)sha.digest[1],
-		(unsigned long)sha.digest[2], (unsigned long)sha.digest[3],
-		(unsigned long)sha.digest[4]);
+        sprintf(result + (bits / 160) * 40,
+                "%08lx%08lx%08lx%08lx%08lx",
+                (unsigned long)sha.digest[0], (unsigned long)sha.digest[1],
+                (unsigned long)sha.digest[2], (unsigned long)sha.digest[3],
+                (unsigned long)sha.digest[4]);
     }
 
     return result;
@@ -3462,48 +3462,48 @@ hexStrToBits(char *hexStr, unsigned short bits, unsigned char *bitVec)
 
     if ((int)((bits + 3) / 4U) < len)
     {
-	len = (int)((bits + 3) / 4U);
+        len = (int)((bits + 3) / 4U);
     }
 
     /* Truncate the number of nybbles to fit in the buffer, if necessary */
 
     if (len > (MAX_KEY_BYTES * 2))
     {
-	len = MAX_KEY_BYTES * 2;
+        len = MAX_KEY_BYTES * 2;
     }
 
     /* Now process the string a nybble at a time */
 
     for (i = 0; i < len; i += 2)
     {
-	byte = '\0';
+        byte = '\0';
 
-	/* High nybble */
+        /* High nybble */
 
-	if (hexStr[i] >= '0' && hexStr[i] <= '9')
-	{
-	    byte = (hexStr[i] - '0') << 4;
-	}
-	else if (toupper(hexStr[i]) >= 'A' && toupper(hexStr[i]) <= 'F')
-	{
-	    byte = (toupper(hexStr[i]) - 'A' + 0xA) << 4;
-	}
+        if (hexStr[i] >= '0' && hexStr[i] <= '9')
+        {
+            byte = (hexStr[i] - '0') << 4;
+        }
+        else if (toupper(hexStr[i]) >= 'A' && toupper(hexStr[i]) <= 'F')
+        {
+            byte = (toupper(hexStr[i]) - 'A' + 0xA) << 4;
+        }
 
-	/* Low nybble -- if any, otherwise left as zero */
+        /* Low nybble -- if any, otherwise left as zero */
 
-	if (i + 1 < len)
-	{
-	    if (hexStr[i + 1] >= '0' && hexStr[i + 1] <= '9')
-	    {
-		byte |= (hexStr[i + 1] - '0');
-	    }
-	    else if (toupper(hexStr[i + 1]) >= 'A' && toupper(hexStr[i + 1]) <= 'F')
-	    {
-		byte |= (toupper(hexStr[i + 1]) - 'A' + 0xA);
-	    }
-	}
+        if (i + 1 < len)
+        {
+            if (hexStr[i + 1] >= '0' && hexStr[i + 1] <= '9')
+            {
+                byte |= (hexStr[i + 1] - '0');
+            }
+            else if (toupper(hexStr[i + 1]) >= 'A' && toupper(hexStr[i + 1]) <= 'F')
+            {
+                byte |= (toupper(hexStr[i + 1]) - 'A' + 0xA);
+            }
+        }
 
-	bitVec[i / 2] = byte;
+        bitVec[i / 2] = byte;
     }
 
     /* Return number of bytes */
@@ -3516,7 +3516,7 @@ hexStrToBits(char *hexStr, unsigned short bits, unsigned char *bitVec)
 **
 ** Perform the core Diffie-Hellman calculation which is
 **
-**	(generator ** exponent) mod modulus
+**      (generator ** exponent) mod modulus
 **
 ** This operates on hex strings and returns a newly-allocated hex string
 ** as its answer. If genStr or modStr are NULL or empty strings then
@@ -3583,7 +3583,7 @@ challengeAnswer(unsigned char *challenge)
 
     for (i = 0; i < CHALLENGE_SIZE; i++)
     {
-	challenge[i] ^= THE_ANSWER;
+        challenge[i] ^= THE_ANSWER;
     }
 }
 
@@ -3610,8 +3610,8 @@ clientPerformChallenge(int serverFd, MsgBuf_t *msg)
 
     if (readMessage(serverFd, msg, CHALLENGE_SIZE) <= 0)
     {
-	message(0, errno, "failed to read challenge from server");
-	return 0;
+        message(0, errno, "failed to read challenge from server");
+        return 0;
     }
     getMsgBuf(msg, challenge, CHALLENGE_SIZE);
 
@@ -3626,8 +3626,8 @@ clientPerformChallenge(int serverFd, MsgBuf_t *msg)
     setMsgBuf(msg, challenge, CHALLENGE_SIZE);
     if (writeMessage(serverFd, msg) != CHALLENGE_SIZE)
     {
-	message(0, errno, "failed writing challenge response to server");
-	return 0;
+        message(0, errno, "failed writing challenge response to server");
+        return 0;
     }
     message(3, 0, "wrote challenge response");
 
@@ -3640,8 +3640,8 @@ clientPerformChallenge(int serverFd, MsgBuf_t *msg)
     setMsgBuf(msg, myChallenge, CHALLENGE_SIZE);
     if (writeMessage(serverFd, msg) != CHALLENGE_SIZE)
     {
-	message(0, errno, "failed writing challenge to server");
-	return 0;
+        message(0, errno, "failed writing challenge to server");
+        return 0;
     }
     message(3, 0, "wrote challenge");
 
@@ -3649,8 +3649,8 @@ clientPerformChallenge(int serverFd, MsgBuf_t *msg)
 
     if (readMessage(serverFd, msg, CHALLENGE_SIZE) <= 0)
     {
-	message(0, errno, "failed to read challenge response from server");
-	return 0;
+        message(0, errno, "failed to read challenge response from server");
+        return 0;
     }
     getMsgBuf(msg, challenge, CHALLENGE_SIZE);
 
@@ -3662,8 +3662,8 @@ clientPerformChallenge(int serverFd, MsgBuf_t *msg)
 
     if (memcmp(challenge, myChallenge, CHALLENGE_SIZE) != 0)
     {
-	message(0, 0, "server responded incorrectly to challenge");
-	return 0;
+        message(0, 0, "server responded incorrectly to challenge");
+        return 0;
     }
 
     memset(challenge, 0, CHALLENGE_SIZE);
@@ -3698,8 +3698,8 @@ serverPerformChallenge(int clientFd, MsgBuf_t *msg)
     setMsgBuf(msg, myChallenge, CHALLENGE_SIZE);
     if (writeMessage(clientFd, msg) != CHALLENGE_SIZE)
     {
-	message(0, errno, "failed writing challenge to client");
-	return 0;
+        message(0, errno, "failed writing challenge to client");
+        return 0;
     }
     message(3, 0, "wrote challenge");
 
@@ -3707,8 +3707,8 @@ serverPerformChallenge(int clientFd, MsgBuf_t *msg)
 
     if (readMessage(clientFd, msg, CHALLENGE_SIZE) <= 0)
     {
-	message(0, errno, "failed to read challenge response from client");
-	return 0;
+        message(0, errno, "failed to read challenge response from client");
+        return 0;
     }
     getMsgBuf(msg, challenge, CHALLENGE_SIZE);
 
@@ -3720,8 +3720,8 @@ serverPerformChallenge(int clientFd, MsgBuf_t *msg)
 
     if (memcmp(challenge, myChallenge, CHALLENGE_SIZE) != 0)
     {
-	message(0, 0, "client responded incorrectly to challenge");
-	return 0;
+        message(0, 0, "client responded incorrectly to challenge");
+        return 0;
     }
 
     /* Now read challenge from the client */
@@ -3730,8 +3730,8 @@ serverPerformChallenge(int clientFd, MsgBuf_t *msg)
 
     if (readMessage(clientFd, msg, CHALLENGE_SIZE) <= 0)
     {
-	message(0, errno, "failed to read challenge from client");
-	return 0;
+        message(0, errno, "failed to read challenge from client");
+        return 0;
     }
     getMsgBuf(msg, challenge, CHALLENGE_SIZE);
 
@@ -3746,8 +3746,8 @@ serverPerformChallenge(int clientFd, MsgBuf_t *msg)
     setMsgBuf(msg, challenge, CHALLENGE_SIZE);
     if (writeMessage(clientFd, msg) != CHALLENGE_SIZE)
     {
-	message(0, errno, "failed writing challenge response to client");
-	return 0;
+        message(0, errno, "failed writing challenge response to client");
+        return 0;
     }
     message(3, 0, "wrote challenge response");
     memset(challenge, 0, CHALLENGE_SIZE);
@@ -3756,9 +3756,9 @@ serverPerformChallenge(int clientFd, MsgBuf_t *msg)
 }
 
 /************************************\
-**				    **
+**                                  **
 **  Reuseable session key routines  **
-**				    **
+**                                  **
 \************************************/
 
 /*
@@ -3772,8 +3772,8 @@ freeKeyInfo(KeyInfo_t *info)
 {
     if (info->key)
     {
-	memset(info->key, 0, strlen(info->key));
-	free(info->key);
+        memset(info->key, 0, strlen(info->key));
+        free(info->key);
     }
     free(info);
 }
@@ -3798,10 +3798,10 @@ freeKeyInfo(KeyInfo_t *info)
 
 char *
 findKeyByToken(KeyInfo_t *list,
-	       unsigned long token,
-	       struct sockaddr_in *peerAddrP,
-	       struct sockaddr_in *targetAddrP,
-	       unsigned short targetPort)
+               unsigned long token,
+               struct sockaddr_in *peerAddrP,
+               struct sockaddr_in *targetAddrP,
+               unsigned short targetPort)
 {
     KeyInfo_t *ptr = NULL;
     char *found = NULL;
@@ -3814,12 +3814,12 @@ findKeyByToken(KeyInfo_t *list,
 
     if (SharedKey)
     {
-	if ((result = (char *)malloc(strlen(SharedKey) + 1)) == NULL)
-	{
-	    return NULL;
-	}
-	strcpy(result, SharedKey);
-	return result;
+        if ((result = (char *)malloc(strlen(SharedKey) + 1)) == NULL)
+        {
+            return NULL;
+        }
+        strcpy(result, SharedKey);
+        return result;
     }
 
     /*
@@ -3829,7 +3829,7 @@ findKeyByToken(KeyInfo_t *list,
 
     if (SharedKeyGenCmd && (result = runKeyGenCommand(SharedKeyGenCmd, peerAddrP, targetAddrP, targetPort)) != NULL)
     {
-	return result;
+        return result;
     }
 
     if (token == 0 || token == TOKEN_NEW) return NULL;
@@ -3840,36 +3840,36 @@ findKeyByToken(KeyInfo_t *list,
 
     for (ptr = list; ptr; ptr = ptr->next)
     {
-	/* Check if the entry has expired */
+        /* Check if the entry has expired */
 
-	if (ptr->expiry && now > ptr->expiry)
-	{
-	    /* It has, so remove it! */
+        if (ptr->expiry && now > ptr->expiry)
+        {
+            /* It has, so remove it! */
 
-	    ptr->prev->next = ptr->next;
-	    if (ptr->next)
-	    {
-		ptr->next->prev = ptr->prev;
-	    }
-	    tmp = ptr;
-	    ptr = ptr->prev;
-	    freeKeyInfo(tmp);
-	}
-	else if (!found && ptr->token == token)
-	{
-	    /* We have a matching element, copy the key to return */
+            ptr->prev->next = ptr->next;
+            if (ptr->next)
+            {
+                ptr->next->prev = ptr->prev;
+            }
+            tmp = ptr;
+            ptr = ptr->prev;
+            freeKeyInfo(tmp);
+        }
+        else if (!found && ptr->token == token)
+        {
+            /* We have a matching element, copy the key to return */
 
-	    if ((found = (char *)malloc(strlen(ptr->key) + 1)) == NULL)
-	    {
-		message(0, errno, "Out of memory allocating copy of key");
-	    }
-	    else
-	    {
-		strcpy(found, ptr->key);
-	    }
+            if ((found = (char *)malloc(strlen(ptr->key) + 1)) == NULL)
+            {
+                message(0, errno, "Out of memory allocating copy of key");
+            }
+            else
+            {
+                strcpy(found, ptr->key);
+            }
 
-	    /* Carry on with the loop to purge expired entries */
-	}
+            /* Carry on with the loop to purge expired entries */
+        }
     }
 
     mutexUnlock(MUTEX_KEYLIST);
@@ -3895,22 +3895,22 @@ addKeyInfoToList(KeyInfo_t *list, unsigned long token, char *key)
     mutexLock(MUTEX_KEYLIST);
 
     if ((new = (KeyInfo_t *)malloc(sizeof(KeyInfo_t))) == NULL ||
-	(new->key = (char *)malloc(strlen(key) + 1)) == NULL)
+        (new->key = (char *)malloc(strlen(key) + 1)) == NULL)
     {
-	message(0, errno, "Out of memory allocating key info element");
+        message(0, errno, "Out of memory allocating key info element");
     }
     else
     {
-	strcpy(new->key, key);
-	new->token = token;
-	new->next = NULL;
-	time(&(new->expiry));
-	new->expiry += KeyLifetime;
+        strcpy(new->key, key);
+        new->token = token;
+        new->next = NULL;
+        time(&(new->expiry));
+        new->expiry += KeyLifetime;
 
-	for (ptr = list; ptr->next; ptr = ptr->next) /* move on ... */;
+        for (ptr = list; ptr->next; ptr = ptr->next) /* move on ... */;
 
-	ptr->next = new;
-	new->prev = ptr;
+        ptr->next = new;
+        new->prev = ptr;
     }
 
     mutexUnlock(MUTEX_KEYLIST);
@@ -3939,38 +3939,38 @@ generateToken(KeyInfo_t *list, unsigned long oldToken)
 
     if (nextToken == 0)
     {
-	srand((int)threadPid() + (int)time(NULL));
-	nextToken = (unsigned long)((rand() & 0xffff) << 16);
-	nextToken |= (unsigned long)(rand() & 0xffff);
+        srand((int)threadPid() + (int)time(NULL));
+        nextToken = (unsigned long)((rand() & 0xffff) << 16);
+        nextToken |= (unsigned long)(rand() & 0xffff);
     }
 
     while (token == 0)
     {
-	nextToken = (nextToken + 1) & 0xffffffff;   /* Cope with 64-bit! */
+        nextToken = (nextToken + 1) & 0xffffffff;   /* Cope with 64-bit! */
 
-	/* Avoid special values */
+        /* Avoid special values */
 
-	if (nextToken == 0 || nextToken == TOKEN_NEW || nextToken == oldToken)
-	{
-	    continue;
-	}
+        if (nextToken == 0 || nextToken == TOKEN_NEW || nextToken == oldToken)
+        {
+            continue;
+        }
 
-	/*
-	** Screen out ones we already have. Note that peer and target
-	** information is NULL because if we are in generateToken
-	** they can't have been used by any shared key generation
-	** command.
-	*/
+        /*
+        ** Screen out ones we already have. Note that peer and target
+        ** information is NULL because if we are in generateToken
+        ** they can't have been used by any shared key generation
+        ** command.
+        */
 
-	if ((key = findKeyByToken(list, nextToken, NULL, NULL, 0)) != NULL)
-	{
-	    free(key);
-	    continue;
-	}
+        if ((key = findKeyByToken(list, nextToken, NULL, NULL, 0)) != NULL)
+        {
+            free(key);
+            continue;
+        }
 
-	/* We've got one! */
+        /* We've got one! */
 
-	token = nextToken;
+        token = nextToken;
     }
 
     mutexUnlock(MUTEX_TOKEN);
@@ -3999,16 +3999,16 @@ getCurrentToken(void)
 
     for (ptr = &ClientKeyList; ptr; ptr = ptr->next)
     {
-	if (ptr->token == CurrentToken)
-	{
-	    /* Check if the entry has expired or will do soon */
+        if (ptr->token == CurrentToken)
+        {
+            /* Check if the entry has expired or will do soon */
 
-	    if (ptr->expiry && now > (ptr->expiry - TOKEN_EXPIRE_GRACE))
-	    {
-		CurrentToken = TOKEN_NEW;
-	    }
-	    break;
-	}
+            if (ptr->expiry && now > (ptr->expiry - TOKEN_EXPIRE_GRACE))
+            {
+                CurrentToken = TOKEN_NEW;
+            }
+            break;
+        }
     }
 
     mutexUnlock(MUTEX_KEYLIST);
@@ -4017,9 +4017,9 @@ getCurrentToken(void)
 }
 
 /*****************************\
-**			     **
+**                           **
 **  General Helper Routines  **
-**			     **
+**                           **
 \*****************************/
 
 /*
@@ -4035,7 +4035,7 @@ spawnCommand(unsigned short port, char *cmdFormat)
 {
 #ifdef WIN32
     char cmdBuf[MAX_LINE_SIZE];
-    STARTUPINFO	suInfo;
+    STARTUPINFO suInfo;
     PROCESS_INFORMATION pInfo;
 
     snprintf(cmdBuf, sizeof(cmdBuf), cmdFormat, (int)port);
@@ -4044,19 +4044,19 @@ spawnCommand(unsigned short port, char *cmdFormat)
     suInfo.cb = sizeof(suInfo);
 
 
-    if (!CreateProcess(NULL,	/* No executable -- take it from cmdBuf */
-		       cmdBuf,	/* Command and arguments */
-		       NULL,	/* No security attributes */
-		       NULL,	/* No thread attributes */
-		       FALSE,	/* Don't inherit handles */
-		       0,	/* No special creation flags */
-		       NULL,	/* Inherit environment */
-		       NULL,	/* Inherit current directory */
-		       &suInfo,	/* Start-up info */
-		       &pInfo))	/* Process info needed */
+    if (!CreateProcess(NULL,    /* No executable -- take it from cmdBuf */
+                       cmdBuf,  /* Command and arguments */
+                       NULL,    /* No security attributes */
+                       NULL,    /* No thread attributes */
+                       FALSE,   /* Don't inherit handles */
+                       0,       /* No special creation flags */
+                       NULL,    /* Inherit environment */
+                       NULL,    /* Inherit current directory */
+                       &suInfo, /* Start-up info */
+                       &pInfo)) /* Process info needed */
     {
-	message(0, errno, "failed to spawn '%s'", cmdBuf);
-	return 0;
+        message(0, errno, "failed to spawn '%s'", cmdBuf);
+        return 0;
     }
 #else
     char *shell = DFLT_SHELL;
@@ -4066,23 +4066,23 @@ spawnCommand(unsigned short port, char *cmdFormat)
 
     if (((shell = getenv("SHELL")) == NULL) || *shell == '\0')
     {
-	shell = DFLT_SHELL;
+        shell = DFLT_SHELL;
     }
 
     switch (fork())
     {
     case -1:
-	message(0, errno, "fork failed");
-	return 0;
-	break;
+        message(0, errno, "fork failed");
+        return 0;
+        break;
 
     case 0:
-	execl(shell, shell, "-c", cmdBuf, NULL);
-	message(0, errno, "failed to exec '%s -c \"%s\"'", shell, cmdBuf);
-	break;
+        execl(shell, shell, "-c", cmdBuf, NULL);
+        message(0, errno, "failed to exec '%s -c \"%s\"'", shell, cmdBuf);
+        break;
 
     default:
-	break;
+        break;
     }
 #endif
 
@@ -4110,8 +4110,8 @@ spawnCommand(unsigned short port, char *cmdFormat)
 
 int
 filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
-	   struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP,
-	   int replyFd, int udpMode)
+           struct sockaddr_in *toAddrP, struct sockaddr_in *fromAddrP,
+           int replyFd, int udpMode)
 {
     fd_set testSet;
     int ready = 0;
@@ -4123,125 +4123,125 @@ filterLoop(int localFd, int remoteFd, MsgBuf_t *msgBuf,
 
     do
     {
-	/* Set up the delay for select */
+        /* Set up the delay for select */
 
-	delay.tv_sec = (udpMode ? UdpTimeout : TcpTimeout);
-	delay.tv_usec = 0;
+        delay.tv_sec = (udpMode ? UdpTimeout : TcpTimeout);
+        delay.tv_usec = 0;
 
-	/* Set up file descriptors in mask to test */
+        /* Set up file descriptors in mask to test */
 
-	FD_ZERO(&testSet);
-	if (localFd >= 0)
-	{
-	    FD_SET(localFd, &testSet);
-	}
-	if (remoteFd >= 0)
-	{
-	    FD_SET(remoteFd, &testSet);
-	}
+        FD_ZERO(&testSet);
+        if (localFd >= 0)
+        {
+            FD_SET(localFd, &testSet);
+        }
+        if (remoteFd >= 0)
+        {
+            FD_SET(remoteFd, &testSet);
+        }
 
-	/* Do a blocking select waiting for any i/o */
+        /* Do a blocking select waiting for any i/o */
 
-	ready = select(maxTestFd, &testSet, 0, 0, (delay.tv_sec ? &delay : NULL));
+        ready = select(maxTestFd, &testSet, 0, 0, (delay.tv_sec ? &delay : NULL));
 
-	/*
-	** If we get zero then there is nothing left on either fd
-	** or we hit the timeout.
-	*/
+        /*
+        ** If we get zero then there is nothing left on either fd
+        ** or we hit the timeout.
+        */
 
-	if (ready == 0)
-	{
-	    break;
-	}
+        if (ready == 0)
+        {
+            break;
+        }
 
-	/* Check for error but ignore interrupted system calls */
+        /* Check for error but ignore interrupted system calls */
 
-	if (ready < 0 && errno != EINTR)
-	{
-	    message(0, errno, "error in select");
-	    status = -1;
-	    break;
-	}
+        if (ready < 0 && errno != EINTR)
+        {
+            message(0, errno, "error in select");
+            status = -1;
+            break;
+        }
 
-	/* Is there local data ready? */
+        /* Is there local data ready? */
 
-	if (FD_ISSET(localFd, &testSet))
-	{
-		if ((num = recv(localFd, (char *)msgBuf->data, msgBuf->maxSize, 0)) > 0)
-	    {
-		message(5, 0, "read %d bytes from local socket %d", num, localFd);
+        if (FD_ISSET(localFd, &testSet))
+        {
+                if ((num = recv(localFd, (char *)msgBuf->data, msgBuf->maxSize, 0)) > 0)
+            {
+                message(5, 0, "read %d bytes from local socket %d", num, localFd);
 
-		msgBuf->size = (unsigned short)num;
-		if (DumpData) dumpData("<", msgBuf->data, msgBuf->size);
+                msgBuf->size = (unsigned short)num;
+                if (DumpData) dumpData("<", msgBuf->data, msgBuf->size);
 
-		if (writeMessage(remoteFd, msgBuf) != num)
-		{
-		    status = 1;
-		    break;
-		}
-	    }
-	    else
-	    {
-		status = (num == 0 ? 0 : -1);
-		break;
-	    }
-	}
+                if (writeMessage(remoteFd, msgBuf) != num)
+                {
+                    status = 1;
+                    break;
+                }
+            }
+            else
+            {
+                status = (num == 0 ? 0 : -1);
+                break;
+            }
+        }
 
-	/* Is there remote data ready? */
+        /* Is there remote data ready? */
 
-	if (FD_ISSET(remoteFd, &testSet))
-	{
-	    /* Read the encrypted/compressed message and write to local socket */
+        if (FD_ISSET(remoteFd, &testSet))
+        {
+            /* Read the encrypted/compressed message and write to local socket */
 
-	    num = readMessage(remoteFd, msgBuf, 0);
-	    if (num > 0)
-	    {
-		if (udpMode)
-		{
+            num = readMessage(remoteFd, msgBuf, 0);
+            if (num > 0)
+            {
+                if (udpMode)
+                {
 #ifdef USE_UDP_SPOOFING
-		    if (Transparent)
-		    {
-			num = sendSpoofed(replyFd, (char *)(msgBuf->data),
-					  msgBuf->size, toAddrP, fromAddrP);
-		    }
-		    else
+                    if (Transparent)
+                    {
+                        num = sendSpoofed(replyFd, (char *)(msgBuf->data),
+                                          msgBuf->size, toAddrP, fromAddrP);
+                    }
+                    else
 #endif
-		    {
-			num = sendto(replyFd, (char *)(msgBuf->data), msgBuf->size,
-				     0, (struct sockaddr *)toAddrP,
-				     sizeof(struct sockaddr_in));
-		    }
-		}
-		else
-		{
-		    num = writeData(localFd, (unsigned char *)(msgBuf->data),
-				    msgBuf->size);
-		}
-		if (num != msgBuf->size)
-		{
-		    status = -1;
-		    break;
-		}
-		message(5, 0, "sent %d bytes to %s socket %d", num,
+                    {
+                        num = sendto(replyFd, (char *)(msgBuf->data), msgBuf->size,
+                                     0, (struct sockaddr *)toAddrP,
+                                     sizeof(struct sockaddr_in));
+                    }
+                }
+                else
+                {
+                    num = writeData(localFd, (unsigned char *)(msgBuf->data),
+                                    msgBuf->size);
+                }
+                if (num != msgBuf->size)
+                {
+                    status = -1;
+                    break;
+                }
+                message(5, 0, "sent %d bytes to %s socket %d", num,
                         (udpMode ? "reply" : "local"),
                         (udpMode ? replyFd : localFd));
-		if (DumpData) dumpData(">", msgBuf->data, msgBuf->size);
-	    }
-	    else
-	    {
-		status = (num == 0 ? 0 : 1);
-		break;
-	    }
-	}
+                if (DumpData) dumpData(">", msgBuf->data, msgBuf->size);
+            }
+            else
+            {
+                status = (num == 0 ? 0 : 1);
+                break;
+            }
+        }
     }
     while (1);
 
     message(3, 0, "connection closed or timed out");
 
     message(2, 0, "read %lu bytes (%lu expanded) in %lu messages",
-	    msgBuf->bytesIn, msgBuf->expBytesIn, msgBuf->readCount);
+            msgBuf->bytesIn, msgBuf->expBytesIn, msgBuf->readCount);
     message(2, 0, "wrote %lu bytes (%lu expanded) in %lu messages",
-	    msgBuf->bytesOut, msgBuf->expBytesOut, msgBuf->writeCount);
+            msgBuf->bytesOut, msgBuf->expBytesOut, msgBuf->writeCount);
 
     return status;
 }
@@ -4264,13 +4264,13 @@ hashStrings(char *hashBuf, ...)
     va_start(ap, hashBuf);
     while ((str = va_arg(ap, char *)) != NULL)
     {
-	sha_update(&sha, (SHA_BYTE *)str, strlen(str));
+        sha_update(&sha, (SHA_BYTE *)str, strlen(str));
     }
     sha_final(&sha);
     sprintf(hashBuf, "%08lx%08lx%08lx%08lx%08lx",
-	    (unsigned long)sha.digest[0], (unsigned long)sha.digest[1],
-	    (unsigned long)sha.digest[2], (unsigned long)sha.digest[3],
-	    (unsigned long)sha.digest[4]);
+            (unsigned long)sha.digest[0], (unsigned long)sha.digest[1],
+            (unsigned long)sha.digest[2], (unsigned long)sha.digest[3],
+            (unsigned long)sha.digest[4]);
 }
 
 /*
@@ -4291,31 +4291,31 @@ hashFile(char *hashBuf, char *fileName)
 
     if (strcmp(fileName, "-") == 0)
     {
-	fp = stdin;
+        fp = stdin;
 #if defined(WIN32) || defined(__CYGWIN__)
-	setmode(0, O_BINARY);
+        setmode(0, O_BINARY);
 #endif
     }
     else if ((fp = fopen(fileName, "rb")) == NULL)
     {
-	message(0, errno, "can't open '%s'", fileName);
-	return;
+        message(0, errno, "can't open '%s'", fileName);
+        return;
     }
 
     sha_init(&sha);
 
     while ((num = fread(buf, 1, MAX_BUF_SIZE, fp)) > 0)
     {
-	sha_update(&sha, (SHA_BYTE *)buf, num);
+        sha_update(&sha, (SHA_BYTE *)buf, num);
     }
 
     fclose(fp);
 
     sha_final(&sha);
     sprintf(hashBuf, "%08lx%08lx%08lx%08lx%08lx",
-	    (unsigned long)sha.digest[0], (unsigned long)sha.digest[1],
-	    (unsigned long)sha.digest[2], (unsigned long)sha.digest[3],
-	    (unsigned long)sha.digest[4]);
+            (unsigned long)sha.digest[0], (unsigned long)sha.digest[1],
+            (unsigned long)sha.digest[2], (unsigned long)sha.digest[3],
+            (unsigned long)sha.digest[4]);
 }
 
 /*
@@ -4340,8 +4340,8 @@ checkIdentity(char *idFile, char *generator, char *modulus, char *key)
 
     if ((fp = fopen(idFile, "r")) == NULL)
     {
-	message(0, errno, "can't open identity file '%s'", idFile);
-	return 0;
+        message(0, errno, "can't open identity file '%s'", idFile);
+        return 0;
     }
 
     if (*generator == '\0') generator = DFLT_GENERATOR;
@@ -4354,17 +4354,17 @@ checkIdentity(char *idFile, char *generator, char *modulus, char *key)
 
     while (fgets(line, MAX_LINE_SIZE, fp) != NULL)
     {
-	if (sscanf(line, "%s", checkSig) != 1)
-	{
-	    continue;
-	}
+        if (sscanf(line, "%s", checkSig) != 1)
+        {
+            continue;
+        }
 
-	if (strcasecmp(checkSig, keySig) == 0)
-	{
-	    message(1, 0, "key identity matched: %.*s", strlen(line) - 1, line);
-	    found = 1;
-	    break;
-	}
+        if (strcasecmp(checkSig, keySig) == 0)
+        {
+            message(1, 0, "key identity matched: %.*s", strlen(line) - 1, line);
+            found = 1;
+            break;
+        }
     }
 
     fclose(fp);
@@ -4456,7 +4456,7 @@ makeDetached(void)
 
     if (!FreeConsole())
     {
-	message(0, errno, "failed to detach from console (Win32 error = %ld)", GetLastError());
+        message(0, errno, "failed to detach from console (Win32 error = %ld)", GetLastError());
     }
 #elif defined(HAVE_PTHREADS) && defined(BUGGY_FORK_WITH_THREADS)
 
@@ -4478,18 +4478,18 @@ makeDetached(void)
     switch (fork())
     {
     case -1:
-	/* Error! */
-	message(0, errno, "fork failed becoming daemon");
-	return;
+        /* Error! */
+        message(0, errno, "fork failed becoming daemon");
+        return;
 
     case 0:
-	/* Child -- continue */
-	break;
+        /* Child -- continue */
+        break;
 
     default:
-	/* Parent -- exit and leave child running */
-	exit(EXIT_SUCCESS);
-	break;
+        /* Parent -- exit and leave child running */
+        exit(EXIT_SUCCESS);
+        break;
     }
 
     /* Detach from controlling terminal */
@@ -4532,8 +4532,8 @@ makeDetached(void)
 
 int
 allowRedirect(unsigned short port, struct sockaddr_in *addrP,
-	      struct sockaddr_in *peerAddrP, int udpMode,
-	      char **hostP, char **idFileP)
+              struct sockaddr_in *peerAddrP, int udpMode,
+              char **hostP, char **idFileP)
 {
     EndPtList_t *lp1, *lp2;
     struct in_addr *alp = NULL;
@@ -4562,11 +4562,11 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
 
     if (addrP->sin_addr.s_addr == 0x00000000)
     {
-	if (!getHostAddress(TargetHost, addrP, NULL, NULL))
-	{
-	    message(0, 0, "can't resolve host or address '%s'", TargetHost);
-	    return 0;
-	}
+        if (!getHostAddress(TargetHost, addrP, NULL, NULL))
+        {
+            message(0, 0, "can't resolve host or address '%s'", TargetHost);
+            return 0;
+        }
     }
 
     /*
@@ -4576,16 +4576,16 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
 
     if (peerAddrP->sin_addr.s_addr == 0x00000000)
     {
-	message(0, 0, "client peer address not available");
-	return 0;
+        message(0, 0, "client peer address not available");
+        return 0;
     }
 
     /* Allocate and fill buffer for returned host IP address string */
 
     if ((ipName = (char *)malloc(IP_BUF_SIZE)) == NULL)
     {
-	message(0, errno, "out of memory allocating hostname");
-	return 0;
+        message(0, errno, "out of memory allocating hostname");
+        return 0;
     }
     *hostP = ipString(addrP->sin_addr, ipName);
 
@@ -4596,82 +4596,82 @@ allowRedirect(unsigned short port, struct sockaddr_in *addrP,
 
     for (lp1 = AllowedTargets; lp1; lp1 = lp1->next)
     {
-	mask = lp1->mask;
+        mask = lp1->mask;
 
-	if ((addrP->sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
-	{
-	    /* Did not match primary address, check aliases */
+        if ((addrP->sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
+        {
+            /* Did not match primary address, check aliases */
 
-	    for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
-	    {
-		if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
-		{
-		    /* Found a matching address in the aliases */
-		
-		    break;
-		}
-	    }
+            for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
+            {
+                if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
+                {
+                    /* Found a matching address in the aliases */
+                
+                    break;
+                }
+            }
 
-	    if (alp->s_addr == 0xffffffff)
-	    {
-		/* Did not match at all, try next entry */
+            if (alp->s_addr == 0xffffffff)
+            {
+                /* Did not match at all, try next entry */
 
-		continue;
-	    }
-	}
+                continue;
+            }
+        }
 
-	if (lp1->peer != NULL)
-	{
-	    message(4, 0, "checking peer address restrictions for target %s:%hu-%hu", lp1->host, lp1->lo, lp1->hi);
-	    if (!checkPeerAddress(peerAddrP, lp1->peer))
-	    {
-		message(4, 0, "peer address disallowed");
-		continue;
-	    }
-	}
-	else
-	{
-	    message(4, 0, "no peer address restrictions for target %s:%hu-%hu", lp1->host, lp1->lo, lp1->hi);
-	}
+        if (lp1->peer != NULL)
+        {
+            message(4, 0, "checking peer address restrictions for target %s:%hu-%hu", lp1->host, lp1->lo, lp1->hi);
+            if (!checkPeerAddress(peerAddrP, lp1->peer))
+            {
+                message(4, 0, "peer address disallowed");
+                continue;
+            }
+        }
+        else
+        {
+            message(4, 0, "no peer address restrictions for target %s:%hu-%hu", lp1->host, lp1->lo, lp1->hi);
+        }
 
-	message(4, 0, "checking port %hu against range %hu-%hu for host %s", port, lp1->lo, lp1->hi, lp1->host);
+        message(4, 0, "checking port %hu against range %hu-%hu for host %s", port, lp1->lo, lp1->hi, lp1->host);
 
-	/* If the port range is 0 -- 0 then look in the default list */
+        /* If the port range is 0 -- 0 then look in the default list */
 
-	if (lp1->lo == 0 && lp1->hi == 0)
-	{
-	    if (AllowedDefault == NULL)
-	    {
-		message(4, 0, "no default port restrictions, port is allowed");
-		*idFileP = lp1->idFile;
-		return 1;
-	    }
+        if (lp1->lo == 0 && lp1->hi == 0)
+        {
+            if (AllowedDefault == NULL)
+            {
+                message(4, 0, "no default port restrictions, port is allowed");
+                *idFileP = lp1->idFile;
+                return 1;
+            }
 
-	    for (lp2 = AllowedDefault; lp2; lp2 = lp2->next)
-	    {
-		message(4, 0, "checking port %hu against default range %hu - %hu", port, lp2->lo, lp2->hi);
+            for (lp2 = AllowedDefault; lp2; lp2 = lp2->next)
+            {
+                message(4, 0, "checking port %hu against default range %hu - %hu", port, lp2->lo, lp2->hi);
 
-		if (port >= lp2->lo && port <= lp2->hi)
-		{
-		    if (lp2->type & (udpMode ? ENDPTLIST_UDP : ENDPTLIST_TCP))
-		    {
-			*idFileP = lp1->idFile;
-			return 1;
-		    }
-		}
-	    }
-	}
+                if (port >= lp2->lo && port <= lp2->hi)
+                {
+                    if (lp2->type & (udpMode ? ENDPTLIST_UDP : ENDPTLIST_TCP))
+                    {
+                        *idFileP = lp1->idFile;
+                        return 1;
+                    }
+                }
+            }
+        }
 
-	/* Otherwise check against the entry for this specific host */
+        /* Otherwise check against the entry for this specific host */
 
-	else if (port >= lp1->lo && port <= lp1->hi)
-	{
-	    if (lp1->type & (udpMode ? ENDPTLIST_UDP : ENDPTLIST_TCP))
-	    {
-		*idFileP = lp1->idFile;
-		return 1;
-	    }
-	}
+        else if (port >= lp1->lo && port <= lp1->hi)
+        {
+            if (lp1->type & (udpMode ? ENDPTLIST_UDP : ENDPTLIST_TCP))
+            {
+                *idFileP = lp1->idFile;
+                return 1;
+            }
+        }
     }
 
     *hostP = NULL;
@@ -4708,8 +4708,8 @@ checkPeerForSocket(int fd, struct sockaddr_in *addrP)
 
     if (getpeername(fd, (struct sockaddr *)addrP, &addrLen))
     {
-	message(0, errno, "can't get peer address for socket");
-	return 0;
+        message(0, errno, "can't get peer address for socket");
+        return 0;
     }
     message(4, 0, "peer address from connection is %s", ipString(addrP->sin_addr, ipBuf));
 
@@ -4741,45 +4741,45 @@ checkPeerAddress(struct sockaddr_in *addrP, EndPtList_t *peerList)
 
     for (lp1 = peerList; lp1; lp1 = lp1->next)
     {
-	mask = lp1->mask;
+        mask = lp1->mask;
 
-	if ((addrP->sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
-	{
-	    /* Did not match primary address, check aliases */
+        if ((addrP->sin_addr.s_addr & mask) != (lp1->addr.sin_addr.s_addr & mask))
+        {
+            /* Did not match primary address, check aliases */
 
-	    for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
-	    {
-		if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
-		{
-		    /* Found a matching address in the aliases */
+            for (alp = lp1->addrList; alp->s_addr != 0xffffffff; alp++)
+            {
+                if ((addrP->sin_addr.s_addr & mask) == (alp->s_addr & mask))
+                {
+                    /* Found a matching address in the aliases */
 
-		    break;
-		}
-	    }
+                    break;
+                }
+            }
 
-	    if (alp->s_addr == 0xffffffff)
-	    {
-		/* Did not match at all, try next entry */
+            if (alp->s_addr == 0xffffffff)
+            {
+                /* Did not match at all, try next entry */
 
-		continue;
-	    }
-	}
+                continue;
+            }
+        }
 
-	message(4, 0, "checking port %hu against range %hu-%hu for host %s", port, lp1->lo, lp1->hi, lp1->host);
+        message(4, 0, "checking port %hu against range %hu-%hu for host %s", port, lp1->lo, lp1->hi, lp1->host);
 
-	/* If the port range is 0 -- 0 then any port is OK */
+        /* If the port range is 0 -- 0 then any port is OK */
 
-	if (lp1->lo == 0 && lp1->hi == 0)
-	{
-	    return 1;
-	}
+        if (lp1->lo == 0 && lp1->hi == 0)
+        {
+            return 1;
+        }
 
-	/* Otherwise check against the entry for this specific host */
+        /* Otherwise check against the entry for this specific host */
 
-	else if (port >= lp1->lo && port <= lp1->hi)
-	{
-	    return 1;
-	}
+        else if (port >= lp1->lo && port <= lp1->hi)
+        {
+            return 1;
+        }
     }
 
     return 0;
@@ -4799,8 +4799,8 @@ countPorts(EndPtList_t *list)
 
     while (list)
     {
-	count += (int)(list->hi - list->lo + 1);
-	list = list->next;
+        count += (int)(list->hi - list->lo + 1);
+        list = list->next;
     }
 
     return count;
@@ -4829,58 +4829,58 @@ mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP)
 
     while (localPtr)
     {
-	if (localPort <= localPtr->hi && localPort >= localPtr->lo)
-	{
-	    count += localPort - localPtr->lo;
-	    break;
-	}
+        if (localPort <= localPtr->hi && localPort >= localPtr->lo)
+        {
+            count += localPort - localPtr->lo;
+            break;
+        }
 
-	count += (localPtr->hi - localPtr->lo + 1);
-	localPtr = localPtr->next;
+        count += (localPtr->hi - localPtr->lo + 1);
+        localPtr = localPtr->next;
     }
 
     /* If we have fallen off the end of the list, return 0 */
 
     if (localPtr == NULL)
     {
-	return 0;
+        return 0;
     }
 
     /* Now find the corresponding element in TargetPorts */
 
     while (remotePtr)
     {
-	if (count <= (unsigned short)(remotePtr->hi - remotePtr->lo))
-	{
-	    if (addrP)
-	    {
-		addrP->sin_addr.s_addr = remotePtr->addr.sin_addr.s_addr;
-	    }
-	    if (hostP)
-	    {
-		if (remotePtr->host)
-		{
-		    *hostP = remotePtr->host;
-		}
-		else
-		{
-		    *hostP = ServerHost;
-		}
-	    }
-	    return (remotePtr->lo + count);
-	}
+        if (count <= (unsigned short)(remotePtr->hi - remotePtr->lo))
+        {
+            if (addrP)
+            {
+                addrP->sin_addr.s_addr = remotePtr->addr.sin_addr.s_addr;
+            }
+            if (hostP)
+            {
+                if (remotePtr->host)
+                {
+                    *hostP = remotePtr->host;
+                }
+                else
+                {
+                    *hostP = ServerHost;
+                }
+            }
+            return (remotePtr->lo + count);
+        }
 
-	count -= (remotePtr->hi - remotePtr->lo + 1);
-	remotePtr = remotePtr->next;
+        count -= (remotePtr->hi - remotePtr->lo + 1);
+        remotePtr = remotePtr->next;
     }
 
     return 0;
 }
 
 /******************************************\
-**					  **
+**                                        **
 **  Core Client/Server Protocol Routines  **
-**					  **
+**                                        **
 \******************************************/
 
 
@@ -4893,7 +4893,7 @@ mapPort(unsigned short localPort, char **hostP, struct sockaddr_in *addrP)
 
 unsigned long
 spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
-	     int inLine, struct sockaddr_in *addrP, int udpMode)
+             int inLine, struct sockaddr_in *addrP, int udpMode)
 {
     FnArgs_t *argP = NULL;
     struct sockaddr_in localAddr;
@@ -4902,13 +4902,13 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
 
     if ((argP = (FnArgs_t *)malloc(sizeof(FnArgs_t))) == NULL)
     {
-	message(0, errno, "failed to allocate handler argument structure");
-	return 0;
+        message(0, errno, "failed to allocate handler argument structure");
+        return 0;
     }
     argP->fd = clientFd;
     if (addrP)
     {
-	memcpy(&(argP->addr), addrP, sizeof(struct sockaddr_in));
+        memcpy(&(argP->addr), addrP, sizeof(struct sockaddr_in));
     }
 
     /*
@@ -4919,14 +4919,14 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
     argP->listenFd = listenFd;
     if (listenFd >= 0)
     {
-	addrLen = sizeof(localAddr);
-	memset(&localAddr, 0, sizeof(localAddr));
-	if (getsockname(listenFd, (struct sockaddr *)&localAddr, &addrLen))
-	{
-	    message(0, errno, "can't get local port number");
-	    return 0;
-	}
-	argP->port = ntohs(localAddr.sin_port);
+        addrLen = sizeof(localAddr);
+        memset(&localAddr, 0, sizeof(localAddr));
+        if (getsockname(listenFd, (struct sockaddr *)&localAddr, &addrLen))
+        {
+            message(0, errno, "can't get local port number");
+            return 0;
+        }
+        argP->port = ntohs(localAddr.sin_port);
     }
 
     argP->udpMode = udpMode;
@@ -4934,72 +4934,72 @@ spawnHandler(void (*handler)(FnArgs_t *), int listenFd, int clientFd,
     argP->inLine = inLine;
     if (inLine)
     {
-	message(4, 0, "running handler function in-line");
-	(*handler)(argP);
-	return 0;
+        message(4, 0, "running handler function in-line");
+        (*handler)(argP);
+        return 0;
     }
 
 #if defined(HAVE_PTHREADS)
     {
-	pthread_t tid;
+        pthread_t tid;
 
-	message(4, 0, "spawning handler function thread");
-	if (pthread_create(&tid,
-			   &ThreadAttr,
-			   (void * (*)(void *))handler,
-			   (void *)argP) == -1)
-	{
-	    message(0, errno, "failed to create handler thread");
-	}
-	message(4, 0, "handler thread %lu created", (unsigned long)tid);
-	return ((unsigned long)tid ? (unsigned long)tid : 0xffffffff );    /* Ensure it is never 0 */
+        message(4, 0, "spawning handler function thread");
+        if (pthread_create(&tid,
+                           &ThreadAttr,
+                           (void * (*)(void *))handler,
+                           (void *)argP) == -1)
+        {
+            message(0, errno, "failed to create handler thread");
+        }
+        message(4, 0, "handler thread %lu created", (unsigned long)tid);
+        return ((unsigned long)tid ? (unsigned long)tid : 0xffffffff );    /* Ensure it is never 0 */
     }
 #elif defined(WIN32)
     {
-	unsigned long tid = 0;
+        unsigned long tid = 0;
 
-	message(4, 0, "spawning handler function thread");
-	if ((tid = (unsigned long)_beginthread((void (*)(void *))handler,
-					       (DWORD)ThreadStackSize,
-					       (LPVOID)argP)) == 0)
-	{
-	    message(0, errno, "failed to create handler thread");
-	}
-	else
-	{
-	    message(4, 0, "handler thread created");
-	}
-	return tid;
+        message(4, 0, "spawning handler function thread");
+        if ((tid = (unsigned long)_beginthread((void (*)(void *))handler,
+                                               (DWORD)ThreadStackSize,
+                                               (LPVOID)argP)) == 0)
+        {
+            message(0, errno, "failed to create handler thread");
+        }
+        else
+        {
+            message(4, 0, "handler thread created");
+        }
+        return tid;
     }
-#else	/* No PTHREADS and not WIN32 */
+#else   /* No PTHREADS and not WIN32 */
     {
-	pid_t pid;
+        pid_t pid;
 
 
-	message(4, 0, "spawning handler sub-process");
-	if ((pid = fork()) < 0)
-	{
-	    message(0, errno, "failed to fork handler sub-process");
-	    return 0;
-	}
+        message(4, 0, "spawning handler sub-process");
+        if ((pid = fork()) < 0)
+        {
+            message(0, errno, "failed to fork handler sub-process");
+            return 0;
+        }
         else if (pid == 0)
-	{
-	    /* Child -- listenFd no longer needed */
+        {
+            /* Child -- listenFd no longer needed */
 
-	    if (!udpMode) closesocket(listenFd);
+            if (!udpMode) closesocket(listenFd);
 
-	    (*handler)(argP);
-	    exit(EXIT_SUCCESS);
-	}
-	else
-	{
-	    /* Parent -- clientFd no longer needed */
+            (*handler)(argP);
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            /* Parent -- clientFd no longer needed */
 
-	    if (!udpMode) closesocket(clientFd);
+            if (!udpMode) closesocket(clientFd);
 
-	    message(4, 0, "handler sub-process %lu created", (unsigned long)pid);
-	    return (unsigned long)pid;
-	}
+            message(4, 0, "handler sub-process %lu created", (unsigned long)pid);
+            return (unsigned long)pid;
+        }
     }
 #endif
 }
@@ -5028,36 +5028,36 @@ findHandler(struct sockaddr_in *fromAddrP, struct sockaddr_in *localAddrP)
     for (ptr = &HandlerList; ptr != NULL; ptr = ptr->next)
     {
 #if !defined(WIN32) && !defined(HAVE_PTHREADS)
-	/*
-	** If we don't have threads then check whether the handler process
-	** is still alive. If not, remove it from the list.
-	*/
+        /*
+        ** If we don't have threads then check whether the handler process
+        ** is still alive. If not, remove it from the list.
+        */
 
-	if (kill((pid_t)(ptr->id), 0) != 0)
-	{
-	    message(5, 0, "removing defunct handler, id = %lu", ptr->id);
+        if (kill((pid_t)(ptr->id), 0) != 0)
+        {
+            message(5, 0, "removing defunct handler, id = %lu", ptr->id);
 
-	    ptr->prev->next = ptr->next;
-	    if (ptr->next)
-	    {
-		ptr->next->prev = ptr->prev;
-	    }
-	    tmp = ptr;
-	    ptr = ptr->prev;
-	    closesocket(tmp->fd);
-	    free(tmp);
-	    continue;
-	}
+            ptr->prev->next = ptr->next;
+            if (ptr->next)
+            {
+                ptr->next->prev = ptr->prev;
+            }
+            tmp = ptr;
+            ptr = ptr->prev;
+            closesocket(tmp->fd);
+            free(tmp);
+            continue;
+        }
 #endif
-	if (ptr->fromAddr.sin_port == fromAddrP->sin_port &&
-	    ptr->fromAddr.sin_addr.s_addr == fromAddrP->sin_addr.s_addr)
-	{
-	    message(5, 0, "found handler, id = %lu, socket = %d", ptr->id, ptr->fd);
-	    found = ptr->fd;
-	    memcpy(localAddrP, &(ptr->localAddr), sizeof(struct sockaddr_in));
-	}
+        if (ptr->fromAddr.sin_port == fromAddrP->sin_port &&
+            ptr->fromAddr.sin_addr.s_addr == fromAddrP->sin_addr.s_addr)
+        {
+            message(5, 0, "found handler, id = %lu, socket = %d", ptr->id, ptr->fd);
+            found = ptr->fd;
+            memcpy(localAddrP, &(ptr->localAddr), sizeof(struct sockaddr_in));
+        }
 
-	tmp = ptr; /* Shut the compiler up by using tmp! */
+        tmp = ptr; /* Shut the compiler up by using tmp! */
     }
 
     mutexUnlock(MUTEX_HNDLIST);
@@ -5085,21 +5085,21 @@ addHandler(struct sockaddr_in *fromAddrP, unsigned long id, int fd, struct socka
 
     for (ptr = &HandlerList; ptr->next != NULL; ptr = ptr->next)
     {
-	/* Walk to end */
+        /* Walk to end */
     }
 
     if ((ptr->next = (HndInfo_t *)malloc(sizeof(HndInfo_t))) == NULL)
     {
-	message(0, errno, "failed to allocate memory for handler list element");
+        message(0, errno, "failed to allocate memory for handler list element");
     }
     else
     {
-	ptr->next->id = id;
-	ptr->next->fd = fd;
-	memcpy(&(ptr->next->fromAddr), fromAddrP, sizeof(struct sockaddr_in));
-	memcpy(&(ptr->next->localAddr), localAddrP, sizeof(struct sockaddr_in));
-	ptr->next->prev = ptr;
-	ptr->next->next = NULL;
+        ptr->next->id = id;
+        ptr->next->fd = fd;
+        memcpy(&(ptr->next->fromAddr), fromAddrP, sizeof(struct sockaddr_in));
+        memcpy(&(ptr->next->localAddr), localAddrP, sizeof(struct sockaddr_in));
+        ptr->next->prev = ptr;
+        ptr->next->next = NULL;
     }
 
     mutexUnlock(MUTEX_HNDLIST);
@@ -5121,19 +5121,19 @@ removeHandler(struct sockaddr_in *addrP)
 
     for (ptr = &HandlerList; ptr != NULL; ptr = ptr->next)
     {
-	if (ptr->fromAddr.sin_port == addrP->sin_port &&
-	    ptr->fromAddr.sin_addr.s_addr == addrP->sin_addr.s_addr)
-	{
-	    ptr->prev->next = ptr->next;
-	    if (ptr->next)
-	    {
-		ptr->next->prev = ptr->prev;
-	    }
-	    tmp = ptr;
-	    ptr = ptr->prev;
-	    /* socket is closed in client routine */
-	    free(tmp);
-	}
+        if (ptr->fromAddr.sin_port == addrP->sin_port &&
+            ptr->fromAddr.sin_addr.s_addr == addrP->sin_addr.s_addr)
+        {
+            ptr->prev->next = ptr->next;
+            if (ptr->next)
+            {
+                ptr->next->prev = ptr->prev;
+            }
+            tmp = ptr;
+            ptr = ptr->prev;
+            /* socket is closed in client routine */
+            free(tmp);
+        }
     }
 
     mutexUnlock(MUTEX_HNDLIST);
@@ -5194,15 +5194,15 @@ clientListener(EndPtList_t *ports)
     FD_ZERO(&udpSet);
     if (TcpMode)
     {
-	maxFd = makeClientListeners(ports, &tcpSet, 0);
+        maxFd = makeClientListeners(ports, &tcpSet, 0);
     }
     if (UdpMode)
     {
-	listenFd = makeClientListeners(ports, &udpSet, 1);
-	if (listenFd > maxFd)
-	{
-	    maxFd = listenFd;
-	}
+        listenFd = makeClientListeners(ports, &udpSet, 1);
+        if (listenFd > maxFd)
+        {
+            maxFd = listenFd;
+        }
     }
 
     /*
@@ -5212,8 +5212,8 @@ clientListener(EndPtList_t *ports)
 
     if (maxFd == -1)
     {
-	message(0, 0, "client not listening on any ports -- check tunnel specifications");
-	exit(EXIT_FAILURE);
+        message(0, 0, "client not listening on any ports -- check tunnel specifications");
+        exit(EXIT_FAILURE);
     }
 
     /*
@@ -5223,21 +5223,21 @@ clientListener(EndPtList_t *ports)
 
     if (ListenMode)
     {
-	message(3, 0, "listening for server connection on port %hu", ServerPort);
+        message(3, 0, "listening for server connection on port %hu", ServerPort);
 
-	if ((ListenSock = makeListener(&ServerPort, ListenIp, 0, 1)) == -1)
-	{
-	    message(0, errno, "can't create listener socket for server connection");
-	    exit(EXIT_FAILURE);
-	}
+        if ((ListenSock = makeListener(&ServerPort, ListenIp, 0, 1)) == -1)
+        {
+            message(0, errno, "can't create listener socket for server connection");
+            exit(EXIT_FAILURE);
+        }
     }
 
     /* Detach from terminal, if required */
 
     if (IsDetached)
     {
-	message(3, 0, "detaching from terminal");
-	makeDetached();
+        message(3, 0, "detaching from terminal");
+        makeDetached();
     }
 
     /* Change user ID, if required */
@@ -5248,12 +5248,12 @@ clientListener(EndPtList_t *ports)
 
     if (CommandString)
     {
-	message(3, 0, "spawning command '%s'", CommandString);
+        message(3, 0, "spawning command '%s'", CommandString);
 
-	if (!spawnCommand(ports->lo, CommandString))
-	{
-	    exit(EXIT_FAILURE);
-	}
+        if (!spawnCommand(ports->lo, CommandString))
+        {
+            exit(EXIT_FAILURE);
+        }
     }
 
     /*
@@ -5269,156 +5269,156 @@ clientListener(EndPtList_t *ports)
     FD_ZERO(&unionSet);
     for (listenFd = 0; listenFd <= maxFd; listenFd++)
     {
-	if (FD_ISSET(listenFd, &tcpSet))
-	{
-	    FD_SET(listenFd, &unionSet);
-	}
-	else if (FD_ISSET(listenFd, &udpSet))
-	{
-	    FD_SET(listenFd, &unionSet);
-	}
+        if (FD_ISSET(listenFd, &tcpSet))
+        {
+            FD_SET(listenFd, &unionSet);
+        }
+        else if (FD_ISSET(listenFd, &udpSet))
+        {
+            FD_SET(listenFd, &unionSet);
+        }
     }
 
     do
     {
-	memcpy(&testSet, &unionSet, sizeof(fd_set));
+        memcpy(&testSet, &unionSet, sizeof(fd_set));
 
-	if (UdpMode)
-	{
-	    message(5, 0, "waiting for client data", localPort);
-	}
-	else
-	{
-	    message(1, 0, "waiting for client connection", localPort);
-	}
+        if (UdpMode)
+        {
+            message(5, 0, "waiting for client data", localPort);
+        }
+        else
+        {
+            message(1, 0, "waiting for client connection", localPort);
+        }
 
-	/* Do a blocking select waiting for any i/o */
+        /* Do a blocking select waiting for any i/o */
 
-	ready = select(maxFd + 1, &testSet, 0, 0, 0);
+        ready = select(maxFd + 1, &testSet, 0, 0, 0);
 
-	message((UdpMode ? 5 : 3), 0, "select returned %d", ready);
+        message((UdpMode ? 5 : 3), 0, "select returned %d", ready);
 
-	/* If we get zero then there is nothing available on any fd. */
+        /* If we get zero then there is nothing available on any fd. */
 
-	if (ready == 0)
-	{
-	    break;
-	}
+        if (ready == 0)
+        {
+            break;
+        }
 
-	/* Check for error but ignore interrupted system calls */
+        /* Check for error but ignore interrupted system calls */
 
-	if (ready < 0 && errno != EINTR)
-	{
-	    message(0, errno, "error in select");
-	    break;
-	}
+        if (ready < 0 && errno != EINTR)
+        {
+            message(0, errno, "error in select");
+            break;
+        }
 
-	/* See which sockets have connections/data and handle them */
+        /* See which sockets have connections/data and handle them */
 
-	for (listenFd = 0; listenFd <= maxFd; listenFd++)
-	{
-	    if (FD_ISSET(listenFd, &testSet))
-	    {
-		if (FD_ISSET(listenFd, &udpSet))
-		{
-		    /* See who this is from */
+        for (listenFd = 0; listenFd <= maxFd; listenFd++)
+        {
+            if (FD_ISSET(listenFd, &testSet))
+            {
+                if (FD_ISSET(listenFd, &udpSet))
+                {
+                    /* See who this is from */
 
-		    addrLen = sizeof(fromAddr);
-		    if ((num = recvfrom(listenFd, data, MAX_BUF_SIZE, 0,
-					(struct sockaddr *)&fromAddr,
-					&addrLen)) > 0)
-		    {
-			/*
-			** If there is not already a handler for this
-			** address/port combination then create one.
-			*/
+                    addrLen = sizeof(fromAddr);
+                    if ((num = recvfrom(listenFd, data, MAX_BUF_SIZE, 0,
+                                        (struct sockaddr *)&fromAddr,
+                                        &addrLen)) > 0)
+                    {
+                        /*
+                        ** If there is not already a handler for this
+                        ** address/port combination then create one.
+                        */
 
-			if ((clientFd = findHandler(&fromAddr, &localAddr)) == -1)
-			{
-			    /* Create a "loopback" socket */
+                        if ((clientFd = findHandler(&fromAddr, &localAddr)) == -1)
+                        {
+                            /* Create a "loopback" socket */
 
-			    localPort = 0;
-			    if ((clientFd = makeListener(&localPort, "127.0.0.1", 1, MAX_LISTEN)) == -1)
-			    {
-				continue;
-			    }
+                            localPort = 0;
+                            if ((clientFd = makeListener(&localPort, "127.0.0.1", 1, MAX_LISTEN)) == -1)
+                            {
+                                continue;
+                            }
 
-			    id = spawnHandler(client, listenFd, clientFd,
-					      (Debug || !MultiUse), &fromAddr, 1);
+                            id = spawnHandler(client, listenFd, clientFd,
+                                              (Debug || !MultiUse), &fromAddr, 1);
 
-			    if (id != 0)
-			    {
-				memset(&localAddr, 0, sizeof(localAddr));
-				localAddr.sin_family = AF_INET;
-				localAddr.sin_port = htons(localPort);
-				localAddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+                            if (id != 0)
+                            {
+                                memset(&localAddr, 0, sizeof(localAddr));
+                                localAddr.sin_family = AF_INET;
+                                localAddr.sin_port = htons(localPort);
+                                localAddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-				addHandler(&fromAddr, id, clientFd, &localAddr);
-			    }
-			}
+                                addHandler(&fromAddr, id, clientFd, &localAddr);
+                            }
+                        }
 
-			/*
-			** We should now have a valid loopback socket
-			** descriptor associated with a handler. If so,
-			** send the data on to it.
-			*/
+                        /*
+                        ** We should now have a valid loopback socket
+                        ** descriptor associated with a handler. If so,
+                        ** send the data on to it.
+                        */
 
-			if (clientFd != -1)
-			{
-			    if (sendto(clientFd, data, num, 0,
-				       (struct sockaddr *)&localAddr,
-				       sizeof(localAddr)) != num)
-			    {
-				message(0, errno, "failed to send data to loopback socket");
-			    }
-			}
-		    }
-		    else
-		    {
-			message(0, errno, "can't read next message");
-		    }
-		}
-		else
-		{
-		    /*
-		    ** New TCP connection -- accept the connection and
-		    ** spawn a new handler for it.
-		    */
+                        if (clientFd != -1)
+                        {
+                            if (sendto(clientFd, data, num, 0,
+                                       (struct sockaddr *)&localAddr,
+                                       sizeof(localAddr)) != num)
+                            {
+                                message(0, errno, "failed to send data to loopback socket");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        message(0, errno, "can't read next message");
+                    }
+                }
+                else
+                {
+                    /*
+                    ** New TCP connection -- accept the connection and
+                    ** spawn a new handler for it.
+                    */
 
-		    message(5, 0, "connection ready on socket %d", listenFd);
+                    message(5, 0, "connection ready on socket %d", listenFd);
 
-		    addrLen = sizeof(struct sockaddr_in);
-		    memset(&fromAddr, 0, sizeof(fromAddr));
-		    if ((clientFd = accept(listenFd,
-					   (struct sockaddr *)&fromAddr,
-					   &addrLen)) < 0)
-		    {
-			message(0, errno, "error on accept");
-		    }
-		    else
-		    {
-			message(1, 0, "accepted connection from %s", ipString(fromAddr.sin_addr, ipBuf));
+                    addrLen = sizeof(struct sockaddr_in);
+                    memset(&fromAddr, 0, sizeof(fromAddr));
+                    if ((clientFd = accept(listenFd,
+                                           (struct sockaddr *)&fromAddr,
+                                           &addrLen)) < 0)
+                    {
+                        message(0, errno, "error on accept");
+                    }
+                    else
+                    {
+                        message(1, 0, "accepted connection from %s", ipString(fromAddr.sin_addr, ipBuf));
 
-			/* Set the "don't linger on close" option */
+                        /* Set the "don't linger on close" option */
 
-			setNoLinger(clientFd);
+                        setNoLinger(clientFd);
 
-			/* Set "keep alive" to reap defunct connections */
+                        /* Set "keep alive" to reap defunct connections */
 
-			setKeepAlive(clientFd);
-			
-			/* If requested, disable buffering */
-			
-			setNoDelayIfInteractive(clientFd);
-			
-			/* Create the handler process/thread */
+                        setKeepAlive(clientFd);
+                        
+                        /* If requested, disable buffering */
+                        
+                        setNoDelayIfInteractive(clientFd);
+                        
+                        /* Create the handler process/thread */
 
-			spawnHandler(client, listenFd, clientFd,
-				     (Debug || !MultiUse), &fromAddr, 0);
-		    }
-		}
-	    }
-	}
+                        spawnHandler(client, listenFd, clientFd,
+                                     (Debug || !MultiUse), &fromAddr, 0);
+                    }
+                }
+            }
+        }
     }
     while (MultiUse);
 
@@ -5426,7 +5426,7 @@ clientListener(EndPtList_t *ports)
 
     for (listenFd = 0; listenFd <= maxFd; listenFd++)
     {
-	if (FD_ISSET(listenFd, &unionSet)) closesocket(listenFd);
+        if (FD_ISSET(listenFd, &unionSet)) closesocket(listenFd);
     }
     listenFd = -1;
 
@@ -5452,49 +5452,49 @@ makeClientListeners(EndPtList_t *ports, fd_set *listenSetP, int udpMode)
 
     while (ports)
     {
-	for (localPort = ports->lo; localPort <= ports->hi; localPort++)
-	{
-	    if ((ports->type & (udpMode ? ENDPTLIST_UDP : ENDPTLIST_TCP)) == 0)
-	    {
-		/* Skip incompatible port types */
-		continue;
-	    }
+        for (localPort = ports->lo; localPort <= ports->hi; localPort++)
+        {
+            if ((ports->type & (udpMode ? ENDPTLIST_UDP : ENDPTLIST_TCP)) == 0)
+            {
+                /* Skip incompatible port types */
+                continue;
+            }
 
-	    message(3, 0, "creating %s-mode local listener socket for port %hu",
-		    (udpMode ? "UDP" : "TCP"), localPort);
+            message(3, 0, "creating %s-mode local listener socket for port %hu",
+                    (udpMode ? "UDP" : "TCP"), localPort);
 
-	    if ((listenFd = makeListener(&localPort, ListenIp, udpMode, MAX_LISTEN)) == -1)
-	    {
-		message(0, errno, "can't create listener socket");
-		exit(EXIT_FAILURE);
-	    }
+            if ((listenFd = makeListener(&localPort, ListenIp, udpMode, MAX_LISTEN)) == -1)
+            {
+                message(0, errno, "can't create listener socket");
+                exit(EXIT_FAILURE);
+            }
 
-	    message(5, 0, "local port %hu has socket %d", localPort, listenFd);
+            message(5, 0, "local port %hu has socket %d", localPort, listenFd);
 
-	    FD_SET(listenFd, listenSetP);
-	    if (listenFd > maxFd)
-	    {
-		maxFd = listenFd;
-	    }
+            FD_SET(listenFd, listenSetP);
+            if (listenFd > maxFd)
+            {
+                maxFd = listenFd;
+            }
 
-	    if (!CommandString)
-	    {
-		message(1, 0, "Listening on local port %hu", localPort);
-	    }
-	    else
-	    {
-		message(3, 0, "listening on local port %hu", localPort);
-	    }
+            if (!CommandString)
+            {
+                message(1, 0, "Listening on local port %hu", localPort);
+            }
+            else
+            {
+                message(3, 0, "listening on local port %hu", localPort);
+            }
 
-	    /* Special case port was zero -- modify entry */
+            /* Special case port was zero -- modify entry */
 
-	    if (ports->hi == 0)
-	    {
-		ports->lo = ports->hi = localPort;
-	    }
-	}
+            if (ports->hi == 0)
+            {
+                ports->lo = ports->hi = localPort;
+            }
+        }
 
-	ports = ports->next;
+        ports = ports->next;
     }
 
     return maxFd;
@@ -5559,37 +5559,37 @@ client(FnArgs_t *argP)
     redirectPort = mapPort(argP->port, &targetHost, &targetAddr);
     if (redirectPort)
     {
-	message(3, 0, "client on local port %hu tunnels to target %s:%hu", argP->port, targetHost, redirectPort);
-	message(4, 0, "target address is %08x", ntohl(targetAddr.sin_addr.s_addr));
+        message(3, 0, "client on local port %hu tunnels to target %s:%hu", argP->port, targetHost, redirectPort);
+        message(4, 0, "target address is %08x", ntohl(targetAddr.sin_addr.s_addr));
     }
     else
     {
-	message(0, 0, "no matching target port for local port %hu", argP->port);
-	goto fatal;
+        message(0, 0, "no matching target port for local port %hu", argP->port);
+        goto fatal;
     }
 
     if (ListenMode)
     {
-	message(3, 0, "waiting for connection from server");
+        message(3, 0, "waiting for connection from server");
 
-	if ((serverFd = acceptConnection(ListenSock, serverHost,
-					 1, AcceptConnectTimeout)) == -1)
-	{
-	    message(0, errno, "failed to accept a connection from %s", serverHost);
-	    goto fatal;
-	}
-	message(3, 0, "accepted connection from server");
+        if ((serverFd = acceptConnection(ListenSock, serverHost,
+                                         1, AcceptConnectTimeout)) == -1)
+        {
+            message(0, errno, "failed to accept a connection from %s", serverHost);
+            goto fatal;
+        }
+        message(3, 0, "accepted connection from server");
     }
     else
     {
-	message(3, 0, "making connection to %s:%hu", serverHost, serverPort);
+        message(3, 0, "making connection to %s:%hu", serverHost, serverPort);
 
-	if ((serverFd = makeConnection(serverHost, serverPort, 0, 1, NULL, NULL, ServerConnectTimeout)) == -1)
-	{
-	    message(0, errno, "can't connect to %s port %hu", serverHost, serverPort);
-	    goto fatal;
-	}
-	message(3, 0, "connected to %s:%hu", serverHost, serverPort);
+        if ((serverFd = makeConnection(serverHost, serverPort, 0, 1, NULL, NULL, ServerConnectTimeout)) == -1)
+        {
+            message(0, errno, "can't connect to %s port %hu", serverHost, serverPort);
+            goto fatal;
+        }
+        message(3, 0, "connected to %s:%hu", serverHost, serverPort);
     }
 
     /*
@@ -5600,8 +5600,8 @@ client(FnArgs_t *argP)
 
     if (!checkPeerForSocket(serverFd, &peerAddr))
     {
-	message(0, 0, "connection with server %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
-	goto fatal;
+        message(0, 0, "connection with server %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
+        goto fatal;
     }
 
     /*
@@ -5612,43 +5612,43 @@ client(FnArgs_t *argP)
 
     if (!requestResponse(serverFd, protocol, &response))
     {
-	message(0, errno, "failed requesting protocol version");
-	goto fatal;
+        message(0, errno, "failed requesting protocol version");
+        goto fatal;
     }
 
     if (LockProtocol)
     {
-	/* We have locked all other protocol versions out of the protocol
-	** negotiation. A server responding with a higher protocol
-	** would indicate that the server is "locked" as well. A lower
-	** protocol would violate "our" lock. In any case we have an error.
-	*/
-	if (response != DFLT_PROTOCOL)
-	{
-	    message(0, 0, "server responded with incompatible protocol version (%#hx)", response);
-	    goto fatal;
-	}
+        /* We have locked all other protocol versions out of the protocol
+        ** negotiation. A server responding with a higher protocol
+        ** would indicate that the server is "locked" as well. A lower
+        ** protocol would violate "our" lock. In any case we have an error.
+        */
+        if (response != DFLT_PROTOCOL)
+        {
+            message(0, 0, "server responded with incompatible protocol version (%#hx)", response);
+            goto fatal;
+        }
     }
     else
     {
-	switch (response)
-	{
-	case PROTOCOL_V202:
-	    protocol = PROTOCOL_V202;
-	    break;
+        switch (response)
+        {
+        case PROTOCOL_V202:
+            protocol = PROTOCOL_V202;
+            break;
 
-	case PROTOCOL_V201:
-	    protocol = PROTOCOL_V201;
-	    break;
+        case PROTOCOL_V201:
+            protocol = PROTOCOL_V201;
+            break;
 
-	case PROTOCOL_V200:
-	    protocol = PROTOCOL_V200;
-	    break;
+        case PROTOCOL_V200:
+            protocol = PROTOCOL_V200;
+            break;
 
-	default:
-	    message(0, 0, "server responded with incompatible protocol version (%#hx)", response);
-	    goto fatal;
-	}
+        default:
+            message(0, 0, "server responded with incompatible protocol version (%#hx)", response);
+            goto fatal;
+        }
     }
 
     message(3, 0, "accepted protocol version %#hx", response);
@@ -5678,105 +5678,105 @@ client(FnArgs_t *argP)
 
     if (protocol >= PROTOCOL_V201)
     {
-	hdrSize = HDR_SIZE_V201;
-	/*
-	** If the target is the same as the ServerHost then we send
-	** all zeroes to indicate the default server target. Otherwise
-	** we use the targetAddr.
-	*/
+        hdrSize = HDR_SIZE_V201;
+        /*
+        ** If the target is the same as the ServerHost then we send
+        ** all zeroes to indicate the default server target. Otherwise
+        ** we use the targetAddr.
+        */
 
-	if (strcmp(targetHost, ServerHost) == 0)
-	{
-	    message(4, 0, "target is the same as the server");
-	    targetAddr.sin_addr.s_addr = 0x00000000;
-	}
-	message(3, 0, "requesting target address %08x", ntohl(targetAddr.sin_addr.s_addr));
-	headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.sin_addr.s_addr), HDR_OFFSET_TARGET);
+        if (strcmp(targetHost, ServerHost) == 0)
+        {
+            message(4, 0, "target is the same as the server");
+            targetAddr.sin_addr.s_addr = 0x00000000;
+        }
+        message(3, 0, "requesting target address %08x", ntohl(targetAddr.sin_addr.s_addr));
+        headerSetULong(hdrData, (unsigned long)ntohl(targetAddr.sin_addr.s_addr), HDR_OFFSET_TARGET);
     }
 
     if (protocol >= PROTOCOL_V202)
     {
-	hdrSize = HDR_SIZE_V202;
-	/*
-	** This adds a message checksum to allows us to detect if
-	** somebody has tampered with the data "in flight".
-	*/
-	headerSetUShort(hdrData, ChecksumLevel, HDR_OFFSET_CHECKSUM);
+        hdrSize = HDR_SIZE_V202;
+        /*
+        ** This adds a message checksum to allows us to detect if
+        ** somebody has tampered with the data "in flight".
+        */
+        headerSetUShort(hdrData, ChecksumLevel, HDR_OFFSET_CHECKSUM);
 
-	/*
-	** The header data sent and received is hashed in order to
-	** obtain the initial checksum seed.
-	*/
-	sha_init(&sha);
-	sha_update(&sha, hdrData, hdrSize);
+        /*
+        ** The header data sent and received is hashed in order to
+        ** obtain the initial checksum seed.
+        */
+        sha_init(&sha);
+        sha_update(&sha, hdrData, hdrSize);
     }
 
     if (writeData(serverFd, hdrData, hdrSize) != hdrSize)
     {
-	message(0, errno, "failed writing protocol header to server");
-	goto fatal;
+        message(0, errno, "failed writing protocol header to server");
+        goto fatal;
     }
 
     if (readData(serverFd, hdrData, hdrSize) != hdrSize)
     {
-	message(0, errno, "failed reading protocol header response from server");
-	goto fatal;
+        message(0, errno, "failed reading protocol header response from server");
+        goto fatal;
     }
 
     if ((udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) != HDR_FLAG_UDPMODE) ||
-	(!udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
+        (!udpMode && headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE))
     {
-	message(0, 0, "client requested %s mode and server is in %s mode",
-		(udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
-	goto fatal;
+        message(0, 0, "client requested %s mode and server is in %s mode",
+                (udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
+        goto fatal;
     }
     else
     {
-	message(3, 0, "accepted %s mode", (udpMode ? "UDP" : "TCP"));
+        message(3, 0, "accepted %s mode", (udpMode ? "UDP" : "TCP"));
     }
 
     maxSize = headerGetUShort(hdrData, HDR_OFFSET_MAXSIZE);
     if (maxSize > 0)
     {
-	message(3, 0, "accepted buffer size %hu", maxSize);
+        message(3, 0, "accepted buffer size %hu", maxSize);
     }
     else
     {
-	message(0, 0, "server responded with zero buffer size");
-	goto fatal;
+        message(0, 0, "server responded with zero buffer size");
+        goto fatal;
     }
 
     cmpInfo = headerGetUShort(hdrData, HDR_OFFSET_CMPINFO);
     if (cmpInfo <= CompressInfo)
     {
-	message(3, 0, "accepted compression level %#hx", cmpInfo);
+        message(3, 0, "accepted compression level %#hx", cmpInfo);
     }
     else
     {
-	message(0, 0, "server responded with invalid compression level (%#hx > %#hx)", cmpInfo, CompressInfo);
-	goto fatal;
+        message(0, 0, "server responded with invalid compression level (%#hx > %#hx)", cmpInfo, CompressInfo);
+        goto fatal;
     }
 
     response = headerGetUShort(hdrData, HDR_OFFSET_PORT);
     if (response == redirectPort)
     {
-	message(3, 0, "redirection request accepted");
+        message(3, 0, "redirection request accepted");
     }
     else
     {
-	message(0, 0, "server refused request for redirection to %s:%hu", targetHost, redirectPort);
-	goto fatal;
+        message(0, 0, "server refused request for redirection to %s:%hu", targetHost, redirectPort);
+        goto fatal;
     }
 
     keyBits = headerGetUShort(hdrData, HDR_OFFSET_KEYLEN);
     if (keyBits >= MinKeyLength)
     {
-	message(3, 0, "accepted key length %hu", keyBits);
+        message(3, 0, "accepted key length %hu", keyBits);
     }
     else
     {
-	message(0, 0, "server key length too small (%hu < %hu)", keyBits, MinKeyLength);
-	goto fatal;
+        message(0, 0, "server key length too small (%hu < %hu)", keyBits, MinKeyLength);
+        goto fatal;
     }
 
     token = headerGetULong(hdrData, HDR_OFFSET_TOKEN);
@@ -5787,33 +5787,33 @@ client(FnArgs_t *argP)
 
     if (protocol >= PROTOCOL_V202)
     {
-	cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
-	if (cksumLevel >= MinChecksumLevel)
-	{
-	    message(3, 0, "accepted checksum level %hu", cksumLevel);
-	}
-	else
-	{
-	    message(0, 0, "server refused request for checksum level %hu", ChecksumLevel);
-	    goto fatal;
-	}
+        cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
+        if (cksumLevel >= MinChecksumLevel)
+        {
+            message(3, 0, "accepted checksum level %hu", cksumLevel);
+        }
+        else
+        {
+            message(0, 0, "server refused request for checksum level %hu", ChecksumLevel);
+            goto fatal;
+        }
 
-	/* Compute the initial checksum seed */
+        /* Compute the initial checksum seed */
 
-	sha_update(&sha, hdrData, hdrSize);
-	sha_final(&sha);
+        sha_update(&sha, hdrData, hdrSize);
+        sha_final(&sha);
     }
     else
     {
-	cksumLevel = CHECKSUM_NONE;
+        cksumLevel = CHECKSUM_NONE;
     }
 
     /* Allocate message buffer */
 
     if ((msg = makeMsgBuf(maxSize, cmpInfo, cksumLevel)) == NULL)
     {
-	message(0, errno, "client failed to allocate message buffer");
-	goto fatal;
+        message(0, errno, "client failed to allocate message buffer");
+        goto fatal;
     }
 
     /*
@@ -5821,13 +5821,13 @@ client(FnArgs_t *argP)
     */
     if (protocol >= PROTOCOL_V202)
     {
-	sha.digest[0] = BUGHTONL(sha.digest[0]);
-	sha.digest[1] = BUGHTONL(sha.digest[1]);
-	sha.digest[2] = BUGHTONL(sha.digest[2]);
-	sha.digest[3] = BUGHTONL(sha.digest[3]);
-	sha.digest[4] = BUGHTONL(sha.digest[4]);
-	memcpy(msg->inSeed, &sha.digest, sizeof(sha.digest));
-	memcpy(msg->outSeed, &sha.digest, sizeof(sha.digest));
+        sha.digest[0] = BUGHTONL(sha.digest[0]);
+        sha.digest[1] = BUGHTONL(sha.digest[1]);
+        sha.digest[2] = BUGHTONL(sha.digest[2]);
+        sha.digest[3] = BUGHTONL(sha.digest[3]);
+        sha.digest[4] = BUGHTONL(sha.digest[4]);
+        memcpy(msg->inSeed, &sha.digest, sizeof(sha.digest));
+        memcpy(msg->outSeed, &sha.digest, sizeof(sha.digest));
     }
 
     /*
@@ -5843,29 +5843,29 @@ client(FnArgs_t *argP)
 
     if ((secretKeyStr = findKeyByToken(&ClientKeyList, token, &peerAddr, &targetAddr, redirectPort)) != NULL)
     {
-	sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
-					   serverNonce, keyBits);
+        sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
+                                           serverNonce, keyBits);
 
-	message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
+        message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
 
-	msg->bfWrite = setupBlowfish(sessionKeyStr, keyBits);
-	msg->bfRead = setupBlowfish(sessionKeyStr, keyBits);
+        msg->bfWrite = setupBlowfish(sessionKeyStr, keyBits);
+        msg->bfRead = setupBlowfish(sessionKeyStr, keyBits);
 
-	memset(secretKeyStr, 0, strlen(secretKeyStr));
-	free(secretKeyStr);
-	secretKeyStr = NULL;
-	memset(sessionKeyStr, 0, strlen(sessionKeyStr));
-	free(sessionKeyStr);
-	sessionKeyStr = NULL;
+        memset(secretKeyStr, 0, strlen(secretKeyStr));
+        free(secretKeyStr);
+        secretKeyStr = NULL;
+        memset(sessionKeyStr, 0, strlen(sessionKeyStr));
+        free(sessionKeyStr);
+        sessionKeyStr = NULL;
 
-	if (!clientPerformChallenge(serverFd, msg))
-	{
-	    message(0, 0, "challenge/response failed to validate shared key (session token = %#08x)", CurrentToken);
-	    mutexLock(MUTEX_TOKEN);
-	    CurrentToken = TOKEN_NEW;
-	    mutexUnlock(MUTEX_TOKEN);
-	    goto fatal;
-	}
+        if (!clientPerformChallenge(serverFd, msg))
+        {
+            message(0, 0, "challenge/response failed to validate shared key (session token = %#08x)", CurrentToken);
+            mutexLock(MUTEX_TOKEN);
+            CurrentToken = TOKEN_NEW;
+            mutexUnlock(MUTEX_TOKEN);
+            goto fatal;
+        }
     }
 
     /*
@@ -5877,181 +5877,181 @@ client(FnArgs_t *argP)
     else if (keyBits > 0)
     {
 
-	/* Read the DH generator */
+        /* Read the DH generator */
 
-	message(3, 0, "reading DH generator");
+        message(3, 0, "reading DH generator");
 
-	if (readMessage(serverFd, msg, MAX_LINE_SIZE) <= 0)
-	{
-	    message(0, errno, "failed reading DH generator");
-	    goto fatal;
-	}
-	getMsgBuf(msg, generator, MAX_LINE_SIZE);
+        if (readMessage(serverFd, msg, MAX_LINE_SIZE) <= 0)
+        {
+            message(0, errno, "failed reading DH generator");
+            goto fatal;
+        }
+        getMsgBuf(msg, generator, MAX_LINE_SIZE);
 
-	message(3, 0, "accepted generator '%s'", generator);
-
-
-	/* Read the DH modulus */
-
-	message(3, 0, "reading DH modulus");
-
-	if (readMessage(serverFd, msg, MAX_LINE_SIZE) <= 0)
-	{
-	    message(0, errno, "failed reading DH modulus");
-	    goto fatal;
-	}
-	getMsgBuf(msg, modulus, MAX_LINE_SIZE);
-
-	message(3, 0, "accepted modulus '%s'", modulus);
+        message(3, 0, "accepted generator '%s'", generator);
 
 
-	/* Read the server DH key */
+        /* Read the DH modulus */
 
-	message(3, 0, "reading server DH key");
+        message(3, 0, "reading DH modulus");
 
-	if (readMessage(serverFd, msg, MAX_LINE_SIZE) <= 0)
-	{
-	    message(0, errno, "failed reading server DH key");
-	    goto fatal;
-	}
-	getMsgBuf(msg, serverDhKey, MAX_LINE_SIZE);
+        if (readMessage(serverFd, msg, MAX_LINE_SIZE) <= 0)
+        {
+            message(0, errno, "failed reading DH modulus");
+            goto fatal;
+        }
+        getMsgBuf(msg, modulus, MAX_LINE_SIZE);
 
-	message(3, 0, "accepted server DH key '%s'", serverDhKey);
+        message(3, 0, "accepted modulus '%s'", modulus);
 
-	/*
-	** If requested, check this against a list of "known" keys
-	** to validate the server identity.
-	*/
 
-	if (IdentityFile)
-	{
-	    message(3, 0, "checking key against identity file '%s'", IdentityFile);
+        /* Read the server DH key */
 
-	    if (!checkIdentity(IdentityFile, generator, modulus, serverDhKey))
-	    {
-		message(0, 0, "server's identity not found in '%s'", IdentityFile);
-		goto fatal;
-	    }
-	}
+        message(3, 0, "reading server DH key");
 
-	/*
-	** Now generate our exponent (the private key). This is returned
-	** as a hex string. If a private key string has been specified
-	** then use this.
-	*/
+        if (readMessage(serverFd, msg, MAX_LINE_SIZE) <= 0)
+        {
+            message(0, errno, "failed reading server DH key");
+            goto fatal;
+        }
+        getMsgBuf(msg, serverDhKey, MAX_LINE_SIZE);
 
-	message(3, 0, "generating private key");
+        message(3, 0, "accepted server DH key '%s'", serverDhKey);
+
+        /*
+        ** If requested, check this against a list of "known" keys
+        ** to validate the server identity.
+        */
+
+        if (IdentityFile)
+        {
+            message(3, 0, "checking key against identity file '%s'", IdentityFile);
+
+            if (!checkIdentity(IdentityFile, generator, modulus, serverDhKey))
+            {
+                message(0, 0, "server's identity not found in '%s'", IdentityFile);
+                goto fatal;
+            }
+        }
+
+        /*
+        ** Now generate our exponent (the private key). This is returned
+        ** as a hex string. If a private key string has been specified
+        ** then use this.
+        */
+
+        message(3, 0, "generating private key");
     
-	if ((exponent = generateKey(&peerAddr, &targetAddr, redirectPort)) == NULL)
-	{
-	    message(0, 0, "can't generate private key");
-	    goto fatal;
-	}
-	message(3, 0, "private key generated");
+        if ((exponent = generateKey(&peerAddr, &targetAddr, redirectPort)) == NULL)
+        {
+            message(0, 0, "can't generate private key");
+            goto fatal;
+        }
+        message(3, 0, "private key generated");
 
 
-	/*
-	** Generate the public DH key.
-	*/
+        /*
+        ** Generate the public DH key.
+        */
 
-	message(3, 0, "generating public DH key");
+        message(3, 0, "generating public DH key");
 
-	if ((dhKey = diffieHellman(generator, modulus, exponent)) == NULL)
-	{
-	    message(0, 0, "can't generate public DH key");
-	    goto fatal;
-	}
-	message(3, 0, "public DH key is '%s'", dhKey);
+        if ((dhKey = diffieHellman(generator, modulus, exponent)) == NULL)
+        {
+            message(0, 0, "can't generate public DH key");
+            goto fatal;
+        }
+        message(3, 0, "public DH key is '%s'", dhKey);
 
-	/* Now send the DH key */
+        /* Now send the DH key */
 
-	message(3, 0, "sending public DH key");
+        message(3, 0, "sending public DH key");
 
-	setMsgBuf(msg, dhKey, strlen(dhKey) + 1);
-	if (writeMessage(serverFd, msg) != msg->size)
-	{
-	    message(0, errno, "failed writing DH key to server");
-	    goto fatal;
-	}
-	message(3, 0, "sent public DH key");
+        setMsgBuf(msg, dhKey, strlen(dhKey) + 1);
+        if (writeMessage(serverFd, msg) != msg->size)
+        {
+            message(0, errno, "failed writing DH key to server");
+            goto fatal;
+        }
+        message(3, 0, "sent public DH key");
 
-	/* Now generate the shared secret key */
+        /* Now generate the shared secret key */
 
-	message(3, 0, "generating shared secret key");
+        message(3, 0, "generating shared secret key");
 
-	secretKeyStr = diffieHellman(serverDhKey, modulus, exponent);
+        secretKeyStr = diffieHellman(serverDhKey, modulus, exponent);
 
-	message(3, 0, "shared key ends '...%s'", secretKeyStr + strlen(secretKeyStr) - 4);
+        message(3, 0, "shared key ends '...%s'", secretKeyStr + strlen(secretKeyStr) - 4);
 
-	if (protocol >= PROTOCOL_V200)
-	{
-	    sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
-					       serverNonce, keyBits);
+        if (protocol >= PROTOCOL_V200)
+        {
+            sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
+                                               serverNonce, keyBits);
 
-	    message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
-	}
-	else
-	{
-	    sessionKeyStr = secretKeyStr;
-	}
+            message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
+        }
+        else
+        {
+            sessionKeyStr = secretKeyStr;
+        }
 
-	message(3, 0, "initialising encryption state");
+        message(3, 0, "initialising encryption state");
 
-	msg->bfWrite = setupBlowfish(sessionKeyStr, keyBits);
-	msg->bfRead = setupBlowfish(sessionKeyStr, keyBits);
+        msg->bfWrite = setupBlowfish(sessionKeyStr, keyBits);
+        msg->bfRead = setupBlowfish(sessionKeyStr, keyBits);
 
-	/* Clear unneeded values */
+        /* Clear unneeded values */
 
-	memset(exponent, 0, strlen(exponent));
-	free(exponent);
-	exponent = NULL;
-	free(dhKey);
-	dhKey = NULL;
+        memset(exponent, 0, strlen(exponent));
+        free(exponent);
+        exponent = NULL;
+        free(dhKey);
+        dhKey = NULL;
 
-	/*
-	** Having established the encrypted channel we now perform a mutual
-	** challenge/response dialogue in order to guard against being spoofed
-	** by a replay attack if we are using a static key.
-	*/
+        /*
+        ** Having established the encrypted channel we now perform a mutual
+        ** challenge/response dialogue in order to guard against being spoofed
+        ** by a replay attack if we are using a static key.
+        */
 
-	if (!clientPerformChallenge(serverFd, msg))
-	{
-	    goto fatal;
-	}
+        if (!clientPerformChallenge(serverFd, msg))
+        {
+            goto fatal;
+        }
 
-	/*
-	** If we are at protocol version 200 or higher and a new session
-	** token was allocated by the server then update the CurrentToken
-	** and secret key list.
-	*/
+        /*
+        ** If we are at protocol version 200 or higher and a new session
+        ** token was allocated by the server then update the CurrentToken
+        ** and secret key list.
+        */
 
-	if (protocol >= PROTOCOL_V200 && token != 0)
-	{
-	    message(3, 0, "new reusable key token established (%#lx)", token);
+        if (protocol >= PROTOCOL_V200 && token != 0)
+        {
+            message(3, 0, "new reusable key token established (%#lx)", token);
 
-	    addKeyInfoToList(&ClientKeyList, token, secretKeyStr);
-	    mutexLock(MUTEX_TOKEN);
-	    CurrentToken = token;
-	    mutexUnlock(MUTEX_TOKEN);
-	}
+            addKeyInfoToList(&ClientKeyList, token, secretKeyStr);
+            mutexLock(MUTEX_TOKEN);
+            CurrentToken = token;
+            mutexUnlock(MUTEX_TOKEN);
+        }
 
-	if (sessionKeyStr != secretKeyStr)
-	{
-	    memset(sessionKeyStr, 0, strlen(sessionKeyStr));
-	    free(sessionKeyStr);
-	    sessionKeyStr = NULL;
-	}
-	memset(secretKeyStr, 0, strlen(secretKeyStr));
-	free(secretKeyStr);
-	secretKeyStr = NULL;
+        if (sessionKeyStr != secretKeyStr)
+        {
+            memset(sessionKeyStr, 0, strlen(sessionKeyStr));
+            free(sessionKeyStr);
+            sessionKeyStr = NULL;
+        }
+        memset(secretKeyStr, 0, strlen(secretKeyStr));
+        free(secretKeyStr);
+        secretKeyStr = NULL;
     }
     else
     {
-	message(3, 0, "key length is zero, omitting key exchange");
-	if (IdentityFile != NULL)
-	{
-	    message(1, 0, "Warning: agreed key length is zero, no identity checking performed");
-	}
+        message(3, 0, "key length is zero, omitting key exchange");
+        if (IdentityFile != NULL)
+        {
+            message(1, 0, "Warning: agreed key length is zero, no identity checking performed");
+        }
     }
 
     message(1, 0, "tunnel established to %s port %hu", serverHost, redirectPort);
@@ -6064,12 +6064,12 @@ client(FnArgs_t *argP)
     switch (filterLoop(clientFd, serverFd, msg, &(argP->addr), &peerAddr, argP->listenFd, udpMode))
     {
     case 1:
-	message(0, errno, "failed communicating with remote server");
-	goto fatal;
+        message(0, errno, "failed communicating with remote server");
+        goto fatal;
 
     case -1:
-	message(0, errno, "failed communicating with local client");
-	goto fatal;
+        message(0, errno, "failed communicating with local client");
+        goto fatal;
     }
 
     message(1, 0, "connection closed");
@@ -6125,16 +6125,16 @@ serverListener(unsigned short *portPtr)
 
     if ((listenFd = makeListener(portPtr, ListenIp, 0, MAX_LISTEN)) == -1)
     {
-	message(0, 0, "server can't listen on port %hu", *portPtr);
-	exit(EXIT_FAILURE);
+        message(0, 0, "server can't listen on port %hu", *portPtr);
+        exit(EXIT_FAILURE);
     }
 
     /* Detach from terminal, if requested */
 
     if (IsDetached)
     {
-	message(3, 0, "detaching from terminal");
-	makeDetached();
+        message(3, 0, "detaching from terminal");
+        makeDetached();
     }
 
     /* Change user ID, if required */
@@ -6143,34 +6143,34 @@ serverListener(unsigned short *portPtr)
 
     while (1)
     {
-	message(1, 0, "waiting for connection on port %hu", *portPtr);
+        message(1, 0, "waiting for connection on port %hu", *portPtr);
 
-	memset(&addr, 0, sizeof(addr));
-	addrLen = sizeof(struct sockaddr_in);
-	if ((clientFd = accept(listenFd, (struct sockaddr *)&addr, &addrLen)) < 0)
-	{
-	    message(0, errno, "error on accept");
-	}
-	else
-	{
-	    message(1, 0, "accepted connection from %s", ipString(addr.sin_addr, ipBuf));
+        memset(&addr, 0, sizeof(addr));
+        addrLen = sizeof(struct sockaddr_in);
+        if ((clientFd = accept(listenFd, (struct sockaddr *)&addr, &addrLen)) < 0)
+        {
+            message(0, errno, "error on accept");
+        }
+        else
+        {
+            message(1, 0, "accepted connection from %s", ipString(addr.sin_addr, ipBuf));
 
-	    /* Set the "don't linger on close" option */
+            /* Set the "don't linger on close" option */
 
-	    setNoLinger(clientFd);
+            setNoLinger(clientFd);
 
-	    /* Set "keep alive" to reap defunct connections */
+            /* Set "keep alive" to reap defunct connections */
 
-	    setKeepAlive(clientFd);
-	    
-	    /* If requested, diable buffering */
-	    
-	    setNoDelayIfInteractive(clientFd);
-	    
-	    /* Create the handler process/thread */
+            setKeepAlive(clientFd);
+            
+            /* If requested, diable buffering */
+            
+            setNoDelayIfInteractive(clientFd);
+            
+            /* Create the handler process/thread */
 
-	    spawnHandler(server, listenFd, clientFd, Debug, &addr, 0);
-	}
+            spawnHandler(server, listenFd, clientFd, Debug, &addr, 0);
+        }
     }
 }
 
@@ -6198,8 +6198,8 @@ serverInitiator(unsigned short *portPtr)
 
     if (IsDetached)
     {
-	message(3, 0, "detaching from terminal");
-	makeDetached();
+        message(3, 0, "detaching from terminal");
+        makeDetached();
     }
 
     /* Change user ID, if required */
@@ -6209,88 +6209,88 @@ serverInitiator(unsigned short *portPtr)
 
     while (forever || tries > 0)
     {
-	tries--;
+        tries--;
 
-	message(2, 0, "initiating connection back to client at %s:%hu", ClientHost, port);
+        message(2, 0, "initiating connection back to client at %s:%hu", ClientHost, port);
 
-	if ((clientFd = makeConnection(ClientHost, port, 0, 1, NULL, NULL, ServerConnectTimeout)) == -1)
-	{
-	    /*
-	    ** If the connection timed out then we will retry if necessary,
-	    ** otherwise it is a fatal error ...
-	    */
+        if ((clientFd = makeConnection(ClientHost, port, 0, 1, NULL, NULL, ServerConnectTimeout)) == -1)
+        {
+            /*
+            ** If the connection timed out then we will retry if necessary,
+            ** otherwise it is a fatal error ...
+            */
 
-	    if (errno == ETIMEDOUT)
-	    {
-		message(3, 0, "timed out connecting back to client, retrying");
-		continue;
-	    }
-	    else
-	    {
-		message(3, errno, "failed to connect back to client at %s:%hu", ClientHost, port);
+            if (errno == ETIMEDOUT)
+            {
+                message(3, 0, "timed out connecting back to client, retrying");
+                continue;
+            }
+            else
+            {
+                message(3, errno, "failed to connect back to client at %s:%hu", ClientHost, port);
 
-		/* We need to pause here to avoid continuous connection attempts */
+                /* We need to pause here to avoid continuous connection attempts */
 
-		message(4, 0, "sleeping for %hu seconds", ServerConnectTimeout);
+                message(4, 0, "sleeping for %hu seconds", ServerConnectTimeout);
 #ifdef WIN32
-		/* Sleeps are shorter on Windows! */
+                /* Sleeps are shorter on Windows! */
 
-		Sleep((unsigned long)ServerConnectTimeout * 1000);
+                Sleep((unsigned long)ServerConnectTimeout * 1000);
 #else
-		sleep(ServerConnectTimeout);
+                sleep(ServerConnectTimeout);
 #endif
-		continue;
-	    }
-	}
+                continue;
+            }
+        }
 
-	message(2, 0, "connected to client");
+        message(2, 0, "connected to client");
 
 
-	/*
-	** Now we will wait until either there is data ready to
-	** read from the client or we exceed the timeout value.
-	*/
+        /*
+        ** Now we will wait until either there is data ready to
+        ** read from the client or we exceed the timeout value.
+        */
 
-	delay.tv_sec = AcceptConnectTimeout;
-	delay.tv_usec = 0;
+        delay.tv_sec = AcceptConnectTimeout;
+        delay.tv_usec = 0;
 
-	FD_ZERO(&testSet);
-	FD_SET(clientFd, &testSet);
+        FD_ZERO(&testSet);
+        FD_SET(clientFd, &testSet);
 
-	ready = select(clientFd + 1, &testSet, 0, 0, &delay);
+        ready = select(clientFd + 1, &testSet, 0, 0, &delay);
 
-	if (ready == 0)
-	{
-	    message(3, 0, "timed out waiting for accepted connection from client");
-	    closesocket(clientFd);
-	    continue;
-	}
+        if (ready == 0)
+        {
+            message(3, 0, "timed out waiting for accepted connection from client");
+            closesocket(clientFd);
+            continue;
+        }
 
-	/* Check for error but ignore interrupted system calls */
+        /* Check for error but ignore interrupted system calls */
 
-	if (ready < 0)
-	{
-	    if (errno != EINTR)
-	    {
-		message(0, errno, "error in select waiting for client to accept connection");
-		break;
-	    }
-	}
-	else
-	{
-	    /*
-	    ** The connection was successful so spawn the handler and
-	    ** reset the attempt count.
-	    */
+        if (ready < 0)
+        {
+            if (errno != EINTR)
+            {
+                message(0, errno, "error in select waiting for client to accept connection");
+                break;
+            }
+        }
+        else
+        {
+            /*
+            ** The connection was successful so spawn the handler and
+            ** reset the attempt count.
+            */
 
-	    spawnHandler(server, -1, clientFd, 0, NULL, 0);
-	    tries = ConnectAttempts;
-	}
+            spawnHandler(server, -1, clientFd, 0, NULL, 0);
+            tries = ConnectAttempts;
+        }
     }
 
     if (ConnectAttempts > 0 && tries == 0)
     {
-	message(0, errno, "maximum connection attempt tries (%hu) exhausted", ConnectAttempts);
+        message(0, errno, "maximum connection attempt tries (%hu) exhausted", ConnectAttempts);
     }
 
     closesocket(clientFd);
@@ -6361,8 +6361,8 @@ server(FnArgs_t *argP)
     message(3, 0, "validating client IP address");
     if (!checkPeerForSocket(clientFd, &peerAddr))
     {
-	message(0, 0, "client connection from %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
-	goto fatal;
+        message(0, 0, "client connection from %s disallowed", ipString(peerAddr.sin_addr, ipBuf));
+        goto fatal;
     }
 
     /* Read protocol version */
@@ -6371,8 +6371,8 @@ server(FnArgs_t *argP)
     
     if (readUShort(clientFd, &request) != 2)
     {
-	message(0, errno, "failed reading protocol version");
-	goto fatal;
+        message(0, errno, "failed reading protocol version");
+        goto fatal;
     }
 
     message(3, 0, "read protocol version %#hx", request);
@@ -6386,41 +6386,41 @@ server(FnArgs_t *argP)
 
     if (LockProtocol)
     {
-	if (request != DFLT_PROTOCOL)
-	{
-	    message(0, errno, "failed due to client requesting incompatible protocol version (%#hx), server locked to version %#hx ", request, DFLT_PROTOCOL);
-	    goto fatal;
-	}
-	else
-	{
-	    /* Set to our default */
-	    protocol = DFLT_PROTOCOL;
-	}
+        if (request != DFLT_PROTOCOL)
+        {
+            message(0, errno, "failed due to client requesting incompatible protocol version (%#hx), server locked to version %#hx ", request, DFLT_PROTOCOL);
+            goto fatal;
+        }
+        else
+        {
+            /* Set to our default */
+            protocol = DFLT_PROTOCOL;
+        }
     }
     else if (request <= PROTOCOL_V202 && request >= PROTOCOL_V200)
     {
-	/* These we can support directly, as requested */
-	protocol = request;
+        /* These we can support directly, as requested */
+        protocol = request;
     }
     else if (DropUnknownProtocol)
     {
-	/* Don't even try to handle unknown protocol versions */
+        /* Don't even try to handle unknown protocol versions */
 
-	message(0, 0, "client requested unknown protocol version (%#hx), dropped by server", request);
-	goto fatal;
+        message(0, 0, "client requested unknown protocol version (%#hx), dropped by server", request);
+        goto fatal;
     }
     else
     {
-	/* Set to highest we can support */
-	protocol = DFLT_PROTOCOL;
+        /* Set to highest we can support */
+        protocol = DFLT_PROTOCOL;
     }
 
     message(3, 0, "replying with protocol version %#hx", protocol);
     
     if (writeUShort(clientFd, protocol) != 2)
     {
-	message(0, errno, "failed writing protocol version back to client");
-	goto fatal;
+        message(0, errno, "failed writing protocol version back to client");
+        goto fatal;
     }
 
     /* Set the size of the protocol header block */
@@ -6428,45 +6428,45 @@ server(FnArgs_t *argP)
     switch (protocol)
     {
     case PROTOCOL_V200:
-	    hdrSize = HDR_SIZE_V200;
-	    break;
+            hdrSize = HDR_SIZE_V200;
+            break;
     case PROTOCOL_V201:
-	    hdrSize = HDR_SIZE_V201;
-	    break;
+            hdrSize = HDR_SIZE_V201;
+            break;
     default:
-	    hdrSize = HDR_SIZE_V202;
-	    break;
+            hdrSize = HDR_SIZE_V202;
+            break;
     }
 
     if (readData(clientFd, hdrData, hdrSize) != hdrSize)
     {
-	message(0, errno, "failed reading protocol header from client");
-	goto fatal;
+        message(0, errno, "failed reading protocol header from client");
+        goto fatal;
     }
 
     if (protocol >= PROTOCOL_V202)
     {
-	/*
-	** This adds a message checksum to allows us to detect if
-	** somebody has tampered with the data "in flight".
-	** The header data sent and received is hashed in order to
-	** obtain the initial checksum seed.
-	*/
-	sha_init(&sha);
-	sha_update(&sha, hdrData, hdrSize);
+        /*
+        ** This adds a message checksum to allows us to detect if
+        ** somebody has tampered with the data "in flight".
+        ** The header data sent and received is hashed in order to
+        ** obtain the initial checksum seed.
+        */
+        sha_init(&sha);
+        sha_update(&sha, hdrData, hdrSize);
     }
 
     udpMode = (headerGetUShort(hdrData, HDR_OFFSET_FLAGS) == HDR_FLAG_UDPMODE);
     if ((udpMode && !UdpMode) || (!udpMode && !TcpMode))
     {
-	message(0, 0, "client requested %s mode tunnel to %s mode server",
-		(udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
-	headerSetUShort(hdrData, (udpMode ? 0 : HDR_FLAG_UDPMODE), HDR_OFFSET_FLAGS);
+        message(0, 0, "client requested %s mode tunnel to %s mode server",
+                (udpMode ? "UDP" : "TCP"), (udpMode ? "TCP" : "UDP"));
+        headerSetUShort(hdrData, (udpMode ? 0 : HDR_FLAG_UDPMODE), HDR_OFFSET_FLAGS);
     }
     else
     {
-	message(3, 0, "replying with %s mode", (udpMode ? "UDP" : "TCP"));
-	headerSetUShort(hdrData, (udpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
+        message(3, 0, "replying with %s mode", (udpMode ? "UDP" : "TCP"));
+        headerSetUShort(hdrData, (udpMode ? HDR_FLAG_UDPMODE : 0), HDR_OFFSET_FLAGS);
     }
 
     maxSize = headerGetUShort(hdrData, HDR_OFFSET_MAXSIZE);
@@ -6493,12 +6493,12 @@ server(FnArgs_t *argP)
 
     if (request < cmpInfo)
     {
-	cmpInfo = request;
-	response = request;
+        cmpInfo = request;
+        response = request;
     }
     else
     {
-	response = cmpInfo;
+        response = cmpInfo;
     }
 
     message(3, 0, "replying with compression level %#hx", response);
@@ -6510,8 +6510,8 @@ server(FnArgs_t *argP)
     memset(&localAddr, 0, sizeof(localAddr));
     if (protocol >= PROTOCOL_V201)
     {
-	localAddr.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
-	message(3, 0, "read target address %s", ipString(localAddr.sin_addr, ipBuf));
+        localAddr.sin_addr.s_addr = htonl(headerGetULong(hdrData, HDR_OFFSET_TARGET) & 0xffffffff);
+        message(3, 0, "read target address %s", ipString(localAddr.sin_addr, ipBuf));
     }
 
     /*
@@ -6530,38 +6530,38 @@ server(FnArgs_t *argP)
 
     if (allowRedirect(request, &localAddr, &peerAddr, udpMode, &targetHost, &idFile))
     {
-	message(3, 0, "allowed redirection request to %s:%hu", targetHost, request);
+        message(3, 0, "allowed redirection request to %s:%hu", targetHost, request);
 
-	/*
-	** Attempt to open connection -- if this fails then we write back
-	** zero to the client otherwise we send back the requested port
-	** number.
-	*/
+        /*
+        ** Attempt to open connection -- if this fails then we write back
+        ** zero to the client otherwise we send back the requested port
+        ** number.
+        */
 
-	message(3, 0, "opening connection to port %hu on %s", request, targetHost);
-	
-	memset(&localAddr, 0, sizeof(localAddr));
-	if ((localFd = makeConnection(targetHost, request, udpMode, 0,
-				      (Transparent ? &peerAddr : NULL),
-				      &localAddr, TargetConnectTimeout)) == -1)
-	{
-	    port = 0;
-	    message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
-	    headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
-	}
-	else
-	{
-	    /* All OK -- echo back port number */
+        message(3, 0, "opening connection to port %hu on %s", request, targetHost);
+        
+        memset(&localAddr, 0, sizeof(localAddr));
+        if ((localFd = makeConnection(targetHost, request, udpMode, 0,
+                                      (Transparent ? &peerAddr : NULL),
+                                      &localAddr, TargetConnectTimeout)) == -1)
+        {
+            port = 0;
+            message(0, errno, "failed connecting to port %hu on %s", request, targetHost);
+            headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
+        }
+        else
+        {
+            /* All OK -- echo back port number */
 
-	    port = request;
-	    message(3, 0, "made connection to target -- writing back %hu to client", port);
-	    headerSetUShort(hdrData, port, HDR_OFFSET_PORT);
-	}
+            port = request;
+            message(3, 0, "made connection to target -- writing back %hu to client", port);
+            headerSetUShort(hdrData, port, HDR_OFFSET_PORT);
+        }
     }
     else
     {
-	message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", ipString(localAddr.sin_addr, ipBuf), request, (udpMode ? "udp" : "tcp"));
-	headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
+        message(0, 0, "client requested redirection to a disallowed target (%s:%hu/%s)", ipString(localAddr.sin_addr, ipBuf), request, (udpMode ? "udp" : "tcp"));
+        headerSetUShort(hdrData, 0, HDR_OFFSET_PORT);
     }
 
     request = headerGetUShort(hdrData, HDR_OFFSET_KEYLEN);
@@ -6574,17 +6574,17 @@ server(FnArgs_t *argP)
 
     if (request > keyBits)
     {
-	response = keyBits;
+        response = keyBits;
     }
     else if (request >= MinKeyLength)
     {
-	keyBits = request;
-	response = request;
+        keyBits = request;
+        response = request;
     }
     else
     {
-	keyBits = MinKeyLength;
-	response = MinKeyLength;
+        keyBits = MinKeyLength;
+        response = MinKeyLength;
     }
 
     message(3, 0, "replying with key length %hu", response);
@@ -6595,15 +6595,15 @@ server(FnArgs_t *argP)
 
     if (token != 0)
     {
-	/*
-	** Search for matching token. If not found then allocate
-	** a new one.
-	*/
+        /*
+        ** Search for matching token. If not found then allocate
+        ** a new one.
+        */
 
-	if ((secretKeyStr = findKeyByToken(&ServerKeyList, token, &peerAddr, &localAddr, port)) == NULL)
-	{
-	    token = generateToken(&ServerKeyList, token);
-	}
+        if ((secretKeyStr = findKeyByToken(&ServerKeyList, token, &peerAddr, &localAddr, port)) == NULL)
+        {
+            token = generateToken(&ServerKeyList, token);
+        }
     }
     headerSetULong(hdrData, token, HDR_OFFSET_TOKEN);
     message(3, 0, "returned key reuse token %#lx", token);
@@ -6617,58 +6617,58 @@ server(FnArgs_t *argP)
 
     if (protocol >= PROTOCOL_V202)
     {
-	cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
-	if (cksumLevel > ChecksumLevel)
-	{
-	    cksumLevel = ChecksumLevel;
-	}
-	else if (cksumLevel < MinChecksumLevel)
-	{
-	    cksumLevel = MinChecksumLevel;
-	}
-	message(3, 0, "replying with checksum level %hu", cksumLevel);
-	headerSetUShort(hdrData, cksumLevel, HDR_OFFSET_CHECKSUM);
+        cksumLevel = headerGetUShort(hdrData, HDR_OFFSET_CHECKSUM);
+        if (cksumLevel > ChecksumLevel)
+        {
+            cksumLevel = ChecksumLevel;
+        }
+        else if (cksumLevel < MinChecksumLevel)
+        {
+            cksumLevel = MinChecksumLevel;
+        }
+        message(3, 0, "replying with checksum level %hu", cksumLevel);
+        headerSetUShort(hdrData, cksumLevel, HDR_OFFSET_CHECKSUM);
     }
     else
     {
-	cksumLevel = CHECKSUM_NONE;
+        cksumLevel = CHECKSUM_NONE;
     }
 
     if (writeData(clientFd, hdrData, hdrSize) != hdrSize)
     {
-	message(0, errno, "failed writing protocol header back to client");
-	goto fatal;
+        message(0, errno, "failed writing protocol header back to client");
+        goto fatal;
     }
 
     /* Quit now if we have no local connection */
 
     if (port == 0)
     {
-	message(0, 0, "initial protocol exchange failed");
-	goto fatal;
+        message(0, 0, "initial protocol exchange failed");
+        goto fatal;
     }
 
     /* Allocate message buffer */
 
     if ((msg = makeMsgBuf(maxSize, cmpInfo, cksumLevel)) == NULL)
     {
-	message(0, errno, "server failed to allocate message buffer");
-	goto fatal;
+        message(0, errno, "server failed to allocate message buffer");
+        goto fatal;
     }
 
     /* Set the checksum seeds, if necessary */
 
     if (protocol >= PROTOCOL_V202)
     {
-	sha_update(&sha, hdrData, hdrSize);
-	sha_final(&sha);
-	sha.digest[0] = BUGHTONL(sha.digest[0]);
-	sha.digest[1] = BUGHTONL(sha.digest[1]);
-	sha.digest[2] = BUGHTONL(sha.digest[2]);
-	sha.digest[3] = BUGHTONL(sha.digest[3]);
-	sha.digest[4] = BUGHTONL(sha.digest[4]);
-	memcpy(msg->inSeed, &sha.digest, sizeof(sha.digest));
-	memcpy(msg->outSeed, &sha.digest, sizeof(sha.digest));
+        sha_update(&sha, hdrData, hdrSize);
+        sha_final(&sha);
+        sha.digest[0] = BUGHTONL(sha.digest[0]);
+        sha.digest[1] = BUGHTONL(sha.digest[1]);
+        sha.digest[2] = BUGHTONL(sha.digest[2]);
+        sha.digest[3] = BUGHTONL(sha.digest[3]);
+        sha.digest[4] = BUGHTONL(sha.digest[4]);
+        memcpy(msg->inSeed, &sha.digest, sizeof(sha.digest));
+        memcpy(msg->outSeed, &sha.digest, sizeof(sha.digest));
     }
 
     /*
@@ -6679,26 +6679,26 @@ server(FnArgs_t *argP)
 
     if (secretKeyStr != NULL)
     {
-	sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
-					   serverNonce, keyBits);
+        sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
+                                           serverNonce, keyBits);
 
-	message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
+        message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
 
-	msg->bfWrite = setupBlowfish(sessionKeyStr, keyBits);
-	msg->bfRead = setupBlowfish(sessionKeyStr, keyBits);
+        msg->bfWrite = setupBlowfish(sessionKeyStr, keyBits);
+        msg->bfRead = setupBlowfish(sessionKeyStr, keyBits);
 
-	memset(sessionKeyStr, 0, strlen(sessionKeyStr));
-	free(sessionKeyStr);
-	sessionKeyStr = NULL;
-	memset(secretKeyStr, 0, strlen(secretKeyStr));
-	free(secretKeyStr);
-	secretKeyStr = NULL;
+        memset(sessionKeyStr, 0, strlen(sessionKeyStr));
+        free(sessionKeyStr);
+        sessionKeyStr = NULL;
+        memset(secretKeyStr, 0, strlen(secretKeyStr));
+        free(secretKeyStr);
+        secretKeyStr = NULL;
 
-	if (!serverPerformChallenge(clientFd, msg))
-	{
-	    message(0, 0, "challenge/response failed to validate shared key (session token = %#08x)", token);
-	    goto fatal;
-	}
+        if (!serverPerformChallenge(clientFd, msg))
+        {
+            message(0, 0, "challenge/response failed to validate shared key (session token = %#08x)", token);
+            goto fatal;
+        }
     }
 
     /*
@@ -6709,189 +6709,189 @@ server(FnArgs_t *argP)
 
     else if (keyBits > 0)
     {
-	/*
-	** Send the Diffie-Hellman generator
-	**
-	** The server decides the generator and modulus because to avoid
-	** "man-in-the-middle" attacks you are more likely to want to know
-	** the identity of the server from the client than vice-versa. This
-	** lets the server control its public key identity better.
-	*/
+        /*
+        ** Send the Diffie-Hellman generator
+        **
+        ** The server decides the generator and modulus because to avoid
+        ** "man-in-the-middle" attacks you are more likely to want to know
+        ** the identity of the server from the client than vice-versa. This
+        ** lets the server control its public key identity better.
+        */
 
-	message(3, 0, "sending DH generator '%s'", Generator);
+        message(3, 0, "sending DH generator '%s'", Generator);
 
-	assert((len = strlen(Generator) + 1) <= MAX_LINE_SIZE);
-	setMsgBuf(msg, Generator, strlen(Generator) + 1);
+        assert((len = strlen(Generator) + 1) <= MAX_LINE_SIZE);
+        setMsgBuf(msg, Generator, strlen(Generator) + 1);
 
-	if (writeMessage(clientFd, msg) != len)
-	{
-	    message(0, errno, "failed writing generator to client");
-	    goto fatal;
-	}
+        if (writeMessage(clientFd, msg) != len)
+        {
+            message(0, errno, "failed writing generator to client");
+            goto fatal;
+        }
 
-	message(3, 0, "sent generator");
+        message(3, 0, "sent generator");
 
-	/* Send the Diffie-Hellman modulus */
+        /* Send the Diffie-Hellman modulus */
 
-	message(3, 0, "sending DH modulus '%s'", Modulus);
+        message(3, 0, "sending DH modulus '%s'", Modulus);
 
-	assert((len = strlen(Modulus) + 1) <= MAX_LINE_SIZE);
-	setMsgBuf(msg, Modulus, strlen(Modulus) + 1);
+        assert((len = strlen(Modulus) + 1) <= MAX_LINE_SIZE);
+        setMsgBuf(msg, Modulus, strlen(Modulus) + 1);
 
-	if (writeMessage(clientFd, msg) != len)
-	{
-	    message(0, errno, "failed writing modulus to client");
-	    goto fatal;
-	}
+        if (writeMessage(clientFd, msg) != len)
+        {
+            message(0, errno, "failed writing modulus to client");
+            goto fatal;
+        }
 
-	message(3, 0, "sent modulus", Modulus);
-
-
-	/*
-	** Calculate our DH key
-	**
-	** This requires that we first generate our private key (the
-	** the exponent) and then perform the modular exponentiation
-	** to generate the public key.
-	*/
-
-	message(3, 0, "generating private key");
-
-	if ((exponent = generateKey(&peerAddr, &localAddr, port)) == NULL)
-	{
-	    message(0, errno, "can't generate private key");
-	    goto fatal;
-	}
-
-	message(3, 0, "private key generated");
-
-	message(3, 0, "generating public DH key");
-
-	if ((dhKey = diffieHellman(Generator, Modulus, exponent)) == NULL)
-	{
-	    message(0, errno, "can't generate public DH key");
-	    goto fatal;
-	}
-
-	message(3, 0, "public DH key is '%s'", dhKey);
-
-	/* Now send the DH key */
-
-	message(3, 0, "sending public DH key");
-
-	assert((len = strlen(dhKey) + 1) <= MAX_LINE_SIZE);
-	setMsgBuf(msg, dhKey, strlen(dhKey) + 1);
-
-	if (writeMessage(clientFd, msg) != len)
-	{
-	    message(0, errno, "failed writing DH key to client");
-	    goto fatal;
-	}
-
-	message(3, 0, "sent public DH key");
+        message(3, 0, "sent modulus", Modulus);
 
 
-	/* Read the client DH key */
+        /*
+        ** Calculate our DH key
+        **
+        ** This requires that we first generate our private key (the
+        ** the exponent) and then perform the modular exponentiation
+        ** to generate the public key.
+        */
 
-	message(3, 0, "reading client DH key");
+        message(3, 0, "generating private key");
 
-	if (readMessage(clientFd, msg, MAX_LINE_SIZE) <= 0)
-	{
-	    message(0, errno, "failed reading client DH key");
-	    goto fatal;
-	}
-	getMsgBuf(msg, clientDhKey, MAX_LINE_SIZE);
+        if ((exponent = generateKey(&peerAddr, &localAddr, port)) == NULL)
+        {
+            message(0, errno, "can't generate private key");
+            goto fatal;
+        }
 
-	message(3, 0, "accepted client DH key '%s'", clientDhKey);
+        message(3, 0, "private key generated");
+
+        message(3, 0, "generating public DH key");
+
+        if ((dhKey = diffieHellman(Generator, Modulus, exponent)) == NULL)
+        {
+            message(0, errno, "can't generate public DH key");
+            goto fatal;
+        }
+
+        message(3, 0, "public DH key is '%s'", dhKey);
+
+        /* Now send the DH key */
+
+        message(3, 0, "sending public DH key");
+
+        assert((len = strlen(dhKey) + 1) <= MAX_LINE_SIZE);
+        setMsgBuf(msg, dhKey, strlen(dhKey) + 1);
+
+        if (writeMessage(clientFd, msg) != len)
+        {
+            message(0, errno, "failed writing DH key to client");
+            goto fatal;
+        }
+
+        message(3, 0, "sent public DH key");
 
 
-	/*
-	** If requested, check this against a list of "known" keys
-	** to validate the client identity.
-	*/
+        /* Read the client DH key */
 
-	if (idFile == NULL)
-	{
-	    /* Use the default file if no specific file was given */
-	    idFile = IdentityFile;
-	}
+        message(3, 0, "reading client DH key");
 
-	if (idFile)
-	{
-	    message(3, 0, "checking key against identity file '%s'", idFile);
+        if (readMessage(clientFd, msg, MAX_LINE_SIZE) <= 0)
+        {
+            message(0, errno, "failed reading client DH key");
+            goto fatal;
+        }
+        getMsgBuf(msg, clientDhKey, MAX_LINE_SIZE);
 
-	    if (!(result = checkIdentity(idFile, Generator, Modulus, clientDhKey)))
-	    {
-		message(0, 0, "client's key identity not found in '%s'", idFile);
-		goto fatal;
-	    }
-	}
+        message(3, 0, "accepted client DH key '%s'", clientDhKey);
 
-	/* Now generate the shared secret key */
 
-	message(3, 0, "generating shared secret key");
+        /*
+        ** If requested, check this against a list of "known" keys
+        ** to validate the client identity.
+        */
 
-	secretKeyStr = diffieHellman(clientDhKey, Modulus, exponent);
+        if (idFile == NULL)
+        {
+            /* Use the default file if no specific file was given */
+            idFile = IdentityFile;
+        }
 
-	message(3, 0, "shared key ends '...%s'", secretKeyStr + strlen(secretKeyStr) - 4);
+        if (idFile)
+        {
+            message(3, 0, "checking key against identity file '%s'", idFile);
 
-	sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
-					   serverNonce, keyBits);
+            if (!(result = checkIdentity(idFile, Generator, Modulus, clientDhKey)))
+            {
+                message(0, 0, "client's key identity not found in '%s'", idFile);
+                goto fatal;
+            }
+        }
 
-	message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
+        /* Now generate the shared secret key */
 
-	message(3, 0, "initialising encryption state");
+        message(3, 0, "generating shared secret key");
 
-	msg->bfWrite = setupBlowfish(sessionKeyStr, keyBits);
-	msg->bfRead = setupBlowfish(sessionKeyStr, keyBits);
+        secretKeyStr = diffieHellman(clientDhKey, Modulus, exponent);
 
-	/* Clear unneeded values */
+        message(3, 0, "shared key ends '...%s'", secretKeyStr + strlen(secretKeyStr) - 4);
 
-	free(dhKey);
-	dhKey = NULL;
-	memset(exponent, 0, strlen(exponent));
-	free(exponent);
-	exponent = NULL;
+        sessionKeyStr = generateSessionKey(secretKeyStr, clientNonce,
+                                           serverNonce, keyBits);
 
-	/*
-	** Having established the encrypted channel we now perform a mutual
-	** challenge/response dialogue in order to guard against being spoofed
-	** by a replay attack if we are using a static key.
-	*/
+        message(3, 0, "session key ends '...%s'", sessionKeyStr + strlen(sessionKeyStr) - 4);
 
-	if (!serverPerformChallenge(clientFd, msg))
-	{
-	    goto fatal;
-	}
+        message(3, 0, "initialising encryption state");
 
-	/*
-	** If a new session token was allocated then update the secret
-	** key list.
-	*/
+        msg->bfWrite = setupBlowfish(sessionKeyStr, keyBits);
+        msg->bfRead = setupBlowfish(sessionKeyStr, keyBits);
 
-	if (token != 0)
-	{
-	    message(3, 0, "new reusable key token established (%#lx)", token);
-	    addKeyInfoToList(&ServerKeyList, token, secretKeyStr);
-	}
+        /* Clear unneeded values */
 
-	if (sessionKeyStr != secretKeyStr)
-	{
-	    memset(sessionKeyStr, 0, strlen(sessionKeyStr));
-	    free(sessionKeyStr);
-	    sessionKeyStr = NULL;
-	}
-	memset(secretKeyStr, 0, strlen(secretKeyStr));
-	free(secretKeyStr);
-	secretKeyStr = NULL;
+        free(dhKey);
+        dhKey = NULL;
+        memset(exponent, 0, strlen(exponent));
+        free(exponent);
+        exponent = NULL;
+
+        /*
+        ** Having established the encrypted channel we now perform a mutual
+        ** challenge/response dialogue in order to guard against being spoofed
+        ** by a replay attack if we are using a static key.
+        */
+
+        if (!serverPerformChallenge(clientFd, msg))
+        {
+            goto fatal;
+        }
+
+        /*
+        ** If a new session token was allocated then update the secret
+        ** key list.
+        */
+
+        if (token != 0)
+        {
+            message(3, 0, "new reusable key token established (%#lx)", token);
+            addKeyInfoToList(&ServerKeyList, token, secretKeyStr);
+        }
+
+        if (sessionKeyStr != secretKeyStr)
+        {
+            memset(sessionKeyStr, 0, strlen(sessionKeyStr));
+            free(sessionKeyStr);
+            sessionKeyStr = NULL;
+        }
+        memset(secretKeyStr, 0, strlen(secretKeyStr));
+        free(secretKeyStr);
+        secretKeyStr = NULL;
     }
     else
     {
-	message(3, 0, "key length is zero, omitting key exchange");
-	if (IdentityFile != NULL)
-	{
-	    message(1, 0, "Warning: agreed key length is zero, no identity checking performed");
-	}
+        message(3, 0, "key length is zero, omitting key exchange");
+        if (IdentityFile != NULL)
+        {
+            message(1, 0, "Warning: agreed key length is zero, no identity checking performed");
+        }
     }
 
     message(1, 0, "tunnel established to target %s, port %hu", targetHost, port);
@@ -6904,12 +6904,12 @@ server(FnArgs_t *argP)
     switch (filterLoop(localFd, clientFd, msg, &localAddr, &peerAddr, localFd, udpMode))
     {
     case 1:
-	message(0, errno, "failed communicating with remote client");
-	goto fatal;
+        message(0, errno, "failed communicating with remote client");
+        goto fatal;
 
     case -1:
-	message(0, errno, "failed communicating with local server");
-	goto fatal;
+        message(0, errno, "failed communicating with local server");
+        goto fatal;
     }
 
     errno = 0;
@@ -6944,9 +6944,9 @@ fatal:
 }
 
 /*****************************\
-**			     **
+**                           **
 **  Option Parsing Routines  **
-**			     **
+**                           **
 \*****************************/
 
 /*
@@ -6976,62 +6976,62 @@ scanPortRange(const char *str, unsigned short *loP, unsigned short *hiP, unsigne
 
     if ((slash = strchr(str, '/')) != NULL)
     {
-	if (!strcasecmp(slash, "/tcp"))
-	{
-	    type = ENDPTLIST_TCP;
-	}
-	else if (!strcasecmp(slash, "/udp"))
-	{
-	    type = ENDPTLIST_UDP;
-	}
-	else
-	{
-	    message(0, 0, "invalid port type (%s)", slash);
-	    return 0;
-	}
+        if (!strcasecmp(slash, "/tcp"))
+        {
+            type = ENDPTLIST_TCP;
+        }
+        else if (!strcasecmp(slash, "/udp"))
+        {
+            type = ENDPTLIST_UDP;
+        }
+        else
+        {
+            message(0, 0, "invalid port type (%s)", slash);
+            return 0;
+        }
     }
     if (typeP) *typeP = type;
 
     switch (sscanf(str, "%hu-%hu", &loVal, &hiVal))
     {
     case 0:
-	break;
+        break;
 
     case 1:
-	hiVal = loVal;
+        hiVal = loVal;
 
-	/* Fall through */
+        /* Fall through */
 
     case 2:
-	if (hiVal < loVal)
-	{
-	    hiVal ^= loVal;
-	    hiVal = hiVal ^ loVal;
-	    hiVal ^= loVal;
-	}
+        if (hiVal < loVal)
+        {
+            hiVal ^= loVal;
+            hiVal = hiVal ^ loVal;
+            hiVal ^= loVal;
+        }
 
-	if (hiVal != loVal && !hiP)
-	{
-	    message(0, 0, "port range found where single value expected");
-	    return 0;
-	}
+        if (hiVal != loVal && !hiP)
+        {
+            message(0, 0, "port range found where single value expected");
+            return 0;
+        }
 
-	if (loP) *loP = loVal;
-	if (hiP) *hiP = hiVal;
+        if (loP) *loP = loVal;
+        if (hiP) *hiP = hiVal;
 
-	return loVal;
+        return loVal;
     }
 
     if (sscanf(str, "%[^/]", portName) != 1)
     {
-	message(0, 0, "missing port name");
-	return 0;
+        message(0, 0, "missing port name");
+        return 0;
     }
 
     if ((entry = getservbyname(portName, (type == ENDPTLIST_UDP ? "udp" : "tcp"))) == NULL)
     {
-	message(0, errno, "can't find port name entry for '%s'", portName);
-	return 0;
+        message(0, errno, "can't find port name entry for '%s'", portName);
+        return 0;
     }
 
     loVal = ntohs(entry->s_port);
@@ -7053,15 +7053,15 @@ setBoolean(char *value, int *resultP)
 {
     if (strcasecmp(value, "true") == 0)
     {
-	*resultP = 1;
+        *resultP = 1;
     }
     else if (strcasecmp(value, "false") == 0)
     {
-	*resultP = 0;
+        *resultP = 0;
     }
     else
     {
-	message(0, 0, "can't parse boolean value '%s'", value);
+        message(0, 0, "can't parse boolean value '%s'", value);
     }
 }
 
@@ -7076,7 +7076,7 @@ setUShort(char *value, unsigned short *resultP)
 {
     if (sscanf(value, "%hu", resultP) != 1)
     {
-	message(0, 0, "can't parse unsigned short value '%s'", value);
+        message(0, 0, "can't parse unsigned short value '%s'", value);
     }
 }
 
@@ -7095,11 +7095,11 @@ setPort(char *value, unsigned short *resultP)
     port = scanPortRange(value, NULL, NULL, NULL);
     if (port == 0)
     {
-	message(0, 0, "can't parse port value '%s' key", value);
+        message(0, 0, "can't parse port value '%s' key", value);
     }
     else
     {
-	*resultP = port;
+        *resultP = port;
     }
 }
 
@@ -7112,11 +7112,11 @@ setPort(char *value, unsigned short *resultP)
 
 EndPtList_t *
 newEndPtList(unsigned short lo,
-	     unsigned short hi,
-	     char *host,
-	     char *idFile,
-	     char *peer,
-	     unsigned short type)
+             unsigned short hi,
+             char *host,
+             char *idFile,
+             char *peer,
+             unsigned short type)
 {
     EndPtList_t *new = NULL;
     struct sockaddr_in addr;
@@ -7126,17 +7126,17 @@ newEndPtList(unsigned short lo,
 
     if (host && !getHostAddress(host, &addr, &addrList, &mask))
     {
-	message(0, 0, "can't resolve host or address '%s'", host);
-	return NULL;
+        message(0, 0, "can't resolve host or address '%s'", host);
+        return NULL;
     }
 
     if (addrList)
     {
-	new = allocEndPtList(lo, hi, host, idFile, peer, &(addr.sin_addr), addrList, mask, type);
+        new = allocEndPtList(lo, hi, host, idFile, peer, &(addr.sin_addr), addrList, mask, type);
     }
     else
     {
-	new = allocEndPtList(lo, hi, NULL, idFile, peer, NULL, NULL, 0xffffffff, type);
+        new = allocEndPtList(lo, hi, NULL, idFile, peer, NULL, NULL, 0xffffffff, type);
     }
 
     return new;
@@ -7152,21 +7152,21 @@ newEndPtList(unsigned short lo,
 
 EndPtList_t *
 allocEndPtList(unsigned short lo,
-	       unsigned short hi,
-	       char *host,
-	       char *idFile,
-	       char *peer,
-	       struct in_addr *addrP,
-	       struct in_addr *addrList,
-	       unsigned long mask,
-	       unsigned short type)
+               unsigned short hi,
+               char *host,
+               char *idFile,
+               char *peer,
+               struct in_addr *addrP,
+               struct in_addr *addrList,
+               unsigned long mask,
+               unsigned short type)
 {
     EndPtList_t *new = NULL;
 
 
     if ((new = (EndPtList_t *)malloc(sizeof(EndPtList_t))) == NULL)
     {
-	return NULL;
+        return NULL;
     }
 
     new->lo = lo;
@@ -7177,26 +7177,26 @@ allocEndPtList(unsigned short lo,
     new->peer = NULL;
     if (host && addrP)
     {
-	memcpy(&(new->addr.sin_addr), addrP, sizeof(struct in_addr));
-	if ((new->host = (char *)malloc(strlen(host) + 1)) == NULL)
-	{
-	    message(0, errno, "out of memory");
-	    return NULL;
-	}
-	strcpy(new->host, host);
+        memcpy(&(new->addr.sin_addr), addrP, sizeof(struct in_addr));
+        if ((new->host = (char *)malloc(strlen(host) + 1)) == NULL)
+        {
+            message(0, errno, "out of memory");
+            return NULL;
+        }
+        strcpy(new->host, host);
     }
     if (idFile)
     {
-    	if ((new->idFile =(char *)malloc(strlen(idFile) +1 )) == NULL)
-	{
-	    message(0, errno, "out of memory");
-	    return NULL;
-	}
-	strcpy(new->idFile, idFile);
+        if ((new->idFile =(char *)malloc(strlen(idFile) +1 )) == NULL)
+        {
+            message(0, errno, "out of memory");
+            return NULL;
+        }
+        strcpy(new->idFile, idFile);
     }
     if (peer)
     {
-	setAllowedPeer(peer, new->peer);
+        setAllowedPeer(peer, new->peer);
     }
 
     new->addrList = addrList;
@@ -7222,11 +7222,11 @@ allocEndPtList(unsigned short lo,
 
 void
 setEndPtList(char *value,
-	     EndPtList_t **listP,
-	     char *host,
-	     char *idFile,
-	     char *peer,
-	     int zeroOk)
+             EndPtList_t **listP,
+             char *host,
+             char *idFile,
+             char *peer,
+             int zeroOk)
 {
     EndPtList_t *new = NULL;
     char *token = NULL;
@@ -7242,52 +7242,52 @@ setEndPtList(char *value,
 
     while (last && last->next)
     {
-	last = last->next;
+        last = last->next;
     }
 
     token = value;
     while (*token)
     {
-	/* Skip whitespace and commas */
+        /* Skip whitespace and commas */
 
-	while (*token && (isspace(*token) || *token == ',')) token++;
-	if (!*token) break;
+        while (*token && (isspace(*token) || *token == ',')) token++;
+        if (!*token) break;
 
-	/* Copy the token */
+        /* Copy the token */
 
-	tmpPtr = tmpBuf;
-	while (*token && !(isspace(*token) || *token == ','))
-	{
-	    *tmpPtr++ = *token++;
-	}
-	*tmpPtr = '\0';
+        tmpPtr = tmpBuf;
+        while (*token && !(isspace(*token) || *token == ','))
+        {
+            *tmpPtr++ = *token++;
+        }
+        *tmpPtr = '\0';
 
-	if (scanPortRange(tmpBuf, &lo, &hi, &type) != 0 || zeroOk)
-	{
-	    /* Allocate new list element */
+        if (scanPortRange(tmpBuf, &lo, &hi, &type) != 0 || zeroOk)
+        {
+            /* Allocate new list element */
 
-	    if ((new = newEndPtList(lo, hi, host, idFile, peer, type)) == NULL)
-	    {
-		message(0, errno, "failed allocating memory for port list");
-		exit(EXIT_FAILURE);
-	    }
+            if ((new = newEndPtList(lo, hi, host, idFile, peer, type)) == NULL)
+            {
+                message(0, errno, "failed allocating memory for port list");
+                exit(EXIT_FAILURE);
+            }
 
-	    /* Add to the end of the list */
+            /* Add to the end of the list */
 
-	    if (*listP == NULL)
-	    {
-		*listP = new;
-	    }
-	    else
-	    {
-		last->next = new;
-	    }
-	    last = new;
-	}
-	else
-	{
-	    message(0, 0, "invalid port range '%s'", tmpBuf);
-	}
+            if (*listP == NULL)
+            {
+                *listP = new;
+            }
+            else
+            {
+                last->next = new;
+            }
+            last = new;
+        }
+        else
+        {
+            message(0, 0, "invalid port range '%s'", tmpBuf);
+        }
     }
 }
 
@@ -7312,27 +7312,27 @@ setTarget(char *value)
 
     if (sscanf(value, "%[^:]:%[^?]?%s", target, portList, idFile) == 3)
     {
-    	setEndPtList(portList, &AllowedTargets, target, idFile, NULL, 0);
+        setEndPtList(portList, &AllowedTargets, target, idFile, NULL, 0);
     }
     else if (sscanf(value, "%[^:]:%[^@]@%s", target, portList, peerList) == 3)
     {
-    	setEndPtList(portList, &AllowedTargets, target, NULL, peerList, 0);
+        setEndPtList(portList, &AllowedTargets, target, NULL, peerList, 0);
     }
     else if (sscanf(value, "%[^?]?%s", target, idFile) == 2)
     {
-	setEndPtList("0", &AllowedTargets, target, idFile, NULL, 1);
+        setEndPtList("0", &AllowedTargets, target, idFile, NULL, 1);
     }
     else if (sscanf(value, "%[^@]@%s", target, peerList) == 2)
     {
-	setEndPtList("0", &AllowedTargets, target, NULL, peerList, 1);
+        setEndPtList("0", &AllowedTargets, target, NULL, peerList, 1);
     }
     else if (sscanf(value, "%[^:]:%s", target, portList) == 2)
     {
-	setEndPtList(portList, &AllowedTargets, target, NULL, NULL, 0);
+        setEndPtList(portList, &AllowedTargets, target, NULL, NULL, 0);
     }
     else
     {
-	setEndPtList("0", &AllowedTargets, target, NULL, NULL, 1);
+        setEndPtList("0", &AllowedTargets, target, NULL, NULL, 1);
     }
 
     /* Set the default target host */
@@ -7351,14 +7351,14 @@ setChecksum(char *value, unsigned short *resultP)
 {
     if (sscanf(value, "%hu", resultP) != 1)
     {
-	message(0, 0, "can't parse checksum value '%s'", value);
-	return;
+        message(0, 0, "can't parse checksum value '%s'", value);
+        return;
     }
 
     if (*resultP > CHECKSUM_MAX)
     {
-	message(1, 0, "WARNING: checksum value out of range, using maximum (%hu)", CHECKSUM_MAX);
-	*resultP = CHECKSUM_MAX;
+        message(1, 0, "WARNING: checksum value out of range, using maximum (%hu)", CHECKSUM_MAX);
+        *resultP = CHECKSUM_MAX;
     }
 }
 
@@ -7380,50 +7380,50 @@ setTunnel(char *value)
 
     if (sscanf(value, "%[^:]:%[^:]:%[^:]", clientList, hostName, targetList) == 3)
     {
-	setEndPtList(clientList, &ClientPorts, NULL, NULL, NULL, 0);
-	if (ServerHost == NULL)
-	{
-	    setString(hostName, &ServerHost);
-	}
-	if (strcmp(hostName, "*") == 0)
-	{
-	    setEndPtList(targetList, &TargetPorts, NULL, NULL, NULL, 0);
-	}
-	else
-	{
-	    setEndPtList(targetList, &TargetPorts, hostName, NULL, NULL, 0);
-	}
+        setEndPtList(clientList, &ClientPorts, NULL, NULL, NULL, 0);
+        if (ServerHost == NULL)
+        {
+            setString(hostName, &ServerHost);
+        }
+        if (strcmp(hostName, "*") == 0)
+        {
+            setEndPtList(targetList, &TargetPorts, NULL, NULL, NULL, 0);
+        }
+        else
+        {
+            setEndPtList(targetList, &TargetPorts, hostName, NULL, NULL, 0);
+        }
     }
     else if (sscanf(value, "%[^:]:%[^:]", hostName, targetList) == 2)
     {
-	if (ServerHost == NULL)
-	{
-	    setString(hostName, &ServerHost);
-	}
-	if (strcmp(hostName, "*") == 0)
-	{
-	    setEndPtList(targetList, &TargetPorts, NULL, NULL, NULL, 0);
-	}
-	else
-	{
-	    setEndPtList(targetList, &TargetPorts, hostName, NULL, NULL, 0);
-	}
-	if (countPorts(TargetPorts) != 1)
-	{
-	    message(0, 0, "target port list contains more than one port");
-	    exit(EXIT_FAILURE);
-	}
+        if (ServerHost == NULL)
+        {
+            setString(hostName, &ServerHost);
+        }
+        if (strcmp(hostName, "*") == 0)
+        {
+            setEndPtList(targetList, &TargetPorts, NULL, NULL, NULL, 0);
+        }
+        else
+        {
+            setEndPtList(targetList, &TargetPorts, hostName, NULL, NULL, 0);
+        }
+        if (countPorts(TargetPorts) != 1)
+        {
+            message(0, 0, "target port list contains more than one port");
+            exit(EXIT_FAILURE);
+        }
     }
     else
     {
-	if (ServerHost == NULL || strcmp(ServerHost, "*") == 0)
-	{
-	    setString(value, &ServerHost);
-	}
-	else
-	{
-	    message(0, 0, "invalid tunnel specification '%s'", value);
-	}
+        if (ServerHost == NULL || strcmp(ServerHost, "*") == 0)
+        {
+            setString(value, &ServerHost);
+        }
+        else
+        {
+            message(0, 0, "invalid tunnel specification '%s'", value);
+        }
     }
 }
 
@@ -7443,11 +7443,11 @@ setAllowedPeer(char *value, EndPtList_t *peerList)
 
     if (sscanf(value, "%[^:]:%s", addr, portList) == 2)
     {
-	setEndPtList(portList, &peerList, addr, NULL, NULL, 0);
+        setEndPtList(portList, &peerList, addr, NULL, NULL, 0);
     }
     else
     {
-	setEndPtList("0", &peerList, addr, NULL, NULL, 1);
+        setEndPtList("0", &peerList, addr, NULL, NULL, 1);
     }
 }
 
@@ -7462,8 +7462,8 @@ setString(char *value, char **resultP)
 {
     if ((*resultP = (char *)malloc(strlen(value) + 1)) == NULL)
     {
-	message(0, errno, "failed allocating space for string value '%s'", value);
-	exit(EXIT_FAILURE);
+        message(0, errno, "failed allocating space for string value '%s'", value);
+        exit(EXIT_FAILURE);
     }
 
     strcpy(*resultP, value);
@@ -7483,26 +7483,26 @@ setLogFile(char *newFile)
 {
     if (LogFileP != NULL)
     {
-	fclose(LogFileP);
+        fclose(LogFileP);
     }
 
     if (strcmp(newFile, "NULL") == 0)
     {
-	LogFileType = LOGFILE_NULL;
-	LogFileP = NULL;
+        LogFileType = LOGFILE_NULL;
+        LogFileP = NULL;
     }
     else if (strcmp(newFile, "SYSLOG") == 0)
     {
-	LogFileType = LOGFILE_SYSLOG;
-	LogFileP = NULL;
+        LogFileType = LOGFILE_SYSLOG;
+        LogFileP = NULL;
     }
     else
     {
-	LogFileType = LOGFILE_LOCAL;
-	if ((LogFileP = fopen(newFile, "a")) == NULL)
-	{
-	    message(0, errno, "can't open log file '%s'", newFile);
-	}
+        LogFileType = LOGFILE_LOCAL;
+        if ((LogFileP = fopen(newFile, "a")) == NULL)
+        {
+            message(0, errno, "can't open log file '%s'", newFile);
+        }
     }
 }
 
@@ -7520,40 +7520,40 @@ setCmpInfo(char *value, unsigned short *resultP)
 
     if (sscanf(value, "zlib:%hu", &level) == 1)
     {
-	type = CMPTYPE_ZLIB;
+        type = CMPTYPE_ZLIB;
     }
     else if (sscanf(value, "bzip2:%hu", &level) == 1)
     {
 #ifdef DONT_HAVE_BZIP2
-	message(1, 0, "Warning: bzip2 compression not supported -- using zlib");
-	type = CMPTYPE_ZLIB;
+        message(1, 0, "Warning: bzip2 compression not supported -- using zlib");
+        type = CMPTYPE_ZLIB;
 #else
-	type = CMPTYPE_BZIP2;
+        type = CMPTYPE_BZIP2;
 
-	/* Compression level > 1 is useless as data buffers are too small */
+        /* Compression level > 1 is useless as data buffers are too small */
 
-	if (level > 1) level = 1;
+        if (level > 1) level = 1;
 #endif
     }
     else if (sscanf(value, "%hu", &level) == 1)
     {
-	type = CMPTYPE_ZLIB;
+        type = CMPTYPE_ZLIB;
     }
     else
     {
-	message(0, 0, "invalid compression specification '%s'", value);
-	level = DFLT_CMP_LEVEL;
+        message(0, 0, "invalid compression specification '%s'", value);
+        level = DFLT_CMP_LEVEL;
     }
 
     if (level > 9)
     {
-	message(0, 0, "compression level out of range (%s)", value);
-	level = DFLT_CMP_LEVEL;
+        message(0, 0, "compression level out of range (%s)", value);
+        level = DFLT_CMP_LEVEL;
     }
 
     if (level == 0)
     {
-	type = CMPTYPE_ZLIB;
+        type = CMPTYPE_ZLIB;
     }
 
     *resultP = level;
@@ -7573,11 +7573,11 @@ void setStackSize(char *value)
     setUShort(value, &size);
     if (size < MIN_THREAD_STACK_KB)
     {
-	message(0, 0, "threadstacksize must be at least %hu kbytes", MIN_THREAD_STACK_KB);
+        message(0, 0, "threadstacksize must be at least %hu kbytes", MIN_THREAD_STACK_KB);
     }
     else
     {
-	ThreadStackSize = size * 1024;
+        ThreadStackSize = size * 1024;
     }
 }
 
@@ -7603,14 +7603,14 @@ readConfigFile(const char *fileName, int level)
 
     if (level > MAX_INCLUDE)
     {
-	message(0, 0, "include file nesting too deep (> %d)", MAX_INCLUDE);
-	return;
+        message(0, 0, "include file nesting too deep (> %d)", MAX_INCLUDE);
+        return;
     }
 
     if ((fp = fopen(fileName, "r")) == NULL)
     {
-	message(0, errno, "can't open config file '%s'", fileName);
-	return;
+        message(0, errno, "can't open config file '%s'", fileName);
+        return;
     }
 
     curPtr = lineBuf;
@@ -7618,46 +7618,46 @@ readConfigFile(const char *fileName, int level)
 
     while (fgets(curPtr, size, fp) != NULL)
     {
-	lineNo++;
+        lineNo++;
 
-	len = strlen(curPtr) - 1;
+        len = strlen(curPtr) - 1;
 
-	/* Strip new-line */
+        /* Strip new-line */
 
-	if (curPtr[len] == '\n')
-	{
-	    curPtr[len--] = '\0';
-	}
-	else if (!feof(fp))
-	{
-	    message(0, 0, "line too long in config file '%s' at line %d", fileName, lineNo);
-	    break;
-	}
+        if (curPtr[len] == '\n')
+        {
+            curPtr[len--] = '\0';
+        }
+        else if (!feof(fp))
+        {
+            message(0, 0, "line too long in config file '%s' at line %d", fileName, lineNo);
+            break;
+        }
 
-	message(4, 0, "line %d: %s", lineNo, curPtr);
+        message(4, 0, "line %d: %s", lineNo, curPtr);
 
-	/* Look for continued lines */
+        /* Look for continued lines */
 
-	if (curPtr[len] == '\\')
-	{
-	    curPtr[len] = '\0';
-	    size -= len;
-	    curPtr += len;
+        if (curPtr[len] == '\\')
+        {
+            curPtr[len] = '\0';
+            size -= len;
+            curPtr += len;
 
-	    /* Go and read some more */
+            /* Go and read some more */
 
-	    continue;
-	}
+            continue;
+        }
 
-	/* Reset for next time */
+        /* Reset for next time */
 
-	curPtr = lineBuf;
-	size = MAX_LINE_SIZE;
+        curPtr = lineBuf;
+        size = MAX_LINE_SIZE;
 
-	if (!parseConfigLine(lineBuf, level))
-	{
-	    message(0, 0, "invalid line in config file '%s' at line %d", fileName, lineNo);
-	}
+        if (!parseConfigLine(lineBuf, level))
+        {
+            message(0, 0, "invalid line in config file '%s' at line %d", fileName, lineNo);
+        }
     }
 
     fclose(fp);
@@ -7687,19 +7687,19 @@ parseConfigLine(const char *lineBuf, int level)
 
     if (FieldSeparator)
     {
-	for (s = lineBuf, t = tmpBuf; *s; s++, t++)
-	{
-	    if (*s == *FieldSeparator)
-	    {
-		*t = ' ';
-	    }
-	    else
-	    {
-		*t = *s;
-	    }
-	}
-	*t = '\0';
-	lineBuf = tmpBuf;
+        for (s = lineBuf, t = tmpBuf; *s; s++, t++)
+        {
+            if (*s == *FieldSeparator)
+            {
+                *t = ' ';
+            }
+            else
+            {
+                *t = *s;
+            }
+        }
+        *t = '\0';
+        lineBuf = tmpBuf;
     }
 
     /* Split into key-value pairs */
@@ -7707,34 +7707,34 @@ parseConfigLine(const char *lineBuf, int level)
     *comment = '#';
     *key = '#';
     if (sscanf(lineBuf, "%s \"%[^\"]\" %1s", key, value, comment) < 2 &&
-	sscanf(lineBuf, "%s \'%[^\']' %1s", key, value, comment) < 2 &&
-	sscanf(lineBuf, "%s %s %1s", key, value, comment) < 2)
+        sscanf(lineBuf, "%s \'%[^\']' %1s", key, value, comment) < 2 &&
+        sscanf(lineBuf, "%s %s %1s", key, value, comment) < 2)
     {
-	/*
-	** Return OK if this is blank or a comment but flag an error
-	** otherwise (if it was blank 'key' will be unchanged -- still
-	** a comment character).
-	*/
+        /*
+        ** Return OK if this is blank or a comment but flag an error
+        ** otherwise (if it was blank 'key' will be unchanged -- still
+        ** a comment character).
+        */
 
-	if (*key != '#')
-	{
-	    return 0;
-	}
-	return 1;
+        if (*key != '#')
+        {
+            return 0;
+        }
+        return 1;
     }
 
     /* Skip pure comment lines (that matched the scanf pattern) */
 
     if (*key == '#')
     {
-	return 1;
+        return 1;
     }
-	
+        
     /* Third field if present must be a comment */
 
     if (*comment != '#')
     {
-	return 0;
+        return 0;
     }
 
     message(4, 0, "key = '%s', value = '%s'", key, value);
@@ -7758,8 +7758,8 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "serverhost")) setString(value, &ServerHost);
     else if (!strcasecmp(key, "command"))
     {
-	setString(value, &CommandString);
-	MultiUse = 0;
+        setString(value, &CommandString);
+        MultiUse = 0;
     }
     else if (!strcasecmp(key, "dropunknownprotocol")) setBoolean(value, &DropUnknownProtocol);
     else if (!strcasecmp(key, "lockprotocol")) setBoolean(value, &LockProtocol);
@@ -7775,21 +7775,21 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "checkaddress")) setAllowedPeer(value, AllowedPeers);
     else if (!strcasecmp(key, "redirect"))
     {
-	if (!strcasecmp(value, "none"))
-	{
-	    /*
-	    ** Special case of "none" disables default target ports.
-	    ** Yes, I know there's a potential memory leak. No, it doesn't
-	    ** matter!
-	    */
+        if (!strcasecmp(value, "none"))
+        {
+            /*
+            ** Special case of "none" disables default target ports.
+            ** Yes, I know there's a potential memory leak. No, it doesn't
+            ** matter!
+            */
 
-	    AllowedDefault = NULL;
-	    setEndPtList("0-0", &AllowedDefault, NULL, NULL, NULL, 1);
-	}
-	else
-	{
-	    setEndPtList(value, &AllowedDefault, NULL, NULL, NULL, 0);
-	}
+            AllowedDefault = NULL;
+            setEndPtList("0-0", &AllowedDefault, NULL, NULL, NULL, 1);
+        }
+        else
+        {
+            setEndPtList(value, &AllowedDefault, NULL, NULL, NULL, 0);
+        }
     }
     else if (!strcasecmp(key, "message")) message(1, 0, "%s", value);
     else if (!strcasecmp(key, "name")) setString(value, &Program);
@@ -7799,31 +7799,31 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "keylifetime")) setUShort(value, &KeyLifetime);
     else if (!strcasecmp(key, "udpmode"))
     {
-	setBoolean(value, &UdpMode);
-	TcpMode = !UdpMode;
+        setBoolean(value, &UdpMode);
+        TcpMode = !UdpMode;
     }
     else if (!strcasecmp(key, "ipmode"))
     {
-	if (!strcasecmp(value, "tcp"))
-	{
-	    TcpMode = 1;
-	    UdpMode = 0;
-	}
-	else if (!strcasecmp(value, "udp"))
-	{
-	    TcpMode = 0;
-	    UdpMode = 1;
-	}
-	else if (!strcasecmp(value, "both") || !strcasecmp(value, "mixed"))
-	{
-	    TcpMode = 1;
-	    UdpMode = 1;
-	}
-	else
-	{
-	    message(0, 0, "invalid value for ipmode: %s", value);
-	    return 0;
-	}
+        if (!strcasecmp(value, "tcp"))
+        {
+            TcpMode = 1;
+            UdpMode = 0;
+        }
+        else if (!strcasecmp(value, "udp"))
+        {
+            TcpMode = 0;
+            UdpMode = 1;
+        }
+        else if (!strcasecmp(value, "both") || !strcasecmp(value, "mixed"))
+        {
+            TcpMode = 1;
+            UdpMode = 1;
+        }
+        else
+        {
+            message(0, 0, "invalid value for ipmode: %s", value);
+            return 0;
+        }
     }
     else if (!strcasecmp(key, "checksumlevel")) setChecksum(value, &ChecksumLevel);
     else if (!strcasecmp(key, "minchecksumlevel")) setChecksum(value, &MinChecksumLevel);
@@ -7831,14 +7831,14 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "tcptimeout")) setUShort(value, &TcpTimeout);
     else if (!strcasecmp(key, "idletimeout"))
     {
-	setUShort(value, &TcpTimeout);
-	setUShort(value, &UdpTimeout);
+        setUShort(value, &TcpTimeout);
+        setUShort(value, &UdpTimeout);
     }
     else if (!strcasecmp(key, "localsource"))
     {
-	int yesNo = 0;
-	setBoolean(value, &yesNo);
-	setString(yesNo ? "127.0.0.1" : "0.0.0.0", &ListenIp);
+        int yesNo = 0;
+        setBoolean(value, &yesNo);
+        setString(yesNo ? "127.0.0.1" : "0.0.0.0", &ListenIp);
     }
     else if (!strcasecmp(key, "listenip")) setString(value, &ListenIp);
     else if (!strcasecmp(key, "listenmode")) setBoolean(value, &ListenMode);
@@ -7854,12 +7854,12 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "transparent")) setBoolean(value, &Transparent);
     else if (!strcasecmp(key, "httpproxy"))
     {
-	setString(value, &ProxyHost);
-	if (sscanf(value, "%[^:]:%hu", ProxyHost, &ProxyPort) != 2)
-	{
-	    message(0, 0, "invalid httpproxy specification: %s", value);
-	    ProxyHost = NULL;
-	}
+        setString(value, &ProxyHost);
+        if (sscanf(value, "%[^:]:%hu", ProxyHost, &ProxyPort) != 2)
+        {
+            message(0, 0, "invalid httpproxy specification: %s", value);
+            ProxyHost = NULL;
+        }
     }
     else if (!strcasecmp(key, "httpproxyauth")) setString(base64Encode(value), &ProxyAuth);
     else if (!strcasecmp(key, "sharedkey")) setString(value, &SharedKey);
@@ -7875,7 +7875,7 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "useragent")) setString(value, &UserAgent);
     else
     {
-	return 0;
+        return 0;
     }
 
     return 1;
@@ -7897,19 +7897,19 @@ cleanHexString(char *str)
 
     while (*oldp)
     {
-	if (isxdigit(*oldp))
-	{
-	    *newp++ = tolower(*oldp++);
-	}
-	else if (isspace(*oldp))
-	{   
-	    oldp++;
-	}
-	else
-	{
-	    message(0, 0, "invalid character in hex string '%s'", str);
-	    break;
-	}
+        if (isxdigit(*oldp))
+        {
+            *newp++ = tolower(*oldp++);
+        }
+        else if (isspace(*oldp))
+        {   
+            oldp++;
+        }
+        else
+        {
+            message(0, 0, "invalid character in hex string '%s'", str);
+            break;
+        }
     }
     *newp = '\0';
 
@@ -7928,57 +7928,57 @@ usage(void)
     fprintf(stderr, "Zebedee -- A Secure Tunnel Program: Release %s\n", RELEASE_STR);
     fprintf(stderr, "Copyright (c) 1999-2013 by Neil Winton. All Rights Reserved.\n");
     fprintf(stderr,
-	    "This program is free software and may be distributed under the terms of the\n"
-	    "GNU General Public License, Version 2.\n");
+            "This program is free software and may be distributed under the terms of the\n"
+            "GNU General Public License, Version 2.\n");
     fprintf(stderr, "Zebedee comes with ABSOLUTELY NO WARRANTY.\n\n");
     fprintf(stderr,
-	    "Client: %s [options] [[clientports:]serverhost[:targetports]]\n"
-	    "Server: %s [options] -s [targethost]\n"
-	    "Key generation:  %s -p | -P [-f file]\n"
-	    "Hashing: %s -H string ... | -h [file ...]\n"
+            "Client: %s [options] [[clientports:]serverhost[:targetports]]\n"
+            "Server: %s [options] -s [targethost]\n"
+            "Key generation:  %s -p | -P [-f file]\n"
+            "Hashing: %s -H string ... | -h [file ...]\n"
 #ifdef WIN32
-	    "Service: %s [options] -S [install[=config-file] | remove | run]\n",
-	    Program
+            "Service: %s [options] -S [install[=config-file] | remove | run]\n",
+            Program
 #endif
-	    , Program, Program, Program, Program);
+            , Program, Program, Program, Program);
 
     fprintf(stderr,
-	    "Options are:\n"
-	    "    -b address  Bind only this address when listening for connections\n"
-	    "    -C num      Set the number of attempts to connect back to client (default 1)\n"
-	    "    -c host     Server initiates connection to client host\n"
-	    "    -D          Debug mode\n"
-	    "    -d          Do not detach from terminal\n"
-	    "    -e command  Run command connected to local port (client only)\n"
-	    "    -F char     Specify additional field separator character\n"
-	    "    -f file     Read configuration file\n"
-	    "    -H          Generate hash of string values\n"
-	    "    -h          Generate hash of file contents\n"
-	    "    -i          Interactive mode - set TCP_NODELAY option on all sockets\n"
-	    "    -K level    Specify the checksum level (default 2)\n"
-	    "    -k keybits  Specify key length in bits (default 128)\n"
- 	    "    -L          Lock protocol negotiation\n"
-	    "    -l          Client listens for server connection\n"
-	    "    -m          Client accepts multiple connections (default)\n"
-	    "    -n name     Specify program name\n"
+            "Options are:\n"
+            "    -b address  Bind only this address when listening for connections\n"
+            "    -C num      Set the number of attempts to connect back to client (default 1)\n"
+            "    -c host     Server initiates connection to client host\n"
+            "    -D          Debug mode\n"
+            "    -d          Do not detach from terminal\n"
+            "    -e command  Run command connected to local port (client only)\n"
+            "    -F char     Specify additional field separator character\n"
+            "    -f file     Read configuration file\n"
+            "    -H          Generate hash of string values\n"
+            "    -h          Generate hash of file contents\n"
+            "    -i          Interactive mode - set TCP_NODELAY option on all sockets\n"
+            "    -K level    Specify the checksum level (default 2)\n"
+            "    -k keybits  Specify key length in bits (default 128)\n"
+            "    -L          Lock protocol negotiation\n"
+            "    -l          Client listens for server connection\n"
+            "    -m          Client accepts multiple connections (default)\n"
+            "    -n name     Specify program name\n"
 #ifndef WIN32 
-	    "    -N username If running as root, switch to this user\n"
-#endif  	
-	    "    -o file     Log output to specified file\n"
-	    "    -p          Generate private key\n"
-	    "    -P          Generate public key \"fingerprint\"\n"
-	    "    -r ports    Specify allowed port redirection list (server only)\n"
-	    "    -s          Run as a server\n"
+            "    -N username If running as root, switch to this user\n"
+#endif          
+            "    -o file     Log output to specified file\n"
+            "    -p          Generate private key\n"
+            "    -P          Generate public key \"fingerprint\"\n"
+            "    -r ports    Specify allowed port redirection list (server only)\n"
+            "    -s          Run as a server\n"
 #ifdef WIN32
-	    "    -S option   Install/remove/run service\n"
+            "    -S option   Install/remove/run service\n"
 #endif
-	    "    -t          Timestamp log entries\n"
-	    "    -T port     Specify the server (tunnel) port\n"
-	    "    -u          Run in UDP mode\n"
-	    "    -U          Run in TCP and UDP mode\n"
-	    "    -v level    Set message verbosity level (default 1)\n"
-	    "    -x config   Extended configuration statement\n"
-	    "    -z type     Set the compression type and level (default zlib:6)\n");
+            "    -t          Timestamp log entries\n"
+            "    -T port     Specify the server (tunnel) port\n"
+            "    -u          Run in UDP mode\n"
+            "    -U          Run in TCP and UDP mode\n"
+            "    -v level    Set message verbosity level (default 1)\n"
+            "    -x config   Extended configuration statement\n"
+            "    -z type     Set the compression type and level (default zlib:6)\n");
 
     exit(EXIT_FAILURE);
 }
@@ -8042,28 +8042,28 @@ setRunAsUser(const char *user)
 
     if (geteuid() != 0)
     {
-	message(1, 0, "Warning: username to run as can only be specified if effective UID is root");
-	return;
+        message(1, 0, "Warning: username to run as can only be specified if effective UID is root");
+        return;
     }
 
     if (user != NULL)
     {
-	if ((userent = getpwnam(user)) != NULL)
-	{
-	    ProcessUID = userent->pw_uid;
+        if ((userent = getpwnam(user)) != NULL)
+        {
+            ProcessUID = userent->pw_uid;
             ProcessGID = userent->pw_gid;
         }
-	else
-	{
-	    /*
-	    ** This is a fatal error because failing to switch identity
-	    ** away from root if you are expecting to do so would be
-	    ** a Bad Thing.
-	    */
+        else
+        {
+            /*
+            ** This is a fatal error because failing to switch identity
+            ** away from root if you are expecting to do so would be
+            ** a Bad Thing.
+            */
 
-	    message(0, 0, "invalid username '%s'", user);
-	    exit(EXIT_FAILURE);
-	}
+            message(0, 0, "invalid username '%s'", user);
+            exit(EXIT_FAILURE);
+        }
     }   
 #endif
 }
@@ -8082,25 +8082,25 @@ switchUser(void)
 #ifndef WIN32
     if (ProcessUID != -1 && ProcessGID != -1)
     {
-	if (setgid(ProcessGID) == -1)
-	{
+        if (setgid(ProcessGID) == -1)
+        {
             message(0, errno, "cannot switch group ID to gid = %u", ProcessGID);
             exit(EXIT_FAILURE);
-	}
+        }
 
-	if (setuid(ProcessUID) == -1)
-	{
-	    message(0, errno, "cannot switch user ID to uid = %u", ProcessUID);
-  	    exit(EXIT_FAILURE);		
-	}
+        if (setuid(ProcessUID) == -1)
+        {
+            message(0, errno, "cannot switch user ID to uid = %u", ProcessUID);
+            exit(EXIT_FAILURE);         
+        }
     }
-#endif   	
+#endif          
 }
 
 /******************\
-**		  **
+**                **
 **  Main Routine  **
-**		  **
+**                **
 \******************/
 
 int
@@ -8121,15 +8121,15 @@ main(int argc, char **argv)
 
     if ((last = strrchr(argv[0], FILE_SEP_CHAR)) != NULL)
     {
-	Program = last + 1;
+        Program = last + 1;
     }
     else
     {
-	Program = argv[0];
+        Program = argv[0];
     }
     if ((last = strrchr(Program, '.')) != NULL)
     {
-	*last = '\0';
+        *last = '\0';
     }
 
     /* Initialise critical stuff */
@@ -8138,7 +8138,7 @@ main(int argc, char **argv)
 #ifdef WIN32
     if (WSAStartup(0x0101, &WsaState) != 0)
     {
-	message(0, errno, "winsock initailization failed");
+        message(0, errno, "winsock initailization failed");
     }
 #endif
 
@@ -8146,166 +8146,166 @@ main(int argc, char **argv)
 
     while ((ch = getopt(argc, argv, "b:C:c:Dde:f:F:hHik:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
-	switch (ch)
-	{
-	case 'C':
-	    setUShort(optarg, &ConnectAttempts);
-	    break;
+        switch (ch)
+        {
+        case 'C':
+            setUShort(optarg, &ConnectAttempts);
+            break;
 
-	case 'c':
-	    ClientHost = optarg;
-	    break;
+        case 'c':
+            ClientHost = optarg;
+            break;
 
-	case 'b':
-	    ListenIp = optarg;
-	    break;
+        case 'b':
+            ListenIp = optarg;
+            break;
 
-	case 'D':
-	    Debug = 1;
-	    break;
+        case 'D':
+            Debug = 1;
+            break;
 
-	case 'd':
-	    IsDetached = 0;
-	    break;
+        case 'd':
+            IsDetached = 0;
+            break;
 
-	case 'e':
-	    MultiUse = 0;
-	    CommandString = optarg;
-	    break;
+        case 'e':
+            MultiUse = 0;
+            CommandString = optarg;
+            break;
 
-	case 'f':
-	    readConfigFile(optarg, 1);
-	    break;
+        case 'f':
+            readConfigFile(optarg, 1);
+            break;
 
-	case 'F':
-	    FieldSeparator = optarg;
-	    break;
+        case 'F':
+            FieldSeparator = optarg;
+            break;
 
-	case 'h':
-	    if (doPrivKey || doPubKey)
-	    {
-		message(0, 0, "-h and -p or -P are mutually exclusive");
-		exit(EXIT_FAILURE);
-	    }
-	    doHash = 1;
-	    break;
+        case 'h':
+            if (doPrivKey || doPubKey)
+            {
+                message(0, 0, "-h and -p or -P are mutually exclusive");
+                exit(EXIT_FAILURE);
+            }
+            doHash = 1;
+            break;
 
-	case 'H':
-	    if (doPrivKey || doPubKey)
-	    {
-		message(0, 0, "-H and -p or -P are mutually exclusive");
-		exit(EXIT_FAILURE);
-	    }
-	    doHash = 2;
-	    break;
+        case 'H':
+            if (doPrivKey || doPubKey)
+            {
+                message(0, 0, "-H and -p or -P are mutually exclusive");
+                exit(EXIT_FAILURE);
+            }
+            doHash = 2;
+            break;
     
-	case 'i':
-	    InteractiveMode = 1;
-	    break;
+        case 'i':
+            InteractiveMode = 1;
+            break;
 
-	case 'k':
-	    setUShort(optarg, &KeyLength);
-	    break;
+        case 'k':
+            setUShort(optarg, &KeyLength);
+            break;
 
-	case 'K':
-	    setChecksum(optarg, &ChecksumLevel);
-	    break;
+        case 'K':
+            setChecksum(optarg, &ChecksumLevel);
+            break;
 
-	case 'l':
-	    ListenMode++;
-	    break;
+        case 'l':
+            ListenMode++;
+            break;
 
-	case 'L':
-	    LockProtocol = 1;
-	    break;
+        case 'L':
+            LockProtocol = 1;
+            break;
 
-	case 'm':
-	    MultiUse++;
-	    break;
+        case 'm':
+            MultiUse++;
+            break;
 
-	case 'n':
-	    Program = optarg;
-	    break;
+        case 'n':
+            Program = optarg;
+            break;
 
 #ifndef WIN32
-	case 'N':
-	    setRunAsUser(optarg);
-	    break;
+        case 'N':
+            setRunAsUser(optarg);
+            break;
 #endif
 
-	case 'o':
-	    setLogFile(optarg);
-	    break;
+        case 'o':
+            setLogFile(optarg);
+            break;
 
-	case 'p':
-	    if (doHash)
-	    {
-		message(0, 0, "-h or -H and -p or -P are mutually exclusive");
-		exit(EXIT_FAILURE);
-	    }
-	    doPrivKey++;
-	    break;
+        case 'p':
+            if (doHash)
+            {
+                message(0, 0, "-h or -H and -p or -P are mutually exclusive");
+                exit(EXIT_FAILURE);
+            }
+            doPrivKey++;
+            break;
 
-	case 'P':
-	    if (doHash)
-	    {
-		message(0, 0, "-h or -H and -p or -P are mutually exclusive");
-		exit(EXIT_FAILURE);
-	    }
-	    doPubKey++;
-	    break;
+        case 'P':
+            if (doHash)
+            {
+                message(0, 0, "-h or -H and -p or -P are mutually exclusive");
+                exit(EXIT_FAILURE);
+            }
+            doPubKey++;
+            break;
 
-	case 'r':
-	    setEndPtList(optarg, &AllowedDefault, NULL, NULL, NULL, 0);
-	    break;
+        case 'r':
+            setEndPtList(optarg, &AllowedDefault, NULL, NULL, NULL, 0);
+            break;
 
-	case 's':
-	    IsServer = 1;
-	    break;
+        case 's':
+            IsServer = 1;
+            break;
 
 #ifdef WIN32
-	case 'S':
-	    serviceArgs = optarg;
-	    break;
+        case 'S':
+            serviceArgs = optarg;
+            break;
 #endif
 
-	case 't':
-	    TimestampLog = 1;
-	    break;
+        case 't':
+            TimestampLog = 1;
+            break;
 
-	case 'T':
-	    setUShort(optarg, &ServerPort);
-	    break;
+        case 'T':
+            setUShort(optarg, &ServerPort);
+            break;
 
-	case 'u':
-	    UdpMode = 1;
-	    TcpMode = 0;
-	    break;
+        case 'u':
+            UdpMode = 1;
+            TcpMode = 0;
+            break;
 
-	case 'U':
-	    UdpMode = 1;
-	    TcpMode = 1;
-	    break;
+        case 'U':
+            UdpMode = 1;
+            TcpMode = 1;
+            break;
 
-	case 'v':
-	    LogLevel = strtoul(optarg, NULL, 10);
-	    break;
+        case 'v':
+            LogLevel = strtoul(optarg, NULL, 10);
+            break;
 
-	case 'x':
-	    if (!parseConfigLine(optarg, 0))
-	    {
-		message(0, 0, "invalid extended configuration argument '%s'", optarg);
-	    }
-	    break;
+        case 'x':
+            if (!parseConfigLine(optarg, 0))
+            {
+                message(0, 0, "invalid extended configuration argument '%s'", optarg);
+            }
+            break;
 
-	case 'z':
-	    setCmpInfo(optarg, &CompressInfo);
-	    break;
+        case 'z':
+            setCmpInfo(optarg, &CompressInfo);
+            break;
 
-	default:
-	    usage();
-	    break;
-	}
+        default:
+            usage();
+            break;
+        }
     }
 
     /*
@@ -8315,9 +8315,9 @@ main(int argc, char **argv)
 
     if (IsDetached)
     {
-	prepareToDetach();
+        prepareToDetach();
     }
-	
+        
     /*
     ** If using reusable session keys then initialize the CurrentToken
     ** to request a new one to be generated on first connection.
@@ -8325,7 +8325,7 @@ main(int argc, char **argv)
 
     if (KeyLifetime != 0)
     {
-	CurrentToken = TOKEN_NEW;
+        CurrentToken = TOKEN_NEW;
     }
 
     /*
@@ -8336,8 +8336,8 @@ main(int argc, char **argv)
 
     if (CommandString && MultiUse)
     {
-	message(0, 0, "can't specify a command for a multi-use client");
-	exit(EXIT_FAILURE);
+        message(0, 0, "can't specify a command for a multi-use client");
+        exit(EXIT_FAILURE);
     }
 
     /*
@@ -8346,14 +8346,14 @@ main(int argc, char **argv)
 
     if (ServerPort == 0)
     {
-	if (UdpMode && !TcpMode)
-	{
-	    ServerPort = DFLT_UDP_PORT;
-	}
-	else
-	{
-	    ServerPort = DFLT_TCP_PORT;
-	}
+        if (UdpMode && !TcpMode)
+        {
+            ServerPort = DFLT_UDP_PORT;
+        }
+        else
+        {
+            ServerPort = DFLT_TCP_PORT;
+        }
     }
 
     /*
@@ -8373,13 +8373,13 @@ main(int argc, char **argv)
 
     if (MaxBufSize > MAX_BUF_SIZE)
     {
-	message(1, 0, "Warning: maximum buffer size must be < %hu, rounded down", MAX_BUF_SIZE);
-	MaxBufSize = MAX_BUF_SIZE;
+        message(1, 0, "Warning: maximum buffer size must be < %hu, rounded down", MAX_BUF_SIZE);
+        MaxBufSize = MAX_BUF_SIZE;
     }
     else if (MaxBufSize == 0)
     {
-	message(1, 0, "Warning: buffer size must be > 0, set to %hu", DFLT_BUF_SIZE);
-	MaxBufSize = DFLT_BUF_SIZE;
+        message(1, 0, "Warning: buffer size must be > 0, set to %hu", DFLT_BUF_SIZE);
+        MaxBufSize = DFLT_BUF_SIZE;
     }
 
     /*
@@ -8388,8 +8388,8 @@ main(int argc, char **argv)
 
     if (KeyLength < MinKeyLength)
     {
-	message(1, 0, "Warning: specified keylength (%hu) set to minkeylength (%hu)", KeyLength, MinKeyLength);
-	KeyLength = MinKeyLength;
+        message(1, 0, "Warning: specified keylength (%hu) set to minkeylength (%hu)", KeyLength, MinKeyLength);
+        KeyLength = MinKeyLength;
     }
 
 #ifdef SIGPIPE
@@ -8413,28 +8413,28 @@ main(int argc, char **argv)
 #ifdef WIN32
     if (serviceArgs)
     {
-	if (!strncmp(serviceArgs, "install", 7))
-	{
-	    if (strncmp(serviceArgs, "install=", 8) == 0)
-	    {
-		exit(svcInstall(Program, serviceArgs + 8));
-	    }
-	    else
-	    {
-		exit(svcInstall(Program, NULL));
-	    }
-	}
-	else if (!strcmp(serviceArgs, "remove"))
-	{
-	    exit(svcRemove(Program));
-	}
-	else if (strcmp(serviceArgs, "run") != 0)
-	{
-	    message(0, 0, "invalid argument to -S option: %s", serviceArgs);
-	    exit(EXIT_FAILURE);
-	}
+        if (!strncmp(serviceArgs, "install", 7))
+        {
+            if (strncmp(serviceArgs, "install=", 8) == 0)
+            {
+                exit(svcInstall(Program, serviceArgs + 8));
+            }
+            else
+            {
+                exit(svcInstall(Program, NULL));
+            }
+        }
+        else if (!strcmp(serviceArgs, "remove"))
+        {
+            exit(svcRemove(Program));
+        }
+        else if (strcmp(serviceArgs, "run") != 0)
+        {
+            message(0, 0, "invalid argument to -S option: %s", serviceArgs);
+            exit(EXIT_FAILURE);
+        }
 
-	/* If it was "run" fall through to the rest ... */
+        /* If it was "run" fall through to the rest ... */
     }
 #endif
 
@@ -8449,203 +8449,203 @@ main(int argc, char **argv)
 
     if (doHash)
     {
-	/* Hashing: -h or -H */
+        /* Hashing: -h or -H */
 
-	if (optind >= argc)
-	{
-	    /* If there are no arguments with -h then we use stdin ... */
+        if (optind >= argc)
+        {
+            /* If there are no arguments with -h then we use stdin ... */
 
-	    if (doHash == 1)
-	    {
-		hashFile(hashBuf, "-");
-		printf("%s\n", hashBuf);
-	    }
-	    else
-	    {
-		message(0, 0, "no string argument to hash");
-		exit(EXIT_FAILURE);
-	    }
-	}
-	else
-	{
-	    /* We have arguments -- either strings or filenames */
+            if (doHash == 1)
+            {
+                hashFile(hashBuf, "-");
+                printf("%s\n", hashBuf);
+            }
+            else
+            {
+                message(0, 0, "no string argument to hash");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else
+        {
+            /* We have arguments -- either strings or filenames */
 
-	    while (optind < argc && argv[optind])
-	    {
-		if (doHash == 1)
-		{
-		    hashFile(hashBuf, argv[optind]);
-		}
-		else
-		{
-		    hashStrings(hashBuf, argv[optind], NULL);
-		}
-		printf("%s %s\n", hashBuf, argv[optind]);
-		optind++;
-	    }
-	}
+            while (optind < argc && argv[optind])
+            {
+                if (doHash == 1)
+                {
+                    hashFile(hashBuf, argv[optind]);
+                }
+                else
+                {
+                    hashStrings(hashBuf, argv[optind], NULL);
+                }
+                printf("%s %s\n", hashBuf, argv[optind]);
+                optind++;
+            }
+        }
     }
     else if (doPrivKey || doPubKey)
     {
-	/* Key generation: -p or -P */
+        /* Key generation: -p or -P */
 
-	if (doPrivKey)
-	{
-	    PrivateKey = generateKey(NULL, NULL, 0);
-	    if (PrivateKey != NULL)
-	    {
-		printf("privatekey \"%s\"\n", PrivateKey);
-	    }
-	    else
-	    {
-		message(0, errno, "can't generate private key");
-	    }
-	}
-	if (doPubKey)
-	{
-	    if (PrivateKey == NULL)
-	    {
-		message(0, 0, "can't generate a identity without a private key being set");
-		exit(EXIT_FAILURE);
-	    }
-	    gethostname(hostName, MAX_LINE_SIZE);
-	    printf("%s %s\n", generateIdentity(Generator, Modulus, PrivateKey), hostName);
-	}
+        if (doPrivKey)
+        {
+            PrivateKey = generateKey(NULL, NULL, 0);
+            if (PrivateKey != NULL)
+            {
+                printf("privatekey \"%s\"\n", PrivateKey);
+            }
+            else
+            {
+                message(0, errno, "can't generate private key");
+            }
+        }
+        if (doPubKey)
+        {
+            if (PrivateKey == NULL)
+            {
+                message(0, 0, "can't generate a identity without a private key being set");
+                exit(EXIT_FAILURE);
+            }
+            gethostname(hostName, MAX_LINE_SIZE);
+            printf("%s %s\n", generateIdentity(Generator, Modulus, PrivateKey), hostName);
+        }
     }
     else if (IsServer)
     {
-	/* Server mode -- check for target host arguments */
+        /* Server mode -- check for target host arguments */
 
-	while (optind < argc)
-	{
-	    setTarget(argv[optind]);
-	    optind++;
-	}
+        while (optind < argc)
+        {
+            setTarget(argv[optind]);
+            optind++;
+        }
 
-	/*
-	** Sanity check the default target. This must be a "pure" hostname
-	** without an address mask.
-	*/
+        /*
+        ** Sanity check the default target. This must be a "pure" hostname
+        ** without an address mask.
+        */
 
-	if (strchr(TargetHost, '/') != NULL)
-	{
-	    message(0, 0, "default target host (%s) must not have an address mask", TargetHost);
-	    exit(EXIT_FAILURE);
-	}
+        if (strchr(TargetHost, '/') != NULL)
+        {
+            message(0, 0, "default target host (%s) must not have an address mask", TargetHost);
+            exit(EXIT_FAILURE);
+        }
 
-	/*
-	** If we have not yet set up the allowed redirection ports then we
-	** will only allow redirection to ports on the local machine.
-	*/
+        /*
+        ** If we have not yet set up the allowed redirection ports then we
+        ** will only allow redirection to ports on the local machine.
+        */
 
-	if (AllowedTargets == NULL)
-	{
-	    AllowedTargets = newEndPtList(0, 0, "localhost", NULL, NULL, ENDPTLIST_ANY);
-	}
+        if (AllowedTargets == NULL)
+        {
+            AllowedTargets = newEndPtList(0, 0, "localhost", NULL, NULL, ENDPTLIST_ANY);
+        }
 
 #ifdef WIN32
-	if (serviceArgs)
-	{
-	    svcRun(Program,
-		   (VOID (*)(VOID *))((ClientHost == NULL) ?
-				      serverListener : serverInitiator),
-		   (VOID *)&ServerPort);
-	}
-	else
+        if (serviceArgs)
+        {
+            svcRun(Program,
+                   (VOID (*)(VOID *))((ClientHost == NULL) ?
+                                      serverListener : serverInitiator),
+                   (VOID *)&ServerPort);
+        }
+        else
 #endif
-	if (ClientHost != NULL)
-	{
-	    serverInitiator(&ServerPort);
-	}
-	else
-	{
-	    serverListener(&ServerPort);
-	}
+        if (ClientHost != NULL)
+        {
+            serverInitiator(&ServerPort);
+        }
+        else
+        {
+            serverListener(&ServerPort);
+        }
     }
     else
     {
-	/*
-	** Client mode -- treat any remaining arguments as tunnel
-	** specifications.
-	*/
+        /*
+        ** Client mode -- treat any remaining arguments as tunnel
+        ** specifications.
+        */
 
-	while (optind < argc)
-	{
-	    setTunnel(argv[optind]);
-	    optind++;
-	}
+        while (optind < argc)
+        {
+            setTunnel(argv[optind]);
+            optind++;
+        }
 
-	if (ServerHost == NULL)
-	{
-	    message(0, 0, "no server host specified");
-	    exit(EXIT_FAILURE);
-	}
+        if (ServerHost == NULL)
+        {
+            message(0, 0, "no server host specified");
+            exit(EXIT_FAILURE);
+        }
 
-	/*
-	** This next check is for compatibility -- allowing the command
-	**
-	**  zebedee -e 'telnet localhost %d' serverhost
-	**
-	** to work.
-	*/
+        /*
+        ** This next check is for compatibility -- allowing the command
+        **
+        **  zebedee -e 'telnet localhost %d' serverhost
+        **
+        ** to work.
+        */
 
-	if (TargetPorts == NULL)
-	{
-	    setEndPtList("telnet", &TargetPorts, ServerHost, NULL, NULL, 0);
-	}
+        if (TargetPorts == NULL)
+        {
+            setEndPtList("telnet", &TargetPorts, ServerHost, NULL, NULL, 0);
+        }
 
-	/*
-	** If no local port has been specified then we will default to
-	** using "0" -- which means that one should be dynamically
-	** allocated. Note that this will only be allowed if there is
-	** a single remote port -- see the checks below.
-	*/
+        /*
+        ** If no local port has been specified then we will default to
+        ** using "0" -- which means that one should be dynamically
+        ** allocated. Note that this will only be allowed if there is
+        ** a single remote port -- see the checks below.
+        */
 
-	if (ClientPorts == NULL)
-	{
-	    if ((ClientPorts = newEndPtList(0, 0, NULL, NULL, NULL, ENDPTLIST_ANY)) == NULL)
-	    {
-		message(0, errno, "can't allocate space for port list");
-		exit(EXIT_FAILURE);
-	    }
-	}
+        if (ClientPorts == NULL)
+        {
+            if ((ClientPorts = newEndPtList(0, 0, NULL, NULL, NULL, ENDPTLIST_ANY)) == NULL)
+            {
+                message(0, errno, "can't allocate space for port list");
+                exit(EXIT_FAILURE);
+            }
+        }
 
-	/* Make sure that we have matching local and remote port lists */
+        /* Make sure that we have matching local and remote port lists */
 
-	if (countPorts(ClientPorts) != countPorts(TargetPorts))
-	{
-	    message(0, 0, "the numbers of entries in the client and target port lists do not match");
-	    exit(EXIT_FAILURE);
-	}
+        if (countPorts(ClientPorts) != countPorts(TargetPorts))
+        {
+            message(0, 0, "the numbers of entries in the client and target port lists do not match");
+            exit(EXIT_FAILURE);
+        }
 
-	/*
-	** If there is more than one target port specified then multi-use
-	** mode is implicit. This also means that a command string can not
-	** be specified.
-	*/
+        /*
+        ** If there is more than one target port specified then multi-use
+        ** mode is implicit. This also means that a command string can not
+        ** be specified.
+        */
 
-	if (countPorts(TargetPorts) > 1)
-	{
-	    MultiUse++;
-	    if (CommandString)
-	    {
-		message(0, 0, "can't specify a command with multiple target ports");
-		exit(EXIT_FAILURE);
-	    }
-	}
+        if (countPorts(TargetPorts) > 1)
+        {
+            MultiUse++;
+            if (CommandString)
+            {
+                message(0, 0, "can't specify a command with multiple target ports");
+                exit(EXIT_FAILURE);
+            }
+        }
 
-	/* At last! Invoke the client listener routine! */
+        /* At last! Invoke the client listener routine! */
 
 #ifdef WIN32
-	if (serviceArgs)
-	{
-	    svcRun(Program, (VOID (*)(VOID *))clientListener, (void *)ClientPorts);
-	}
-	else
+        if (serviceArgs)
+        {
+            svcRun(Program, (VOID (*)(VOID *))clientListener, (void *)ClientPorts);
+        }
+        else
 #endif
-	{
-	    clientListener(ClientPorts);
-	}
+        {
+            clientListener(ClientPorts);
+        }
     }
 
     exit(EXIT_SUCCESS);

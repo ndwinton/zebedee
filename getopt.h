@@ -3,7 +3,7 @@
 
 /* RCS ID $Id: getopt.h,v 1.1.1.1 2001-04-12 18:06:46 ndwinton Exp $ */
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 extern "C" {
 #endif
 
@@ -15,7 +15,7 @@ extern int optreset;
 
 extern int getopt(int nargc, char *const *nargv, const char *ostr);
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 }
 #endif
 

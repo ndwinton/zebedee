@@ -40,32 +40,32 @@ char *service_c_rcsid = "$Id: service.c,v 1.1.1.1 2001-04-12 18:07:12 ndwinton E
 
 extern void message(unsigned short, int, char *, ...);
 
-#define	MAX_BUF_SIZE	2048
+#define MAX_BUF_SIZE    2048
 
-HANDLE			SvcFinishEvent = NULL;
-SERVICE_STATUS		SvcStatus;	/* Current status of service */
+HANDLE                  SvcFinishEvent = NULL;
+SERVICE_STATUS          SvcStatus;      /* Current status of service */
 SERVICE_STATUS_HANDLE   SvcStatusHandle;
-DWORD			SvcError;
-HANDLE			SvcThreadHandle = NULL;
-char			*SvcName = NULL;
-VOID			(*SvcFunction)(VOID *) = NULL;
-VOID			*SvcArg = NULL;
+DWORD                   SvcError;
+HANDLE                  SvcThreadHandle = NULL;
+char                    *SvcName = NULL;
+VOID                    (*SvcFunction)(VOID *) = NULL;
+VOID                    *SvcArg = NULL;
 
-DWORD	svcPlatform(void);
-VOID	svcRun(char *name, VOID (*function)(VOID *), VOID *arg);
-VOID	svcRun9X(char *name);
-VOID	svcRunNT(char *name);
-VOID	svcMain(DWORD argc, LPTSTR *argv);
-VOID	svcControl(DWORD ctrlCode);
-BOOL	svcReport(DWORD currentState, DWORD exitCode, DWORD checkPoint,
-		  DWORD waitHint);
+DWORD   svcPlatform(void);
+VOID    svcRun(char *name, VOID (*function)(VOID *), VOID *arg);
+VOID    svcRun9X(char *name);
+VOID    svcRunNT(char *name);
+VOID    svcMain(DWORD argc, LPTSTR *argv);
+VOID    svcControl(DWORD ctrlCode);
+BOOL    svcReport(DWORD currentState, DWORD exitCode, DWORD checkPoint,
+                  DWORD waitHint);
 VOID    svcStop(LPTSTR msg);
-int	svcInstall(char *name, char *configFile);
-int	svcInstall9X(char *name, char *configFile);
-int	svcInstallNT(char *name, char *configFile);
-int	svcRemove(char *name);
-int	svcRemove9X(char *name);
-int	svcRemoveNT(char *name);
+int     svcInstall(char *name, char *configFile);
+int     svcInstall9X(char *name, char *configFile);
+int     svcInstallNT(char *name, char *configFile);
+int     svcRemove(char *name);
+int     svcRemove9X(char *name);
+int     svcRemoveNT(char *name);
 
 
 DWORD
@@ -76,8 +76,8 @@ svcPlatform(void)
     info.dwOSVersionInfoSize = sizeof(info);
     if (!GetVersionEx(&info))
     {
-	message(0, 0, "can't get OS version info");
-	return 0;
+        message(0, 0, "can't get OS version info");
+        return 0;
     }
     return info.dwPlatformId;
 }
@@ -94,16 +94,16 @@ svcRun(char *name, VOID (*function)(VOID *), VOID *arg)
     switch (platform)
     {
     case VER_PLATFORM_WIN32_WINDOWS:
-	svcRun9X(name);
-	break;
+        svcRun9X(name);
+        break;
 
     case VER_PLATFORM_WIN32_NT:
-	svcRunNT(name);
-	break;
+        svcRunNT(name);
+        break;
 
     default:
-	message(0, 0, "unsupported OS platform (type %d)", platform);
-	break;
+        message(0, 0, "unsupported OS platform (type %d)", platform);
+        break;
     }
 }
 
@@ -132,8 +132,8 @@ svcRun9X(char *name)
 
     if ((kernelDll = LoadLibrary("KERNEL32.DLL")) == NULL)
     {
-	message(0, 0, "can't get handle to kernel library");
-	return;
+        message(0, 0, "can't get handle to kernel library");
+        return;
     }
 
     /* Find the address of the RegisterServiceProcess function */
@@ -141,16 +141,16 @@ svcRun9X(char *name)
     regFn = (DWORD (*)(void *, DWORD))GetProcAddress(kernelDll, "RegisterServiceProcess");
     if (regFn == NULL)
     {
-	message(0, 0, "can't get the address of RegisterServiceProcess()");
-	return;
+        message(0, 0, "can't get the address of RegisterServiceProcess()");
+        return;
     }
-			
+                        
     /* Register this process with the OS as a service */
 
     if ((*regFn)(NULL, 1 /* RSP_SIMPLE_SERVICE */) == 0)
     {
-	message(0, 0, "failed to register service process");
-	exit(EXIT_FAILURE);
+        message(0, 0, "failed to register service process");
+        exit(EXIT_FAILURE);
     }
 
     /* Run the main routine */
@@ -161,8 +161,8 @@ svcRun9X(char *name)
 
     if ((*regFn)(NULL, 0 /* RSP_UNREGISTER_SERVICE */) == 0)
     {
-	message(0, 0, "failed to unregister service process");
-	exit(EXIT_FAILURE);
+        message(0, 0, "failed to unregister service process");
+        exit(EXIT_FAILURE);
     }
 
     /* Free the kernel library */
@@ -189,11 +189,11 @@ svcMain(DWORD argc, LPTSTR *argv)
     /* Register the control handler */
 
     SvcStatusHandle = RegisterServiceCtrlHandler(TEXT(SvcName),
-						 (LPHANDLER_FUNCTION)svcControl);
+                                                 (LPHANDLER_FUNCTION)svcControl);
     if (!SvcStatusHandle)
     {
-	message(0, 0, "failed to register service control handler");
-	goto finish;
+        message(0, 0, "failed to register service control handler");
+        goto finish;
     }
 
     /* Initialise static service status values */
@@ -204,12 +204,12 @@ svcMain(DWORD argc, LPTSTR *argv)
     /* Report to SCM */
 
     if (!svcReport(SERVICE_START_PENDING,   /* Service state */
-		   NO_ERROR,		    /* Exit code */
-		   1,			    /* Checkpoint number */
-		   5000))		    /* Wait hint -- 5 secs */
+                   NO_ERROR,                /* Exit code */
+                   1,                       /* Checkpoint number */
+                   5000))                   /* Wait hint -- 5 secs */
     {
-	message(0, 0, "failed to report status to SCM");
-	goto finish;
+        message(0, 0, "failed to report status to SCM");
+        goto finish;
     }
 
     /*
@@ -219,15 +219,15 @@ svcMain(DWORD argc, LPTSTR *argv)
 
     if ((SvcFinishEvent = CreateEvent(NULL, 1, 0, NULL)) == NULL)
     {
-	goto finish;
+        goto finish;
     }
 
     /* Report next checkpoint to SCM */
 
     if (!svcReport(SERVICE_START_PENDING, NO_ERROR, 2, 5000))
     {
-	message(0, 0, "failed to report status to SCM");
-	goto finish;
+        message(0, 0, "failed to report status to SCM");
+        goto finish;
     }
 
     /* Start the worker thread */
@@ -235,15 +235,15 @@ svcMain(DWORD argc, LPTSTR *argv)
     SvcThreadHandle = (HANDLE)_beginthread(SvcFunction, 65536, SvcArg);
     if (!SvcThreadHandle)
     {
-	message(0, 0, "failed to create worker thread");
-	goto finish;
+        message(0, 0, "failed to create worker thread");
+        goto finish;
     }
 
     /* Report all systems GO! */
 
     if (!svcReport(SERVICE_RUNNING, NO_ERROR, 0, 0))
     {
-	message(0, 0, "failed to report status to SCM");
+        message(0, 0, "failed to report status to SCM");
         goto finish;
     }
 
@@ -254,14 +254,14 @@ svcMain(DWORD argc, LPTSTR *argv)
 finish:
     if (SvcFinishEvent != NULL)
     {
-	CloseHandle(SvcFinishEvent);
+        CloseHandle(SvcFinishEvent);
     }
 
     /* Report to SCM if possible */
 
     if (SvcStatusHandle != 0)
     {
-	svcReport(SERVICE_STOPPED, SvcError, 0, 0);
+        svcReport(SERVICE_STOPPED, SvcError, 0, 0);
     }
 
     return;
@@ -282,32 +282,32 @@ svcControl(DWORD code)
     switch(code)
     {
     case SERVICE_CONTROL_PAUSE:
-	if (SvcStatus.dwCurrentState == SERVICE_RUNNING)
-	{
-	    SuspendThread(SvcThreadHandle);
-	    state = SERVICE_PAUSED;
-	}
+        if (SvcStatus.dwCurrentState == SERVICE_RUNNING)
+        {
+            SuspendThread(SvcThreadHandle);
+            state = SERVICE_PAUSED;
+        }
         break;
 
     case SERVICE_CONTROL_CONTINUE:
-	if (SvcStatus.dwCurrentState == SERVICE_PAUSED)
-	{
-	    ResumeThread(SvcThreadHandle);
-	    state = SERVICE_RUNNING;
-	}
-	break;
+        if (SvcStatus.dwCurrentState == SERVICE_PAUSED)
+        {
+            ResumeThread(SvcThreadHandle);
+            state = SERVICE_RUNNING;
+        }
+        break;
 
     case SERVICE_CONTROL_STOP:
-	state = SERVICE_STOP_PENDING;
-	svcReport(SERVICE_STOP_PENDING, NO_ERROR, 1, 5000);
-	SetEvent(SvcFinishEvent);
-	return;
+        state = SERVICE_STOP_PENDING;
+        svcReport(SERVICE_STOP_PENDING, NO_ERROR, 1, 5000);
+        SetEvent(SvcFinishEvent);
+        return;
 
     case SERVICE_CONTROL_INTERROGATE:
-	break;
+        break;
 
     default:
-	break;
+        break;
     }
 
     svcReport(state, NO_ERROR, 0, 0);
@@ -328,12 +328,12 @@ svcReport(DWORD currentState, DWORD exitCode, DWORD checkPoint, DWORD waitHint)
 
     if (currentState == SERVICE_START_PENDING)
     {
-	SvcStatus.dwControlsAccepted = 0;
+        SvcStatus.dwControlsAccepted = 0;
     }
     else
     {
-	SvcStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP |
-				       SERVICE_ACCEPT_PAUSE_CONTINUE;
+        SvcStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP |
+                                       SERVICE_ACCEPT_PAUSE_CONTINUE;
     }
 
     SvcStatus.dwCurrentState = currentState;
@@ -345,8 +345,8 @@ svcReport(DWORD currentState, DWORD exitCode, DWORD checkPoint, DWORD waitHint)
 
     if (!(result = SetServiceStatus(SvcStatusHandle, &SvcStatus)))
     {
-	/* If there is an error then bail out */
-	svcStop("SetServiceStatus failed!");
+        /* If there is an error then bail out */
+        svcStop("SetServiceStatus failed!");
     }
 
     return result;
@@ -383,9 +383,9 @@ svcInstall(char *name, char *configFile)
 
     if (configFile == NULL)
     {
-	flag = "";
-	quote = "";
-	configFile = "";
+        flag = "";
+        quote = "";
+        configFile = "";
     }
 
     /*
@@ -395,35 +395,35 @@ svcInstall(char *name, char *configFile)
     */
 
     if (GetModuleFileName(NULL, path,
-			  MAX_BUF_SIZE - (strlen(configFile) + 20)) == 0)
+                          MAX_BUF_SIZE - (strlen(configFile) + 20)) == 0)
     {
-	message(0, 0, "can't get executable path");
-	return EXIT_FAILURE;
+        message(0, 0, "can't get executable path");
+        return EXIT_FAILURE;
     }
 
     /*
     ** Build the command string. If a config file was specified
     ** this will be of the form:
     **
-    **	"program path" -f "config file" -Srun
+    **  "program path" -f "config file" -Srun
     */
 
     sprintf(cmd, "\"%s\" %s %s%s%s %s", path,
-	    flag, quote, configFile, quote, runArg);
+            flag, quote, configFile, quote, runArg);
 
     switch (platform)
     {
     case VER_PLATFORM_WIN32_WINDOWS:
-	return svcInstall9X(name, cmd);
-	break;
+        return svcInstall9X(name, cmd);
+        break;
 
     case VER_PLATFORM_WIN32_NT:
-	return svcInstallNT(name, cmd);
-	break;
+        return svcInstallNT(name, cmd);
+        break;
 
     default:
-	message(0, 0, "unsupported OS platform (type %d)", platform);
-	break;
+        message(0, 0, "unsupported OS platform (type %d)", platform);
+        break;
     }
     return EXIT_FAILURE;
 }
@@ -439,31 +439,31 @@ svcInstallNT(char *name, char *cmd)
 
     if ((scmHandle = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS)) == NULL)
     {
-	message(0, 0, "can't open SCM database");
-	return EXIT_FAILURE;
+        message(0, 0, "can't open SCM database");
+        return EXIT_FAILURE;
     }
 
     /* Now create the service entry */
 
     svcHandle = CreateService(scmHandle,    /* SCM database handle */
-			      name,	    /* Name of service */
-			      name,	    /* Display name */
-			      SERVICE_ALL_ACCESS,	/* Desired access */
-			      SERVICE_WIN32_OWN_PROCESS,/* Run in own process */
-			      SERVICE_AUTO_START,	/* Start during boot */
-			      SERVICE_ERROR_NORMAL,	/* Show message but continue boot */
-			      cmd,	    /* Program plus arguments */
-			      NULL,	    /* No load ordering group */
-			      NULL,	    /* No tag identifier */
-			      NULL,	    /* No dependencies */
-			      NULL,	    /* Use LocalSystem account */
-			      NULL);	    /* No password */
+                              name,         /* Name of service */
+                              name,         /* Display name */
+                              SERVICE_ALL_ACCESS,       /* Desired access */
+                              SERVICE_WIN32_OWN_PROCESS,/* Run in own process */
+                              SERVICE_AUTO_START,       /* Start during boot */
+                              SERVICE_ERROR_NORMAL,     /* Show message but continue boot */
+                              cmd,          /* Program plus arguments */
+                              NULL,         /* No load ordering group */
+                              NULL,         /* No tag identifier */
+                              NULL,         /* No dependencies */
+                              NULL,         /* Use LocalSystem account */
+                              NULL);        /* No password */
     CloseServiceHandle(scmHandle);
 
     if (svcHandle == NULL)
     {
-	message(0, 0, "can't create service");
-	return EXIT_FAILURE;
+        message(0, 0, "can't create service");
+        return EXIT_FAILURE;
     }
 
     CloseServiceHandle(svcHandle);
@@ -482,20 +482,20 @@ svcInstall9X(char *name, char *cmd)
     /* Open RunServices registry key */
 
     if (RegCreateKey(HKEY_LOCAL_MACHINE,
-		     "Software\\Microsoft\\Windows\\CurrentVersion\\RunServices",
-		     &runKey) != ERROR_SUCCESS)
+                     "Software\\Microsoft\\Windows\\CurrentVersion\\RunServices",
+                     &runKey) != ERROR_SUCCESS)
     {
-	message(0, 0, "can't locate registry key");
-	return EXIT_FAILURE;
+        message(0, 0, "can't locate registry key");
+        return EXIT_FAILURE;
     }
 
     /* Add value for this service */
 
     if (RegSetValueEx(runKey, name, 0, REG_SZ, cmd, strlen(cmd) + 1) != ERROR_SUCCESS)
     {
-	RegCloseKey(runKey);
-	message(0, 0, "failed to add value to registry");
-	return EXIT_FAILURE;
+        RegCloseKey(runKey);
+        message(0, 0, "failed to add value to registry");
+        return EXIT_FAILURE;
     }
 
     RegCloseKey(runKey);
@@ -514,16 +514,16 @@ svcRemove(char *name)
     switch (platform)
     {
     case VER_PLATFORM_WIN32_WINDOWS:
-	return svcRemove9X(name);
-	break;
+        return svcRemove9X(name);
+        break;
 
     case VER_PLATFORM_WIN32_NT:
-	return svcRemoveNT(name);
-	break;
+        return svcRemoveNT(name);
+        break;
 
     default:
-	message(0, 0, "unsupported OS platform (type %d)", platform);
-	break;
+        message(0, 0, "unsupported OS platform (type %d)", platform);
+        break;
     }
 
     return EXIT_FAILURE;
@@ -535,66 +535,66 @@ svcRemoveNT(char *name)
     SC_HANDLE   svcHandle;
     SC_HANDLE   scmHandle;
     SERVICE_STATUS status;
-    int		retStatus = EXIT_SUCCESS;
+    int         retStatus = EXIT_SUCCESS;
 
 
     /* Open the SCM */
 
     if ((scmHandle = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS)) != NULL)
     {
-	svcHandle = OpenService(scmHandle, name, SERVICE_ALL_ACCESS);
+        svcHandle = OpenService(scmHandle, name, SERVICE_ALL_ACCESS);
 
-	if (svcHandle != NULL)
-	{
-	    /* Try to stop the service */
+        if (svcHandle != NULL)
+        {
+            /* Try to stop the service */
 
-	    if (ControlService(svcHandle, SERVICE_CONTROL_STOP, &status))
-	    {
-		while (QueryServiceStatus(svcHandle, &status))
-		{
-		    if (status.dwCurrentState == SERVICE_STOP_PENDING)
-		    {
-			Sleep(1000);
-		    }
-		    else
-		    {
-			break;
-		    }
-		}
+            if (ControlService(svcHandle, SERVICE_CONTROL_STOP, &status))
+            {
+                while (QueryServiceStatus(svcHandle, &status))
+                {
+                    if (status.dwCurrentState == SERVICE_STOP_PENDING)
+                    {
+                        Sleep(1000);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
 
-		if (status.dwCurrentState != SERVICE_STOPPED)
-		{
-		    message(0, 0, "failed to stop the '%s' service", name);
-		    retStatus = EXIT_FAILURE;
-		}
-	    }
+                if (status.dwCurrentState != SERVICE_STOPPED)
+                {
+                    message(0, 0, "failed to stop the '%s' service", name);
+                    retStatus = EXIT_FAILURE;
+                }
+            }
 
-	    /* Now remove the service from the SCM */
+            /* Now remove the service from the SCM */
 
-	    if (DeleteService(svcHandle))
-	    {
-		message(1, 0, "successfully removed the '%s' service", name);
-	    }
-	    else
-	    {
-		message(0, 0, "failed to remove the '%s' service", name);
-		retStatus = EXIT_FAILURE;
-	    }
+            if (DeleteService(svcHandle))
+            {
+                message(1, 0, "successfully removed the '%s' service", name);
+            }
+            else
+            {
+                message(0, 0, "failed to remove the '%s' service", name);
+                retStatus = EXIT_FAILURE;
+            }
 
-	    CloseServiceHandle(svcHandle);
-	}
-	else
-	{
-	    message(0, 0, "can't find the '%s' service", name);
-	    retStatus = EXIT_FAILURE;
-	}
+            CloseServiceHandle(svcHandle);
+        }
+        else
+        {
+            message(0, 0, "can't find the '%s' service", name);
+            retStatus = EXIT_FAILURE;
+        }
 
-	CloseServiceHandle(scmHandle);
+        CloseServiceHandle(scmHandle);
     }
     else
     {
-	message(0, 0, "can't contact Service Control Manager");
-	retStatus = EXIT_FAILURE;
+        message(0, 0, "can't contact Service Control Manager");
+        retStatus = EXIT_FAILURE;
     }
 
     return retStatus;
@@ -611,27 +611,27 @@ svcRemove9X(char *name)
     /* Locate the RunServices registry entry */
 
     if (RegOpenKey(HKEY_LOCAL_MACHINE, 
-		   "Software\\Microsoft\\Windows\\CurrentVersion\\RunServices",
-		   &runKey) != ERROR_SUCCESS)
+                   "Software\\Microsoft\\Windows\\CurrentVersion\\RunServices",
+                   &runKey) != ERROR_SUCCESS)
     {
-	message(0, 0, "can't find the RunServices registry key");
-	status = EXIT_FAILURE;
+        message(0, 0, "can't find the RunServices registry key");
+        status = EXIT_FAILURE;
     }
     else
     {
-	/* Delete the key value for our service */
+        /* Delete the key value for our service */
 
-	if (RegDeleteValue(runKey, name) != ERROR_SUCCESS)
-	{
-	    message(0, 0, "failed to delete registry RunServices entry for '%s'", name);
-	    status = EXIT_FAILURE;
-	}
-	else
-	{
-	    message(1, 0, "successfully removed the '%s' service", name);
-	}
+        if (RegDeleteValue(runKey, name) != ERROR_SUCCESS)
+        {
+            message(0, 0, "failed to delete registry RunServices entry for '%s'", name);
+            status = EXIT_FAILURE;
+        }
+        else
+        {
+            message(1, 0, "successfully removed the '%s' service", name);
+        }
 
-	RegCloseKey(runKey);
+        RegCloseKey(runKey);
     }
 
     return status;

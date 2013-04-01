@@ -33,36 +33,36 @@
 
 #if defined(__GNUC__) && !defined(__STRICT_ANSI__)
 /* this gives a roughly a 7/4 speed increase with powmod() */
-#define SHIFT	31
+#define SHIFT   31
 typedef unsigned int digit;
-typedef unsigned int wdigit;	/* digit widened to parameter size */
+typedef unsigned int wdigit;    /* digit widened to parameter size */
 typedef unsigned long long twodigits;
-typedef long long stwodigits;	/* signed variant of twodigits */
+typedef long long stwodigits;   /* signed variant of twodigits */
 #else
-#define SHIFT	15
+#define SHIFT   15
 typedef unsigned short digit;
 typedef unsigned int wdigit;
 typedef unsigned long twodigits;
 typedef long stwodigits;
 #endif
 
-#define BASE	((digit)1 << SHIFT)
-#define MASK	((int)(BASE - 1))
+#define BASE    ((digit)1 << SHIFT)
+#define MASK    ((int)(BASE - 1))
 
 typedef struct huge_number {
-    long size;			/* ob_size */
-    digit *d;			/* ob_digit */
+    long size;                  /* ob_size */
+    digit *d;                   /* ob_digit */
 } Huge;
 
 /* we want to wipe as we go along, so that secret keys cannot be read from memory: */
-#define huge_free(x)					\
-    {							\
-	if (x) {					\
-	    memset (x, 0, sizeof (Huge) + 		\
-		    sizeof (digit) * (((x)->size) >= 0 ? ((x)->size) : -((x)->size)));	\
-	    free (x);					\
-	}						\
-	(x) = 0;					\
+#define huge_free(x)                                    \
+    {                                                   \
+        if (x) {                                        \
+            memset (x, 0, sizeof (Huge) +               \
+                    sizeof (digit) * (((x)->size) >= 0 ? ((x)->size) : -((x)->size)));  \
+            free (x);                                   \
+        }                                               \
+        (x) = 0;                                        \
     }
 
 /* management */
@@ -127,6 +127,6 @@ Huge *huge_or (Huge * a, Huge * b);
 #define huge_log(x,y) 
 void xhuge_log(Huge *h, char *msg, char *file, int line);
 
-#endif				/* ! _HUGE_H */
+#endif                          /* ! _HUGE_H */
 
 
