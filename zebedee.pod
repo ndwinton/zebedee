@@ -19,7 +19,7 @@ B<zebedee> [B<-m>] [B<-e> I<command>]
 
 =item Common Options:
 
-B<zebedee> [B<-dDLtuU>] [B<-b> I<address>] [B<-F> I<char>] [B<-f> I<file>]
+B<zebedee> [B<-dDiLtuU>] [B<-b> I<address>] [B<-F> I<char>] [B<-f> I<file>]
 [B<-K> I<checksumlevel>] [B<-k> I<keybits>] [B<-n> I<name>] [B<-o> I<log>]
 [B<-T> I<port>] [B<-v> I<level>] [B<-x> I<config>] [B<-z> I<level>] ...
 
@@ -48,12 +48,12 @@ B<zebedee> [B<-N> I<userid>] ...
 =head1 DESCRIPTION
 
 B<Zebedee> is a simple program to establish an encrypted, compressed "tunnel"
-for TCP/IP or UDP traffic between two systems. This allows data from, for
-example, B<telnet>, B<ftp> and B<X> sessions to be protected from snooping.
+for TCP/IP or UDP traffic between two systems. This allows data from otherwise
+unprotected sessions, such as B<telnet>, to be protected from snooping.
 You can also use compression, either with or without data encryption, to gain
 performance over low-bandwidth networks.
 
-This document describes the features of B<Zebedee> as at release 2.5.3. For
+This document describes the features of B<Zebedee> as at release 2.6.0. For
 details of the new features in this release see L<CHANGES|/changes>.
 
 The main goals for B<Zebedee> are to:
@@ -85,7 +85,7 @@ the term of the GNU General Public Licence (see L<CREDITS AND LEGALITIES>).
 
 =back
 
-Of course, B<Zebedee> is by no means the first, or only secure tunnel program
+Of course, B<Zebedee> is by no means the only (or best) secure tunnel program
 available. It does not pretend to compete with the likes of B<ssh> or B<SSL>
 in terms of breadth of function but if you want something quick, simple and
 I<completely free> then it may be the tool for you.
@@ -112,6 +112,23 @@ B<D>iffie-Hellman key agreement.
 =back
 
 So now you know!
+
+=head2 Once upon a time ...
+
+The first version of B<Zebedee> was written at the end of the last century (yes,
+it's that old). After all this time it's amazing that people still find it useful!
+
+The world has moved on a very long way since then. At that time, home Internet
+connections were typically via dial-up modem operating at maybe 56 kbits/sec.
+A home connection now, in 2013, may be over 1000 times faster. For this reason alone
+some of the primary motivations behind creating B<Zebedee> have essentially
+disappeared -- and it's also why there are, on reflection, some less than ideal
+design decisions in the code.
+
+The history of B<Zebedee> is also the reason why some of the documentation will
+seem rather dated. Some of the more outmoded examples have been changed, but
+if things still seem a little "quaint" then maybe that's because B<Zebedee>'s
+author is also considerably older than when he wrote it too ...
 
 =head2 Basic Usage
 
@@ -193,9 +210,11 @@ B<L<tunnel|/item_tunnel>> keyword for more details.
 =head2 UDP Tunnelling
 
 Originally B<Zebedee> was designed only to be able to handle TCP/IP traffic.
-It can now also handle connectionless UDP data. To enable this start B<Zebedee>
-with the B<-U> option (or use the B<L<ipmode|/item_ipmode>> keyword). For
-example:
+It can, however, also handle connectionless UDP data -- although it does so
+by tunnelling it over a TCP connection so it's not particularly efficient.
+
+To enable this start B<Zebedee> with the B<-U> option (or use the
+B<L<ipmode|/item_ipmode>> keyword). For example:
 
  zebedee -s -U
 
@@ -1111,6 +1130,16 @@ protected file. There is a limit of 5 levels deep of include processing
 (counting the initial configuration file as level 1). This avoids
 unintentional recursion.
 
+=item B<interactive> (command-line B<-i>)
+
+Sets B<TCP_NODELAY> option on all sockets. This disables Nagle's algorithm for
+buffering in TCP which may result in better interactive performance at the
+expense of more network packets.
+
+If you don't understand this, try things both with and without this
+set. It is probably best to set it on the client side rather than the server
+to get the best flexibility.
+
 =item B<ipmode> (command-line B<-U> for "both" mode)
 
 As of version 2.4, a B<Zebedee> client or server can handle both TCP and UDP
@@ -1202,6 +1231,7 @@ This specifies that maximum number of concurrent connections (tunnels) that
 the B<Zebedee> instance will handle.
 
 The default value is zero, which means that no limit is applied.
+
 =item B<message>
 
 The specifies a string that will be logged at verbosity level 1 when it is

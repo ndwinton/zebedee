@@ -152,7 +152,7 @@ ISCOMP = "c:/Program Files (x86)/Inno Setup 5/compil32.exe"
 #   -DDFLT_SHELL=\"c:\\winnt\\system32\\cmd.exe\"
 
 DEFINES_win32 = -DFD_SETSIZE=512
-DEFINES_win64 = -DFD_SETSIZE=512
+DEFINES_win64 = -DFD_SETSIZE=1024
 DEFINES_linux = -DHAVE_PTHREADS
 DEFINES_linux64 = $(DEFINES_linux)
 DEFINES_solaris = -D_REENTRANT -DHAVE_PTHREADS
@@ -259,11 +259,11 @@ install : precheck zebedee$(EXE) zebedee.1 ftpgw.tcl.1 $(ZBDFILES) $(TXTFILES)
 clean :
 	rm -f zebedee zebedee.exe *.o core *.1 *.html *.tmp *.bak
 
-# This makes the Win32 setup.exe using InnoSetup. The perl command in
-# this sequence "dosifies" the text files ... sigh ...
+# This makes the Win32 setup.exe using InnoSetup.
 
 zbdsetup.exe : zebedee$(EXE) zebedee.html zebedee.ico vncloopback.reg \
 		$(ZBDFILES) $(TXTFILES)
-	$(PERL) -ni.bak -e print $(ZBDFILES) $(TXTFILES) vncloopback.reg
+	unix2dos $(ZBDFILES) $(TXTFILES) vncloopback.reg
 	$(ISCOMP) /cc zebedee.iss
+	dos2unix $(ZBDFILES) $(TXTFILES) vncloopback.reg
 	mv -f Output/setup.exe zbdsetup.exe

@@ -163,6 +163,7 @@ extern int svcRemove(char *name);
 #include <sys/wait.h>
 #include <dirent.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -531,6 +532,8 @@ gid_t ProcessGID = -1;          /* Group id to run zebedee process if started as
 long ThreadStackSize = THREAD_STACK_SIZE; /* As it says */
 unsigned short BugCompatibility = 0;	/* Be nice to development users */
 unsigned short MaxConnections = 0;      /* Maximum number of simultaneous connections */
+int InteractiveMode = 0;		/* Possibly better interactive performance */
+char *UserAgent = "Zebedee";		/* User agent provided to HTTP proxies */
 
 extern char *optarg;		/* From getopt */
 extern int optind;		/* From getopt */
@@ -597,6 +600,8 @@ int makeListener(unsigned short *portP, char *listenIp, int udpMode, int listenQ
 void setNoLinger(int fd);
 void setKeepAlive(int fd);
 void setNonBlocking(int fd, unsigned long nonBlock);
+void setNoDelayIfInteractive(int fd);
+
 int acceptConnection(int listenFd, const char *host, int loop, unsigned short timeout);
 int socketIsUsable(int sock);
 
@@ -2105,6 +2110,10 @@ makeConnection(const char *host, const unsigned short port,
 		closesocket(sfd);
 		return -1;
 	    }
+	    
+	    /* Disable buffering for possible better performance, if requested */
+
+	    setNoDelayIfInteractive(sfd);
 	}
     }
 
@@ -2137,7 +2146,7 @@ base64Encode(char *str)
     unsigned long bits;
 
 
-    if (str == NULL)
+    if (str == NULL || *str == '\0')
     {
 	return NULL;
     }
@@ -2155,7 +2164,7 @@ base64Encode(char *str)
     }
     
     s = buf;
-    for (i = 0; i <= len - 3; i += 3)
+    for (i = 0; i < len - 3; i += 3)
     {
 	bits = ((unsigned long)(str[i])) << 24;
 	bits |= ((unsigned long)(str[i + 1])) << 16;
@@ -2221,8 +2230,8 @@ base64Encode(char *str)
 ** A strictly configured proxy server may not allow connection to arbitrary
 ** ports but only to that used by HTTPS (port 443). Also, in order to give
 ** proxy server owners some chance of blocking Zebedee if they wish to,
-** the connect method header contains a "User-Agent: Zebedee" line. Unless
-** someone has modified this code, that is :-)
+** the connect method header contains a "User-Agent: Zebedee" line. This can
+** default value can be overridden using the "useragent" keyword.
 **
 ** If ProxyAuth is not NULL it should be the base64-encoded username:password
 ** which will be passed to the proxy server.
@@ -2265,11 +2274,11 @@ proxyConnection(const char *host, const unsigned short port,
     buf[MAX_LINE_SIZE] = '\0';
     if (ProxyAuth)
     {
-	snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nProxy-Authorization: Basic %s\r\nUser-Agent: Zebedee\r\n\r\n", host, port, ProxyAuth);
+	snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nProxy-Authorization: Basic %s\r\nUser-Agent: %s\r\n\r\n", host, port, ProxyAuth, UserAgent);
     }
     else
     {
-	snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nUser-Agent: Zebedee\r\n\r\n", host, port);
+	snprintf(buf, sizeof(buf) - 1, "CONNECT %s:%hu HTTP/1.0\r\nUser-Agent: %s\r\n\r\n", host, port, UserAgent);
     }
 
     if (send(fd, buf, strlen(buf), 0) <= 0)
@@ -2542,6 +2551,26 @@ setNonBlocking(int fd, unsigned long nonBlock)
 }
 
 /*
+** setNoDelayIfInteractive
+**
+** Set TCP_NODELAY option (turn of Nagle algorithm buffering) on the
+** given socket if in interactive mode.
+*/
+
+void
+setNoDelayIfInteractive(int fd)
+{
+    int flag = 1;
+    
+    if (InteractiveMode) 
+    {
+	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int)) != 0)
+	{
+	    message(1, 0, "Warning: failed to set TCP_NODELAY option on socket");
+	}
+    }
+}
+/*
 ** acceptConnection
 **
 ** Accept a connection on the specified listenFd. If the host is "*" then
@@ -2708,11 +2737,13 @@ acceptConnection(int listenFd, const char *host,
 
     /*
     ** Set the "don't linger on close" and "keep alive" options. The latter
-    ** will (eventually) reap defunct connections.
+    ** will (eventually) reap defunct connections. Buffering will be disabled
+    ** if in interactive mode.
     */
 
     setNoLinger(serverFd);
     setKeepAlive(serverFd);
+    setNoDelayIfInteractive(serverFd);
 
     return serverFd;
 
@@ -5375,7 +5406,11 @@ clientListener(EndPtList_t *ports)
 			/* Set "keep alive" to reap defunct connections */
 
 			setKeepAlive(clientFd);
-
+			
+			/* If requested, disable buffering */
+			
+			setNoDelayIfInteractive(clientFd);
+			
 			/* Create the handler process/thread */
 
 			spawnHandler(client, listenFd, clientFd,
@@ -6127,7 +6162,11 @@ serverListener(unsigned short *portPtr)
 	    /* Set "keep alive" to reap defunct connections */
 
 	    setKeepAlive(clientFd);
-
+	    
+	    /* If requested, diable buffering */
+	    
+	    setNoDelayIfInteractive(clientFd);
+	    
 	    /* Create the handler process/thread */
 
 	    spawnHandler(server, listenFd, clientFd, Debug, &addr, 0);
@@ -7832,6 +7871,8 @@ parseConfigLine(const char *lineBuf, int level)
     else if (!strcasecmp(key, "threadstacksize")) setStackSize(value);
     else if (!strcasecmp(key, "bugcompatibility")) setUShort(value, &BugCompatibility);
     else if (!strcasecmp(key, "maxconnections")) setUShort(value, &MaxConnections);
+    else if (!strcasecmp(key, "interactive")) setBoolean(value, &InteractiveMode);
+    else if (!strcasecmp(key, "useragent")) setString(value, &UserAgent);
     else
     {
 	return 0;
@@ -7913,6 +7954,7 @@ usage(void)
 	    "    -f file     Read configuration file\n"
 	    "    -H          Generate hash of string values\n"
 	    "    -h          Generate hash of file contents\n"
+	    "    -i          Interactive mode - set TCP_NODELAY option on all sockets\n"
 	    "    -K level    Specify the checksum level (default 2)\n"
 	    "    -k keybits  Specify key length in bits (default 128)\n"
  	    "    -L          Lock protocol negotiation\n"
@@ -8102,7 +8144,7 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "b:C:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "b:C:c:Dde:f:F:hHik:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
@@ -8155,6 +8197,10 @@ main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	    }
 	    doHash = 2;
+	    break;
+    
+	case 'i':
+	    InteractiveMode = 1;
 	    break;
 
 	case 'k':

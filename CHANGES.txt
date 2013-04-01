@@ -1,3 +1,18 @@
+* Release 2.5.x
+
+Add "interactive" keyword (-i) for "interactive mode" -- which uses TCP_NODELAY to
+disable TCP-level buffering and (possibly) give better interactive performance,
+for example, where single key presses need to be handled as speedily as possible.
+(Thanks to Alex Pelts for the original implementation)
+
+Bug-fix to bas64Encode (Thanks to Mauritius Thinnes for the bug-report)
+
+Added (undocumented, except here :-) "useragent" keyword.
+
+Windows 64-bit port.
+
+Upgrade dependent libraries and tools.
+
 * Release 2.5.3
 
 Fix file descriptor leak when IP address lookup fails.
