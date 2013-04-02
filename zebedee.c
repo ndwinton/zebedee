@@ -21,8 +21,7 @@
 **
 */
 
-char *zebedee_c_rcsid = "$Id: zebedee.c,v 1.49 2005-09-02 22:20:23 ndwinton Exp $";
-#define RELEASE_STR "2.5.3"
+#define RELEASE_STR "2.6.0"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -686,7 +685,6 @@ void sigpipeCatcher(int sig);
 void sigchldCatcher(int sig);
 void sigusr1Catcher(int sig);
 
-void runAsUser(const char *user);
 void switchUser(void);
 
 /*************************************\
@@ -8097,6 +8095,277 @@ switchUser(void)
 #endif          
 }
 
+/*
+** runClientMode
+**
+** Setup and run in client mode
+*/
+
+void
+runClientMode(int argc, char **argv, int optind)
+{
+    /*
+    ** Client mode -- treat any remaining arguments as tunnel
+    ** specifications.
+    */
+
+    while (optind < argc)
+    {
+        setTunnel(argv[optind]);
+        optind++;
+    }
+
+    if (ServerHost == NULL)
+    {
+        message(0, 0, "no server host specified");
+        exit(EXIT_FAILURE);
+    }
+
+    /*
+    ** This next check is for compatibility -- allowing the command
+    **
+    **  zebedee -e 'telnet localhost %d' serverhost
+    **
+    ** to work.
+    */
+
+    if (TargetPorts == NULL)
+    {
+        setEndPtList("telnet", &TargetPorts, ServerHost, NULL, NULL, 0);
+    }
+
+    /*
+    ** If no local port has been specified then we will default to
+    ** using "0" -- which means that one should be dynamically
+    ** allocated. Note that this will only be allowed if there is
+    ** a single remote port -- see the checks below.
+    */
+
+    if (ClientPorts == NULL)
+    {
+        if ((ClientPorts = newEndPtList(0, 0, NULL, NULL, NULL, ENDPTLIST_ANY)) == NULL)
+        {
+            message(0, errno, "can't allocate space for port list");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    /* Make sure that we have matching local and remote port lists */
+
+    if (countPorts(ClientPorts) != countPorts(TargetPorts))
+    {
+        message(0, 0, "the numbers of entries in the client and target port lists do not match");
+        exit(EXIT_FAILURE);
+    }
+
+    /*
+    ** If there is more than one target port specified then multi-use
+    ** mode is implicit. This also means that a command string can not
+    ** be specified.
+    */
+
+    if (countPorts(TargetPorts) > 1)
+    {
+        MultiUse++;
+        if (CommandString)
+        {
+            message(0, 0, "can't specify a command with multiple target ports");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    /* At last! Invoke the client listener routine! */
+
+#ifdef WIN32
+    if (serviceArgs)
+    {
+        svcRun(Program, (VOID (*)(VOID *))clientListener, (void *)ClientPorts);
+    }
+    else
+#endif
+    {
+        clientListener(ClientPorts);
+    }
+}
+
+/*
+** runHashGeneration
+**
+** Run hash generation operations
+*/
+
+void
+runHashGeneration(int argc, char **argv, int optind, int doHash)
+{
+    char hashBuf[HASH_STR_SIZE];
+
+    /* Hashing: -h or -H */
+
+    if (optind >= argc)
+    {
+        /* If there are no arguments with -h then we use stdin ... */
+
+        if (doHash == 1)
+        {
+            hashFile(hashBuf, "-");
+            printf("%s\n", hashBuf);
+        }
+        else
+        {
+            message(0, 0, "no string argument to hash");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+    {
+        /* We have arguments -- either strings or filenames */
+
+        while (optind < argc && argv[optind])
+        {
+            if (doHash == 1)
+            {
+                hashFile(hashBuf, argv[optind]);
+            }
+            else
+            {
+                hashStrings(hashBuf, argv[optind], NULL);
+            }
+            printf("%s %s\n", hashBuf, argv[optind]);
+            optind++;
+        }
+    }
+}
+
+/*
+** runKeyGeneration
+**
+** Run key generation operations
+*/
+
+void
+runKeyGeneration(int doPrivKey, int doPubKey)
+{
+    char hostName[MAX_LINE_SIZE];
+
+    /* Key generation: -p or -P */
+
+    if (doPrivKey)
+    {
+        PrivateKey = generateKey(NULL, NULL, 0);
+        if (PrivateKey != NULL)
+        {
+            printf("privatekey \"%s\"\n", PrivateKey);
+        }
+        else
+        {
+            message(0, errno, "can't generate private key");
+        }
+    }
+    if (doPubKey)
+    {
+        if (PrivateKey == NULL)
+        {
+            message(0, 0, "can't generate a identity without a private key being set");
+            exit(EXIT_FAILURE);
+        }
+        gethostname(hostName, MAX_LINE_SIZE);
+        printf("%s %s\n", generateIdentity(Generator, Modulus, PrivateKey), hostName);
+    }
+}
+
+/*
+** runServerMode
+**
+** Setup and run in server mode
+*/
+
+void
+runServerMode(int argc, char **argv, int optind, char *serviceArgs)
+{
+    /* Server mode -- check for target host arguments */
+
+    while (optind < argc)
+    {
+        setTarget(argv[optind]);
+        optind++;
+    }
+
+    /*
+    ** Sanity check the default target. This must be a "pure" hostname
+    ** without an address mask.
+    */
+
+    if (strchr(TargetHost, '/') != NULL)
+    {
+        message(0, 0, "default target host (%s) must not have an address mask", TargetHost);
+        exit(EXIT_FAILURE);
+    }
+
+    /*
+    ** If we have not yet set up the allowed redirection ports then we
+    ** will only allow redirection to ports on the local machine.
+    */
+
+    if (AllowedTargets == NULL)
+    {
+        AllowedTargets = newEndPtList(0, 0, "localhost", NULL, NULL, ENDPTLIST_ANY);
+    }
+
+#ifdef WIN32
+    if (serviceArgs)
+    {
+        svcRun(Program,
+               (VOID (*)(VOID *))((ClientHost == NULL) ?
+                                  serverListener : serverInitiator),
+               (VOID *)&ServerPort);
+    }
+    else
+#endif
+    if (ClientHost != NULL)
+    {
+        serverInitiator(&ServerPort);
+    }
+    else
+    {
+        serverListener(&ServerPort);
+    }
+}
+
+#ifdef WIN32
+void
+/*
+** manageWindowsService
+**
+** Install, remove or run Zebedee as a Windows service
+*/
+
+manageWindowsService(char *serviceArgs)
+{
+    if (!strncmp(serviceArgs, "install", 7))
+    {
+        if (strncmp(serviceArgs, "install=", 8) == 0)
+        {
+            exit(svcInstall(Program, serviceArgs + 8));
+        }
+        else
+        {
+            exit(svcInstall(Program, NULL));
+        }
+    }
+    else if (!strcmp(serviceArgs, "remove"))
+    {
+        exit(svcRemove(Program));
+    }
+    else if (strcmp(serviceArgs, "run") != 0)
+    {
+        message(0, 0, "invalid argument to -S option: %s", serviceArgs);
+        exit(EXIT_FAILURE);
+    }
+
+    /* If it was "run" fall through to the rest ... */
+}
+#endif
+
 /******************\
 **                **
 **  Main Routine  **
@@ -8107,11 +8376,9 @@ int
 main(int argc, char **argv)
 {
     int ch;
-    char hostName[MAX_LINE_SIZE];
     int doHash = 0;
     int doPrivKey = 0;
     int doPubKey = 0;
-    char hashBuf[HASH_STR_SIZE];
     char *last;
     char *serviceArgs = NULL;
 
@@ -8198,7 +8465,7 @@ main(int argc, char **argv)
             }
             doHash = 2;
             break;
-    
+
         case 'i':
             InteractiveMode = 1;
             break;
@@ -8317,7 +8584,7 @@ main(int argc, char **argv)
     {
         prepareToDetach();
     }
-        
+
     /*
     ** If using reusable session keys then initialize the CurrentToken
     ** to request a new one to be generated on first connection.
@@ -8409,32 +8676,11 @@ main(int argc, char **argv)
 
     signal(SIGCHLD, sigchldCatcher);
 #endif
-    
+
 #ifdef WIN32
     if (serviceArgs)
     {
-        if (!strncmp(serviceArgs, "install", 7))
-        {
-            if (strncmp(serviceArgs, "install=", 8) == 0)
-            {
-                exit(svcInstall(Program, serviceArgs + 8));
-            }
-            else
-            {
-                exit(svcInstall(Program, NULL));
-            }
-        }
-        else if (!strcmp(serviceArgs, "remove"))
-        {
-            exit(svcRemove(Program));
-        }
-        else if (strcmp(serviceArgs, "run") != 0)
-        {
-            message(0, 0, "invalid argument to -S option: %s", serviceArgs);
-            exit(EXIT_FAILURE);
-        }
-
-        /* If it was "run" fall through to the rest ... */
+    	manageWindowsService(serviceArgs)
     }
 #endif
 
@@ -8449,203 +8695,19 @@ main(int argc, char **argv)
 
     if (doHash)
     {
-        /* Hashing: -h or -H */
-
-        if (optind >= argc)
-        {
-            /* If there are no arguments with -h then we use stdin ... */
-
-            if (doHash == 1)
-            {
-                hashFile(hashBuf, "-");
-                printf("%s\n", hashBuf);
-            }
-            else
-            {
-                message(0, 0, "no string argument to hash");
-                exit(EXIT_FAILURE);
-            }
-        }
-        else
-        {
-            /* We have arguments -- either strings or filenames */
-
-            while (optind < argc && argv[optind])
-            {
-                if (doHash == 1)
-                {
-                    hashFile(hashBuf, argv[optind]);
-                }
-                else
-                {
-                    hashStrings(hashBuf, argv[optind], NULL);
-                }
-                printf("%s %s\n", hashBuf, argv[optind]);
-                optind++;
-            }
-        }
+    	runHashGeneration(argc, argv, optind, doHash);
     }
     else if (doPrivKey || doPubKey)
     {
-        /* Key generation: -p or -P */
-
-        if (doPrivKey)
-        {
-            PrivateKey = generateKey(NULL, NULL, 0);
-            if (PrivateKey != NULL)
-            {
-                printf("privatekey \"%s\"\n", PrivateKey);
-            }
-            else
-            {
-                message(0, errno, "can't generate private key");
-            }
-        }
-        if (doPubKey)
-        {
-            if (PrivateKey == NULL)
-            {
-                message(0, 0, "can't generate a identity without a private key being set");
-                exit(EXIT_FAILURE);
-            }
-            gethostname(hostName, MAX_LINE_SIZE);
-            printf("%s %s\n", generateIdentity(Generator, Modulus, PrivateKey), hostName);
-        }
+    	runKeyGeneration(doPrivKey, doPubKey);
     }
     else if (IsServer)
     {
-        /* Server mode -- check for target host arguments */
-
-        while (optind < argc)
-        {
-            setTarget(argv[optind]);
-            optind++;
-        }
-
-        /*
-        ** Sanity check the default target. This must be a "pure" hostname
-        ** without an address mask.
-        */
-
-        if (strchr(TargetHost, '/') != NULL)
-        {
-            message(0, 0, "default target host (%s) must not have an address mask", TargetHost);
-            exit(EXIT_FAILURE);
-        }
-
-        /*
-        ** If we have not yet set up the allowed redirection ports then we
-        ** will only allow redirection to ports on the local machine.
-        */
-
-        if (AllowedTargets == NULL)
-        {
-            AllowedTargets = newEndPtList(0, 0, "localhost", NULL, NULL, ENDPTLIST_ANY);
-        }
-
-#ifdef WIN32
-        if (serviceArgs)
-        {
-            svcRun(Program,
-                   (VOID (*)(VOID *))((ClientHost == NULL) ?
-                                      serverListener : serverInitiator),
-                   (VOID *)&ServerPort);
-        }
-        else
-#endif
-        if (ClientHost != NULL)
-        {
-            serverInitiator(&ServerPort);
-        }
-        else
-        {
-            serverListener(&ServerPort);
-        }
+    	runServerMode(argc, argv, optind, serviceArgs);
     }
     else
     {
-        /*
-        ** Client mode -- treat any remaining arguments as tunnel
-        ** specifications.
-        */
-
-        while (optind < argc)
-        {
-            setTunnel(argv[optind]);
-            optind++;
-        }
-
-        if (ServerHost == NULL)
-        {
-            message(0, 0, "no server host specified");
-            exit(EXIT_FAILURE);
-        }
-
-        /*
-        ** This next check is for compatibility -- allowing the command
-        **
-        **  zebedee -e 'telnet localhost %d' serverhost
-        **
-        ** to work.
-        */
-
-        if (TargetPorts == NULL)
-        {
-            setEndPtList("telnet", &TargetPorts, ServerHost, NULL, NULL, 0);
-        }
-
-        /*
-        ** If no local port has been specified then we will default to
-        ** using "0" -- which means that one should be dynamically
-        ** allocated. Note that this will only be allowed if there is
-        ** a single remote port -- see the checks below.
-        */
-
-        if (ClientPorts == NULL)
-        {
-            if ((ClientPorts = newEndPtList(0, 0, NULL, NULL, NULL, ENDPTLIST_ANY)) == NULL)
-            {
-                message(0, errno, "can't allocate space for port list");
-                exit(EXIT_FAILURE);
-            }
-        }
-
-        /* Make sure that we have matching local and remote port lists */
-
-        if (countPorts(ClientPorts) != countPorts(TargetPorts))
-        {
-            message(0, 0, "the numbers of entries in the client and target port lists do not match");
-            exit(EXIT_FAILURE);
-        }
-
-        /*
-        ** If there is more than one target port specified then multi-use
-        ** mode is implicit. This also means that a command string can not
-        ** be specified.
-        */
-
-        if (countPorts(TargetPorts) > 1)
-        {
-            MultiUse++;
-            if (CommandString)
-            {
-                message(0, 0, "can't specify a command with multiple target ports");
-                exit(EXIT_FAILURE);
-            }
-        }
-
-        /* At last! Invoke the client listener routine! */
-
-#ifdef WIN32
-        if (serviceArgs)
-        {
-            svcRun(Program, (VOID (*)(VOID *))clientListener, (void *)ClientPorts);
-        }
-        else
-#endif
-        {
-            clientListener(ClientPorts);
-        }
+    	runClientMode(argc, argv, optind);
     }
 
     exit(EXIT_SUCCESS);
