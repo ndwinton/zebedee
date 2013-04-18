@@ -535,6 +535,7 @@ int UdpMode = 0;		/* Run in UDP mode */
 int TcpMode = 1;		/* Run in TCP mode */
 unsigned short TcpTimeout = DFLT_TCP_TIMEOUT;	/* TCP inactivity timeout */
 unsigned short UdpTimeout = DFLT_UDP_TIMEOUT;	/* UDP inactivity timeout */
+char *SourceIp = NULL;		/* source IP address */
 char *ListenIp = NULL;		/* IP address on which to listen */
 int ListenMode = 0;		/* True if client waits for server connection */
 char *ClientHost = NULL;	/* Server initiates connection to client */
@@ -2096,6 +2097,18 @@ makeConnection(const char *host, const unsigned short port,
 	errno = 0;
 	return -1;
     }
+
+	if (Transparent && *SourceIp)
+	{
+		message(0, errno, "transparent and sourceip option set");
+	}
+	if (fromAddrP == NULL && *SourceIp)
+	{
+		if (!getHostAddress(*SourceIp, &fromAddrP, NULL, NULL))
+		{
+			message(0, 0, "can't resolve souce address '%s'", SourceIp);
+		}
+	}
 
     /*
     ** If a source address was specified, try to set it. This is not
@@ -8145,6 +8158,7 @@ parseConfigLine(const char *lineBuf, int level)
 	setBoolean(value, &yesNo);
 	setString(yesNo ? "127.0.0.1" : "0.0.0.0", &ListenIp);
     }
+    else if (!strcasecmp(key, "sourceip")) setString(value, &SourceIp);
     else if (!strcasecmp(key, "listenip")) setString(value, &ListenIp);
     else if (!strcasecmp(key, "listenmode")) setBoolean(value, &ListenMode);
     else if (!strcasecmp(key, "clienthost")) setString(value, &ClientHost);
@@ -8258,6 +8272,7 @@ usage(void)
 #if defined(USE_IPv6)
 	    "    -4          Use IPv4 protocol only\n"
 #endif
+	    "    -a address  Source IP for outgoing connections\n"
 	    "    -b address  Bind only this address when listening for connections\n"
 	    "    -C num      Set the number of attempts to connect back to client (default 1)\n"
 	    "    -c host     Server initiates connection to client host\n"
@@ -8270,7 +8285,7 @@ usage(void)
 	    "    -h          Generate hash of file contents\n"
 	    "    -K level    Specify the checksum level (default 2)\n"
 	    "    -k keybits  Specify key length in bits (default 128)\n"
- 	    "    -L          Lock protocol negotiation\n"
+	    "    -L          Lock protocol negotiation\n"
 	    "    -l          Client listens for server connection\n"
 	    "    -m          Client accepts multiple connections (default)\n"
 	    "    -n name     Specify program name\n"
@@ -8526,6 +8541,10 @@ main(int argc, char **argv)
 
 	case 'c':
 	    ClientHost = optarg;
+	    break;
+
+	case 'a':
+	    SourceIp = optarg;
 	    break;
 
 	case 'b':
