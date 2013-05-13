@@ -2098,15 +2098,18 @@ makeConnection(const char *host, const unsigned short port,
 	return -1;
     }
 
-	if (Transparent && *SourceIp)
+	if (Transparent && SourceIp != NULL)
 	{
-		message(0, errno, "transparent and sourceip option set");
+		message(0, 0, "transparent and sourceip option set");
+		exit(EXIT_FAILURE);
 	}
-	if (fromAddrP == NULL && *SourceIp)
+
+	if (fromAddrP == NULL && SourceIp != NULL)
 	{
-		if (!getHostAddress(*SourceIp, &fromAddrP, NULL, NULL))
+                memset(&myFromAddr, 0, sizeof(myFromAddr));
+		if (!getHostAddress(SourceIp, &myFromAddr, NULL, NULL))
 		{
-			message(0, 0, "can't resolve souce address '%s'", SourceIp);
+			message(0, 0, "can't resolve source address '%s'", SourceIp);
 		}
 	}
 
@@ -2124,11 +2127,13 @@ makeConnection(const char *host, const unsigned short port,
     */
 #error "Time to implement transparent proxy using setsockopt(fd, SOL_TCP, TCP_TPROXY_SRCADDR, ...) now!"
 #else
-    if (fromAddrP && ((fromAddrP->sa.sa_family == AF_INET && fromAddrP->in.sin_addr.s_addr)
+    if ((fromAddrP && ((fromAddrP->sa.sa_family == AF_INET && fromAddrP->in.sin_addr.s_addr)
 #if defined(USE_IPv6)
-    	|| (fromAddrP->sa.sa_family == AF_INET6 && memcmp(&fromAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))
+       || (fromAddrP->sa.sa_family == AF_INET6 && memcmp(&fromAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))))
+       || (myFromAddr.sa.sa_family == AF_INET && myFromAddr.in.sin_addr.s_addr) 
+       || (myFromAddr.sa.sa_family == AF_INET6 && memcmp(&myFromAddr.in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))
 #endif
-    ))
+    )
     {
 #ifdef USE_UDP_SPOOFING
 	closesocket(sfd);
@@ -2139,8 +2144,11 @@ makeConnection(const char *host, const unsigned short port,
 	    return -1;
 	}
 #else
-	memset(&myFromAddr, 0, sizeof(addr));
-	memcpy(&myFromAddr, fromAddrP, sizeof(addr));
+        if (SourceIp == NULL || fromAddrP != NULL)
+        {
+	    memset(&myFromAddr, 0, sizeof(addr));
+	    memcpy(&myFromAddr, fromAddrP, sizeof(addr));
+        }
 	if (bind(sfd, &myFromAddr.sa, addr.sa.sa_family == AF_INET ? sizeof(addr.in) : sizeof(addr)) < 0)
 	{
 	    message(1, errno, "WARNING: failed to set connection source address -- ignored");
@@ -5689,7 +5697,7 @@ client(FnArgs_t *argP)
     unsigned short cksumLevel = CHECKSUM_NONE;
     SHA_INFO sha;
     int active = 0;
-    
+
 
     active = incrActiveCount(1);
     if (MaxConnections > 0 && MaxConnections < active)
@@ -8528,7 +8536,7 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "4b:C:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "4a:b:C:c:Dde:f:F:hHk:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
 	switch (ch)
 	{
