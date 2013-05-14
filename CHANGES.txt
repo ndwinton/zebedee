@@ -1,3 +1,7 @@
+* Release 2.5.7
+
+Add -a option to set outgoing source IP.
+
 * Release 2.5.6
 
 Fix address size for Solaris IPv6 bind() and sendto() calls.
