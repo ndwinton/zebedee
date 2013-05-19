@@ -42,7 +42,7 @@ OPTIM = -Wall -O3
 
 # Location of Blowfish include and library
 # You can use the versions from OpenSSL if you have it installed, as follows:
-# BFINC = /usr/include/openssl
+# BFINC = -I/usr/include/openssl
 # BFLIB = -lcrypto
 
 BFINC = -I../blowfish-1.0.0a
