@@ -1920,9 +1920,8 @@ getHostAddress(const char *host,
 	if (!IPv4Only)
 	    hints.ai_family = AF_UNSPEC; /* Allow IPv4 or IPv6 */
 	else
-#else
-	    hints.ai_family = AF_INET; /* Request IPv4 addresses only */
 #endif
+	    hints.ai_family = AF_INET; /* Request IPv4 addresses only */
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = 0;
 	hints.ai_protocol = 0;
