@@ -402,6 +402,10 @@ B<L<server|/item_server>> keyword:
 Restrict network sockets to IPv4 protocol only. This is useful when running
 B<Zebedee> compiled with IPv6 support on machines without full IPv6 support.
 
+=item B<sourceip> (command-line B<-a>)
+
+Use this IP as source IP for outgoing connections.
+
 =item B<server> (command-line B<-s>)
 
 This is a boolean indicating whether the program should run as a client or a

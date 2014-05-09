@@ -544,6 +544,7 @@ int UdpMode = 0;                /* Run in UDP mode */
 int TcpMode = 1;                /* Run in TCP mode */
 unsigned short TcpTimeout = DFLT_TCP_TIMEOUT;   /* TCP inactivity timeout */
 unsigned short UdpTimeout = DFLT_UDP_TIMEOUT;   /* UDP inactivity timeout */
+char *SourceIp = NULL;          /* source IP address */
 char *ListenIp = NULL;          /* IP address on which to listen */
 int ListenMode = 0;             /* True if client waits for server connection */
 char *ClientHost = NULL;        /* Server initiates connection to client */
@@ -2110,6 +2111,22 @@ makeConnection(const char *host, const unsigned short port,
         return -1;
     }
 
+    if (Transparent && SourceIp != NULL)
+    {
+        message(0, 0, "can't use transparent and sourceip");
+        exit(EXIT_FAILURE);
+    }
+
+    if (fromAddrP == NULL && SourceIp != NULL)
+    {
+        memset(&myFromAddr, 0, sizeof(myFromAddr));
+        if (!getHostAddress(SourceIp, &myFromAddr, NULL, NULL))
+        {
+            message(0, 0, "can't resolve source address '%s'", SourceIp);
+            exit(EXIT_FAILURE);
+        }
+    }
+
     /*
     ** If a source address was specified, try to set it. This is not
     ** fatal if it fails -- not all platforms support it.
@@ -2124,11 +2141,13 @@ makeConnection(const char *host, const unsigned short port,
     */
 #error "Time to implement transparent proxy using setsockopt(fd, SOL_TCP, TCP_TPROXY_SRCADDR, ...) now!"
 #else
-    if (fromAddrP && ((fromAddrP->sa.sa_family == AF_INET && fromAddrP->in.sin_addr.s_addr)
+    if ((fromAddrP && fromAddrP->sa.sa_family == AF_INET && fromAddrP->in.sin_addr.s_addr)
+       || (myFromAddr.sa.sa_family == AF_INET && myFromAddr.in.sin_addr.s_addr)
 #if defined(USE_IPv6)
-            || (fromAddrP->sa.sa_family == AF_INET6 && memcmp(&fromAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))
+       || (fromAddrP && fromAddrP->sa.sa_family == AF_INET6 && memcmp(&fromAddrP->in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))
+       || (myFromAddr.sa.sa_family == AF_INET6 && memcmp(&myFromAddr.in6.sin6_addr, &in6addr_any, sizeof(struct in6_addr)))
 #endif
-    ))
+    )
     {
 #ifdef USE_UDP_SPOOFING
         closesocket(sfd);
@@ -2139,8 +2158,11 @@ makeConnection(const char *host, const unsigned short port,
             return -1;
         }
 #else
-        memset(&myFromAddr, 0, sizeof(addr));
-        memcpy(&myFromAddr, fromAddrP, sizeof(addr));
+        if (fromAddrP != NULL)
+        {
+            memset(&myFromAddr, 0, sizeof(addr));
+            memcpy(&myFromAddr, fromAddrP, sizeof(addr));
+        }
         if (bind(sfd, &myFromAddr.sa, addr.sa.sa_family == AF_INET ? sizeof(addr.in) : sizeof(addr)) < 0)
         {
             message(1, errno, "WARNING: failed to set connection source address -- ignored");
@@ -8192,6 +8214,7 @@ parseConfigLine(const char *lineBuf, int level)
         setBoolean(value, &yesNo);
         setString(yesNo ? "127.0.0.1" : "0.0.0.0", &ListenIp);
     }
+    else if (!strcasecmp(key, "sourceip")) setString(value, &SourceIp);
     else if (!strcasecmp(key, "listenip")) setString(value, &ListenIp);
     else if (!strcasecmp(key, "listenmode")) setBoolean(value, &ListenMode);
     else if (!strcasecmp(key, "clienthost")) setString(value, &ClientHost);
@@ -8304,6 +8327,7 @@ usage(void)
 #if defined(USE_IPv6)
             "    -4          Use IPv4 protocol only\n"
 #endif
+            "    -a address  Source IP for outgoing connections\n"
             "    -b address  Bind only this address when listening for connections\n"
             "    -C num      Set the number of attempts to connect back to client (default 1)\n"
             "    -c host     Server initiates connection to client host\n"
@@ -8826,7 +8850,7 @@ main(int argc, char **argv)
 
     /* Parse the options! */
 
-    while ((ch = getopt(argc, argv, "4b:C:c:Dde:f:F:hHik:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
+    while ((ch = getopt(argc, argv, "4a:b:C:c:Dde:f:F:hHik:K:LlmN:n:o:pPr:sS:tT:uUv:x:z:")) != -1)
     {
         switch (ch)
         {
@@ -8839,6 +8863,10 @@ main(int argc, char **argv)
 
         case 'c':
             ClientHost = optarg;
+            break;
+
+        case 'a':
+            SourceIp = optarg;
             break;
 
         case 'b':
