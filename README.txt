@@ -1,3 +1,12 @@
+THIS IS NOT THE OFFICIAL ZEBEDEE REPOSITORY
+
+AS SOON AS MY WORK HAS BEEN MERGED INTO THE REPO
+ON sourceforge.net, THIS REPO WILL BE GONE!
+
+POST ANY QUESTIONS TO THE OFFICIAL MAILING LIST
+http://sourceforge.net/p/zebedee/mailman/zebedee-talk/
+
+
 Zebedee Secure Tunnel
 =====================
 
